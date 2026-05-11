@@ -5,6 +5,7 @@ import LeadDetailClient from "@/components/LeadDetailClient"
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
+  const isAdmin = session?.user.role === "ADMIN"
   const { id } = await params
 
   const [lead, salespeople] = await Promise.all([
@@ -18,12 +19,15 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         },
       },
     }),
-    session?.user.role === "ADMIN"
+    isAdmin
       ? db.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
   ])
 
   if (!lead) notFound()
+
+  // Salespeople can only view leads assigned to them
+  if (!isAdmin && lead.assignedToId !== session?.user.id) notFound()
 
   return (
     <LeadDetailClient
