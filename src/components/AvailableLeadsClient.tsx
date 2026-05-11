@@ -151,19 +151,21 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
               <tr key={lead.id} className={`transition ${claiming === lead.id ? "bg-blue-50/50" : "hover:bg-gray-50/70"}`}>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-blue-600">
-                        {(lead.firstName?.[0] ?? "?").toUpperCase()}
-                      </span>
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
                     </div>
-                    <span className="font-medium text-gray-900 text-sm">
-                      {lead.firstName} {lead.lastName}
-                    </span>
+                    <span className="text-sm text-gray-400 italic">Hidden until claimed</span>
                   </div>
                 </td>
-                <td className="px-5 py-3.5 text-sm">
-                  <div className="text-gray-700">{lead.email ?? "—"}</div>
-                  {lead.phone && <div className="text-gray-400 text-xs mt-0.5">{lead.phone}</div>}
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    Claim to reveal
+                  </div>
                 </td>
                 <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
                   {lead.adName ?? lead.campaignName ?? "—"}
