@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/lib/roles"
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
-  if (session.user.role === "ADMIN") return new NextResponse("Admins assign, not claim", { status: 400 })
+  if (isAdmin(session.user.role)) return new NextResponse("Admins assign, not claim", { status: 400 })
 
   const { id } = await params
 
   const user = await db.user.findUnique({ where: { id: session.user.id } })
   if (!user) return new NextResponse("User not found", { status: 404 })
 
-  // Count claims in last 15 minutes
   const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000)
   const recentClaims = await db.lead.count({
-    where: {
-      assignedToId: session.user.id,
-      claimedAt: { gte: fifteenMinsAgo },
-    },
+    where: { assignedToId: session.user.id, claimedAt: { gte: fifteenMinsAgo } },
   })
 
   if (recentClaims >= user.claimLimit) {
@@ -34,7 +31,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     )
   }
 
-  // Atomically claim only if still unassigned
   try {
     const lead = await db.lead.update({
       where: { id, assignedToId: null },

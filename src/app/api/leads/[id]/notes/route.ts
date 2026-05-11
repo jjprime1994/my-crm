@@ -1,28 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/lib/roles"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
   const { id } = await params
-  const isAdmin = session.user.role === "ADMIN"
+  const admin = isAdmin(session.user.role)
 
-  // Verify ownership before allowing note creation
   const lead = await db.lead.findUnique({ where: { id }, select: { assignedToId: true } })
   if (!lead) return new NextResponse("Not found", { status: 404 })
-  if (!isAdmin && lead.assignedToId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
+  if (!admin && lead.assignedToId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
 
   const { content } = await req.json()
   if (!content?.trim()) return new NextResponse("Content is required", { status: 400 })
 
   const note = await db.leadNote.create({
-    data: {
-      leadId: id,
-      authorId: session.user.id,
-      content: content.trim(),
-    },
+    data: { leadId: id, authorId: session.user.id, content: content.trim() },
     include: { author: { select: { id: true, name: true } } },
   })
 

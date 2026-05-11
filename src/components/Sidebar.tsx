@@ -3,9 +3,10 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
+import { isAdmin, isSuperAdmin } from "@/lib/roles"
 
 interface Props {
-  user: { name?: string | null; email?: string | null; role?: string }
+  user: { name?: string | null; email?: string | null; role?: string | null }
 }
 
 function initials(name?: string | null) {
@@ -55,24 +56,42 @@ const Icons = {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  overview: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+    </svg>
+  ),
+  export: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  ),
 }
 
 export default function Sidebar({ user }: Props) {
   const pathname = usePathname()
-  const isAdmin = user.role === "ADMIN"
+  const admin = isAdmin(user.role)
+  const superAdmin = isSuperAdmin(user.role)
 
   const nav = [
     { href: "/", label: "Dashboard", icon: Icons.dashboard },
     { href: "/leads", label: "Leads", icon: Icons.leads },
     { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell },
-    ...(!isAdmin ? [{ href: "/available-leads", label: "Available Leads", icon: Icons.inbox }] : []),
-    ...(isAdmin
+    ...(!admin ? [{ href: "/available-leads", label: "Available Leads", icon: Icons.inbox }] : []),
+    ...(admin
       ? [
           { href: "/admin/assign", label: "Assign Leads", icon: Icons.assign },
           { href: "/admin/users", label: "Manage Team", icon: Icons.team },
         ]
       : []),
   ]
+
+  const superAdminNav = superAdmin
+    ? [
+        { href: "/superadmin/overview", label: "Overview", icon: Icons.overview },
+        { href: "/superadmin/export", label: "Export Leads", icon: Icons.export },
+      ]
+    : []
 
   return (
     <aside className="w-60 flex flex-col bg-slate-900 h-full shrink-0">
@@ -89,7 +108,7 @@ export default function Sidebar({ user }: Props) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-2 space-y-0.5">
+      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         {nav.map(({ href, label, icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href)
           return (
@@ -107,6 +126,31 @@ export default function Sidebar({ user }: Props) {
             </Link>
           )
         })}
+
+        {superAdminNav.length > 0 && (
+          <>
+            <div className="pt-3 pb-1 px-3">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Super Admin</p>
+            </div>
+            {superAdminNav.map(({ href, label, icon }) => {
+              const active = pathname.startsWith(href)
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    active
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  <span className={active ? "text-white" : "text-slate-500"}>{icon}</span>
+                  {label}
+                </Link>
+              )
+            })}
+          </>
+        )}
       </nav>
 
       {/* User */}
@@ -117,7 +161,9 @@ export default function Sidebar({ user }: Props) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{user.name}</p>
-            <p className="text-xs text-slate-400 truncate">{user.role === "ADMIN" ? "Admin" : "Salesperson"}</p>
+            <p className="text-xs text-slate-400 truncate">
+              {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Admin" : "Salesperson"}
+            </p>
           </div>
         </div>
         <button
