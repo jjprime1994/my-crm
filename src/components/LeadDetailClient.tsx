@@ -103,9 +103,37 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
             Created {new Date(lead.createdAt).toLocaleDateString()}
           </p>
         </div>
-        <span className={`text-sm font-medium px-3 py-1 rounded-full ${STATUS_COLORS[status]}`}>
-          {STATUS_OPTIONS.find((s) => s.value === status)?.label}
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {lead.phone && (
+            <a
+              href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition"
+            >
+              WhatsApp
+            </a>
+          )}
+          {lead.phone && (
+            <a
+              href={`tel:${lead.phone}`}
+              className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition"
+            >
+              Call
+            </a>
+          )}
+          {lead.email && (
+            <a
+              href={`mailto:${lead.email}`}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-lg transition"
+            >
+              Email
+            </a>
+          )}
+          <span className={`text-sm font-medium px-3 py-1.5 rounded-full ${STATUS_COLORS[status]}`}>
+            {STATUS_OPTIONS.find((s) => s.value === status)?.label}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -8,13 +8,21 @@ interface Props {
   user: { name?: string | null; email?: string | null; role?: string }
 }
 
-const nav = [
-  { href: "/", label: "Dashboard" },
-  { href: "/leads", label: "Leads" },
-]
-
 export default function Sidebar({ user }: Props) {
   const pathname = usePathname()
+  const isAdmin = user.role === "ADMIN"
+
+  const nav = [
+    { href: "/", label: "Dashboard" },
+    { href: "/leads", label: "Leads" },
+    { href: "/follow-ups", label: "Follow-ups" },
+    ...(isAdmin
+      ? [
+          { href: "/admin/assign", label: "Assign Leads" },
+          { href: "/admin/users", label: "Manage Team" },
+        ]
+      : []),
+  ]
 
   return (
     <aside className="w-56 flex flex-col bg-white border-r border-gray-100 h-full shrink-0">
