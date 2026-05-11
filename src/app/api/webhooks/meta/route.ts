@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
 
-  // Verify signature from Meta
+  // Verify signature from Meta — return 200 even on mismatch so Meta doesn't mark as rejected
   const signature = req.headers.get("x-hub-signature-256")
   if (process.env.META_APP_SECRET && signature) {
     const expectedSig =
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         .update(rawBody)
         .digest("hex")
     if (signature !== expectedSig) {
-      return new NextResponse("Invalid signature", { status: 401 })
+      return NextResponse.json({ ok: true })
     }
   }
 
