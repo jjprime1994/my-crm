@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/lib/roles"
+import { isAdmin, isSuperAdmin } from "@/lib/roles"
 import bcrypt from "bcryptjs"
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -27,9 +27,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return new NextResponse(null, { status: 204 })
   }
 
-  const data: Record<string, number> = {}
+  const data: Record<string, unknown> = {}
   if ("claimLimit" in body) data.claimLimit = Number(body.claimLimit)
   if ("newLeadThreshold" in body) data.newLeadThreshold = Number(body.newLeadThreshold)
+  if ("managerId" in body) {
+    if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+    data.managerId = body.managerId || null
+  }
 
   const user = await db.user.update({
     where: { id },

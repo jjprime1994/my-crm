@@ -15,10 +15,13 @@ model User {
   role       Role       @default(SALESPERSON)
   claimLimit        Int        @default(5)
   newLeadThreshold  Int        @default(0)
-  leads      Lead[]     @relation("AssignedLeads")
-  notes      LeadNote[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  managerId         String?
+  manager           User?      @relation("TeamMembers", fields: [managerId], references: [id])
+  teamMembers       User[]     @relation("TeamMembers")
+  leads             Lead[]     @relation("AssignedLeads")
+  notes             LeadNote[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 }
 
 enum Role {

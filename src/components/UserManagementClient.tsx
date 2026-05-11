@@ -10,6 +10,7 @@ type User = {
   role: string
   claimLimit: number
   newLeadThreshold: number
+  managerId: string | null
   createdAt: Date | string
   _count: { leads: number }
 }
@@ -17,6 +18,8 @@ type User = {
 interface Props {
   users: User[]
   currentUserId: string
+  isSuperAdmin: boolean
+  managers: { id: string; name: string }[]
 }
 
 function initials(name: string) {
@@ -24,7 +27,7 @@ function initials(name: string) {
   return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase()
 }
 
-export default function UserManagementClient({ users: initial, currentUserId }: Props) {
+export default function UserManagementClient({ users: initial, currentUserId, isSuperAdmin, managers }: Props) {
   const router = useRouter()
   const [users, setUsers] = useState(initial)
   const [showForm, setShowForm] = useState(false)
@@ -100,6 +103,15 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
     setEditingThreshold(null)
   }
 
+  async function saveManagerId(id: string, managerId: string) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ managerId: managerId || null }),
+    })
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, managerId: managerId || null } : u)))
+  }
+
   return (
     <div className="space-y-5 max-w-5xl">
       <div className="flex items-center justify-between">
@@ -164,7 +176,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
               >
                 <option value="SALESPERSON">Salesperson</option>
-                <option value="ADMIN">Manager</option>
+                {isSuperAdmin && <option value="ADMIN">Manager</option>}
               </select>
             </div>
           </div>
@@ -192,6 +204,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claim Limit / 15min</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Max New Leads</th>
+              {isSuperAdmin && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Manager</th>}
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Joined</th>
               <th className="px-5 py-3.5" />
             </tr>
@@ -313,6 +326,24 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                     <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
+                {isSuperAdmin && (
+                  <td className="px-5 py-4">
+                    {user.role === "SALESPERSON" ? (
+                      <select
+                        value={user.managerId ?? ""}
+                        onChange={(e) => saveManagerId(user.id, e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 max-w-[140px]"
+                      >
+                        <option value="">Unassigned</option>
+                        {managers.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-5 py-4 text-sm text-gray-400">
                   {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </td>
