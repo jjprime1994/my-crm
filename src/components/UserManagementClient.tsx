@@ -202,9 +202,9 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                      user.role === "ADMIN" ? "bg-violet-100" : "bg-blue-100"
+                      user.role === "SUPER_ADMIN" ? "bg-rose-100" : user.role === "ADMIN" ? "bg-violet-100" : "bg-blue-100"
                     }`}>
-                      <span className={`text-xs font-bold ${user.role === "ADMIN" ? "text-violet-600" : "text-blue-600"}`}>
+                      <span className={`text-xs font-bold ${user.role === "SUPER_ADMIN" ? "text-rose-600" : user.role === "ADMIN" ? "text-violet-600" : "text-blue-600"}`}>
                         {initials(user.name)}
                       </span>
                     </div>
@@ -216,11 +216,13 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                 </td>
                 <td className="px-5 py-4">
                   <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${
-                    user.role === "ADMIN"
+                    user.role === "SUPER_ADMIN"
+                      ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
+                      : user.role === "ADMIN"
                       ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
                       : "bg-gray-100 text-gray-600"
                   }`}>
-                    {user.role === "ADMIN" ? "Manager" : "Salesperson"}
+                    {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Manager" : "Salesperson"}
                   </span>
                 </td>
                 <td className="px-5 py-4">
