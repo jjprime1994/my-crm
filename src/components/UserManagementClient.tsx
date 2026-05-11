@@ -31,6 +31,27 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [editingLimit, setEditingLimit] = useState<{ id: string; value: number } | null>(null)
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [resetSaving, setResetSaving] = useState(false)
+  const [resetError, setResetError] = useState("")
+  const [resetSuccess, setResetSuccess] = useState("")
+
+  async function saveResetPassword(id: string) {
+    if (!newPassword || newPassword.length < 8) { setResetError("Password must be at least 8 characters."); return }
+    setResetSaving(true)
+    setResetError("")
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword }),
+    })
+    setResetSaving(false)
+    if (!res.ok) { setResetError("Failed to reset password."); return }
+    setResetSuccess(users.find((u) => u.id === id)?.name ?? "User")
+    setResettingPassword(null)
+    setNewPassword("")
+  }
 
   async function addUser(e: React.FormEvent) {
     e.preventDefault()
@@ -85,6 +106,14 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
           {showForm ? "Cancel" : "+ Add Member"}
         </button>
       </div>
+
+      {resetSuccess && (
+        <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+          Password reset for <strong>{resetSuccess}</strong>.
+          <button onClick={() => setResetSuccess("")} className="ml-auto text-emerald-500 hover:text-emerald-700">✕</button>
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={addUser} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
@@ -231,14 +260,49 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                   {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </td>
                 <td className="px-5 py-4 text-right">
-                  {user.id !== currentUserId && (
-                    <button
-                      onClick={() => deleteUser(user.id)}
-                      className="text-xs font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition"
-                    >
-                      Remove
-                    </button>
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    {resettingPassword === user.id ? (
+                      <div className="flex items-center gap-2">
+                        {resetError && <span className="text-xs text-rose-500">{resetError}</span>}
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="New password"
+                          className="w-32 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveResetPassword(user.id)}
+                          disabled={resetSaving}
+                          className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
+                        >
+                          {resetSaving ? "…" : "Save"}
+                        </button>
+                        <button
+                          onClick={() => { setResettingPassword(null); setNewPassword(""); setResetError("") }}
+                          className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setResettingPassword(user.id); setResetError("") }}
+                        className="text-xs font-medium text-gray-400 hover:text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition"
+                      >
+                        Reset pw
+                      </button>
+                    )}
+                    {user.id !== currentUserId && resettingPassword !== user.id && (
+                      <button
+                        onClick={() => deleteUser(user.id)}
+                        className="text-xs font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
