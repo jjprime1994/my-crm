@@ -14,7 +14,7 @@ model User {
   password   String
   role       Role       @default(SALESPERSON)
   claimLimit        Int        @default(5)
-  newLeadThreshold  Int        @default(1)
+  newLeadThreshold  Int        @default(0)
   leads      Lead[]     @relation("AssignedLeads")
   notes      LeadNote[]
   createdAt  DateTime   @default(now())
