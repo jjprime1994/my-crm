@@ -164,7 +164,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
               >
                 <option value="SALESPERSON">Salesperson</option>
-                <option value="ADMIN">Admin</option>
+                <option value="ADMIN">Manager</option>
               </select>
             </div>
           </div>
@@ -220,7 +220,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                       ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
                       : "bg-gray-100 text-gray-600"
                   }`}>
-                    {user.role === "ADMIN" ? "Admin" : "Salesperson"}
+                    {user.role === "ADMIN" ? "Manager" : "Salesperson"}
                   </span>
                 </td>
                 <td className="px-5 py-4">

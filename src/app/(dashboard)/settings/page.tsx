@@ -22,7 +22,7 @@ export default async function SettingsPage() {
             <p className="font-semibold text-gray-900">{session?.user.name}</p>
             <p className="text-sm text-gray-400">{session?.user.email}</p>
             <p className="text-xs text-gray-400 capitalize mt-0.5">
-              {session?.user.role === "SUPER_ADMIN" ? "Super Admin" : session?.user.role === "ADMIN" ? "Admin" : "Salesperson"}
+              {session?.user.role === "SUPER_ADMIN" ? "Super Admin" : session?.user.role === "ADMIN" ? "Manager" : "Salesperson"}
             </p>
           </div>
         </div>

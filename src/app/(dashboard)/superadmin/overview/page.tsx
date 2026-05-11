@@ -183,7 +183,7 @@ export default async function SuperAdminOverviewPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${member.role === "ADMIN" ? "bg-violet-50 text-violet-700" : "bg-gray-100 text-gray-600"}`}>
-                      {member.role === "ADMIN" ? "Admin" : "Salesperson"}
+                      {member.role === "ADMIN" ? "Manager" : "Salesperson"}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm font-semibold text-gray-900">{member._count.leads}</td>
