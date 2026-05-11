@@ -73,7 +73,7 @@ export default async function LeadsPage({
 
       <LeadsFilters isAdmin={isAdmin} salespeople={salespeople} />
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">

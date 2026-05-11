@@ -152,7 +152,7 @@ export default async function SuperAdminOverviewPage() {
       </div>
 
       {/* Team leaderboard */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
           <h2 className="font-semibold text-gray-900">Team Leaderboard</h2>
           <Link href="/admin/users" className="text-sm text-blue-600 hover:text-blue-700 font-medium">Manage →</Link>
@@ -204,7 +204,7 @@ export default async function SuperAdminOverviewPage() {
       </div>
 
       {/* Recent leads */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
           <h2 className="font-semibold text-gray-900">Recent Leads</h2>
           <Link href="/leads" className="text-sm text-blue-600 hover:text-blue-700 font-medium">View all →</Link>
