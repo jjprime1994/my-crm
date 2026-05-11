@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(SALESPERSON)
-  leads     Lead[]   @relation("AssignedLeads")
-  notes     LeadNote[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String     @id @default(cuid())
+  name       String
+  email      String     @unique
+  password   String
+  role       Role       @default(SALESPERSON)
+  claimLimit Int        @default(5)
+  leads      Lead[]     @relation("AssignedLeads")
+  notes      LeadNote[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 enum Role {
@@ -39,6 +40,7 @@ model Lead {
   status       LeadStatus @default(NEW)
   assignedTo   User?      @relation("AssignedLeads", fields: [assignedToId], references: [id])
   assignedToId String?
+  claimedAt    DateTime?
   notes        LeadNote[]
   rawData      Json?
   createdAt    DateTime   @default(now())

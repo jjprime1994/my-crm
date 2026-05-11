@@ -8,6 +8,7 @@ type User = {
   name: string
   email: string
   role: string
+  claimLimit: number
   createdAt: Date | string
   _count: { leads: number }
 }
@@ -24,6 +25,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "SALESPERSON" })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [editingLimit, setEditingLimit] = useState<{ id: string; value: number } | null>(null)
 
   async function addUser(e: React.FormEvent) {
     e.preventDefault()
@@ -48,6 +50,18 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
     if (!confirm("Remove this user? Their leads will become unassigned.")) return
     await fetch(`/api/users/${id}`, { method: "DELETE" })
     setUsers(users.filter((u) => u.id !== id))
+  }
+
+  async function saveClaimLimit(id: string, value: number) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ claimLimit: value }),
+    })
+    if (res.ok) {
+      setUsers(users.map((u) => (u.id === id ? { ...u, claimLimit: value } : u)))
+    }
+    setEditingLimit(null)
   }
 
   return (
@@ -129,6 +143,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Leads</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Claim Limit / 15min</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
               <th className="px-4 py-3"></th>
             </tr>
@@ -144,6 +159,46 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{user._count.leads}</td>
+                <td className="px-4 py-3">
+                  {user.role === "SALESPERSON" ? (
+                    editingLimit?.id === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={50}
+                          value={editingLimit.value}
+                          onChange={(e) => setEditingLimit({ id: user.id, value: Number(e.target.value) })}
+                          className="w-16 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          onClick={() => saveClaimLimit(user.id, editingLimit.value)}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingLimit(null)}
+                          className="text-xs text-gray-400 hover:underline"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900">{user.claimLimit}</span>
+                        <button
+                          onClick={() => setEditingLimit({ id: user.id, value: user.claimLimit })}
+                          className="text-xs text-blue-500 hover:underline"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <span className="text-sm text-gray-400">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-400">
                   {new Date(user.createdAt).toLocaleDateString()}
                 </td>

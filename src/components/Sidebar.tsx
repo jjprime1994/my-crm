@@ -14,8 +14,9 @@ export default function Sidebar({ user }: Props) {
 
   const nav = [
     { href: "/", label: "Dashboard" },
-    { href: "/leads", label: "Leads" },
+    { href: "/leads", label: "My Leads" },
     { href: "/follow-ups", label: "Follow-ups" },
+    ...(!isAdmin ? [{ href: "/available-leads", label: "Available Leads" }] : []),
     ...(isAdmin
       ? [
           { href: "/admin/assign", label: "Assign Leads" },
