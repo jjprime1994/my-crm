@@ -20,6 +20,7 @@ interface Props {
   recentClaims: number
   resetAt: string | null
   newLeadsCount: number
+  newLeadThreshold: number
 }
 
 function useCountdown(resetAt: string | null) {
@@ -37,7 +38,7 @@ function useCountdown(resetAt: string | null) {
   return secondsLeft
 }
 
-export default function AvailableLeadsClient({ leads: initial, claimLimit, recentClaims: initialClaims, resetAt, newLeadsCount }: Props) {
+export default function AvailableLeadsClient({ leads: initial, claimLimit, recentClaims: initialClaims, resetAt, newLeadsCount, newLeadThreshold }: Props) {
   const router = useRouter()
   const [leads, setLeads] = useState(initial)
   const [recentClaims, setRecentClaims] = useState(initialClaims)
@@ -47,7 +48,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
 
   const remaining = Math.max(0, claimLimit - recentClaims)
   const atLimit = remaining === 0 && secondsLeft > 0
-  const blockedByNew = newLeadsCount > 0
+  const blockedByNew = newLeadThreshold > 0 && newLeadsCount >= newLeadThreshold
   const mins = Math.floor(secondsLeft / 60)
   const secs = secondsLeft % 60
 
@@ -130,8 +131,8 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
           <span>
-            You have <strong>{newLeadsCount} lead{newLeadsCount > 1 ? "s" : ""}</strong> still in <strong>New</strong> status.
-            Update them before claiming more — go to <strong>My Leads</strong> and change the status.
+            You have <strong>{newLeadsCount} uncontacted lead{newLeadsCount > 1 ? "s" : ""}</strong> (limit: {newLeadThreshold}).
+            Contact them and update their status before claiming more — go to <strong>My Leads</strong>.
           </span>
         </div>
       )}

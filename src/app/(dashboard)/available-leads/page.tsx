@@ -17,7 +17,7 @@ export default async function AvailableLeadsPage() {
     }),
     db.user.findUnique({
       where: { id: session.user.id },
-      select: { claimLimit: true },
+      select: { claimLimit: true, newLeadThreshold: true },
     }),
     db.lead.count({
       where: {
@@ -42,6 +42,8 @@ export default async function AvailableLeadsPage() {
     ? new Date(oldestClaim.claimedAt.getTime() + 15 * 60 * 1000).toISOString()
     : null
 
+  const threshold = user?.newLeadThreshold ?? 1
+
   return (
     <AvailableLeadsClient
       leads={leads}
@@ -49,6 +51,7 @@ export default async function AvailableLeadsPage() {
       recentClaims={recentClaims}
       resetAt={resetAt}
       newLeadsCount={newLeadsCount}
+      newLeadThreshold={threshold}
     />
   )
 }

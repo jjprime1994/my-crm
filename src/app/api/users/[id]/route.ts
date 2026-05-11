@@ -27,11 +27,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return new NextResponse(null, { status: 204 })
   }
 
-  const { claimLimit } = body
+  const data: Record<string, number> = {}
+  if ("claimLimit" in body) data.claimLimit = Number(body.claimLimit)
+  if ("newLeadThreshold" in body) data.newLeadThreshold = Number(body.newLeadThreshold)
+
   const user = await db.user.update({
     where: { id },
-    data: { claimLimit: Number(claimLimit) },
-    select: { id: true, name: true, claimLimit: true },
+    data,
+    select: { id: true, name: true, claimLimit: true, newLeadThreshold: true },
   })
   return NextResponse.json(user)
 }

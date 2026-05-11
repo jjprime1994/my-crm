@@ -13,7 +13,8 @@ model User {
   email      String     @unique
   password   String
   role       Role       @default(SALESPERSON)
-  claimLimit Int        @default(5)
+  claimLimit        Int        @default(5)
+  newLeadThreshold  Int        @default(1)
   leads      Lead[]     @relation("AssignedLeads")
   notes      LeadNote[]
   createdAt  DateTime   @default(now())

@@ -9,6 +9,7 @@ type User = {
   email: string
   role: string
   claimLimit: number
+  newLeadThreshold: number
   createdAt: Date | string
   _count: { leads: number }
 }
@@ -31,6 +32,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [editingLimit, setEditingLimit] = useState<{ id: string; value: number } | null>(null)
+  const [editingThreshold, setEditingThreshold] = useState<{ id: string; value: number } | null>(null)
   const [resettingPassword, setResettingPassword] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [resetSaving, setResetSaving] = useState(false)
@@ -86,6 +88,16 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
     })
     if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, claimLimit: value } : u)))
     setEditingLimit(null)
+  }
+
+  async function saveThreshold(id: string, value: number) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newLeadThreshold: value }),
+    })
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, newLeadThreshold: value } : u)))
+    setEditingThreshold(null)
   }
 
   return (
@@ -179,6 +191,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claim Limit / 15min</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Max New Leads</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Joined</th>
               <th className="px-5 py-3.5" />
             </tr>
@@ -246,6 +259,48 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                         </span>
                         <button
                           onClick={() => setEditingLimit({ id: user.id, value: user.claimLimit })}
+                          className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-5 py-4">
+                  {user.role === "SALESPERSON" ? (
+                    editingThreshold?.id === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={20}
+                          value={editingThreshold.value}
+                          onChange={(e) => setEditingThreshold({ id: user.id, value: Number(e.target.value) })}
+                          className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                        />
+                        <button
+                          onClick={() => saveThreshold(user.id, editingThreshold.value)}
+                          className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 rounded-lg transition"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingThreshold(null)}
+                          className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-semibold px-2.5 py-1 rounded-lg ${user.newLeadThreshold === 0 ? "bg-gray-100 text-gray-400" : "bg-amber-50 text-amber-700"}`}>
+                          {user.newLeadThreshold === 0 ? "Off" : user.newLeadThreshold}
+                        </span>
+                        <button
+                          onClick={() => setEditingThreshold({ id: user.id, value: user.newLeadThreshold })}
                           className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition"
                         >
                           Edit

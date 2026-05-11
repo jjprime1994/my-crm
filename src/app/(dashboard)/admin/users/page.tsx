@@ -15,6 +15,7 @@ export default async function UsersPage() {
       email: true,
       role: true,
       claimLimit: true,
+      newLeadThreshold: true,
       createdAt: true,
       _count: { select: { leads: true } },
     },
