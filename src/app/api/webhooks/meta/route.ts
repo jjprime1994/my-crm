@@ -55,10 +55,19 @@ export async function POST(req: NextRequest) {
         const data = await res.json()
         const fields: { name: string; values: string[] }[] = data.field_data ?? []
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
-        firstName = get("first_name")
-        lastName = get("last_name")
         email = get("email")
         phone = get("phone_number") ?? get("phone")
+
+        // Handle both first_name/last_name and full_name field formats
+        const fullName = get("full_name")
+        if (fullName) {
+          const parts = fullName.trim().split(" ")
+          firstName = parts[0]
+          lastName = parts.slice(1).join(" ") || undefined
+        } else {
+          firstName = get("first_name")
+          lastName = get("last_name")
+        }
 
         // Fetch ad name if we have an ad_id
         if (ad_id) {
