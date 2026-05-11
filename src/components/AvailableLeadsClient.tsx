@@ -19,6 +19,7 @@ interface Props {
   claimLimit: number
   recentClaims: number
   resetAt: string | null
+  newLeadsCount: number
 }
 
 function useCountdown(resetAt: string | null) {
@@ -36,7 +37,7 @@ function useCountdown(resetAt: string | null) {
   return secondsLeft
 }
 
-export default function AvailableLeadsClient({ leads: initial, claimLimit, recentClaims: initialClaims, resetAt }: Props) {
+export default function AvailableLeadsClient({ leads: initial, claimLimit, recentClaims: initialClaims, resetAt, newLeadsCount }: Props) {
   const router = useRouter()
   const [leads, setLeads] = useState(initial)
   const [recentClaims, setRecentClaims] = useState(initialClaims)
@@ -46,11 +47,12 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
 
   const remaining = Math.max(0, claimLimit - recentClaims)
   const atLimit = remaining === 0 && secondsLeft > 0
+  const blockedByNew = newLeadsCount > 0
   const mins = Math.floor(secondsLeft / 60)
   const secs = secondsLeft % 60
 
   async function claim(leadId: string) {
-    if (atLimit) return
+    if (atLimit || blockedByNew) return
     setClaiming(leadId)
     setError("")
     const res = await fetch(`/api/leads/${leadId}/claim`, { method: "POST" })
@@ -122,6 +124,18 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
         </div>
       )}
 
+      {blockedByNew && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>
+            You have <strong>{newLeadsCount} lead{newLeadsCount > 1 ? "s" : ""}</strong> still in <strong>New</strong> status.
+            Update them before claiming more — go to <strong>My Leads</strong> and change the status.
+          </span>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <table className="min-w-full">
           <thead>
@@ -176,9 +190,9 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                 <td className="px-5 py-3.5 text-right">
                   <button
                     onClick={() => claim(lead.id)}
-                    disabled={atLimit || claiming === lead.id}
+                    disabled={atLimit || blockedByNew || claiming === lead.id}
                     className={`text-xs font-semibold px-4 py-2 rounded-lg transition ${
-                      atLimit
+                      atLimit || blockedByNew
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                         : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
                     } disabled:opacity-60`}

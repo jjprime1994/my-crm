@@ -13,6 +13,16 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const user = await db.user.findUnique({ where: { id: session.user.id } })
   if (!user) return new NextResponse("User not found", { status: 404 })
 
+  const newLeadsCount = await db.lead.count({
+    where: { assignedToId: session.user.id, status: "NEW" },
+  })
+  if (newLeadsCount > 0) {
+    return NextResponse.json(
+      { error: `You have ${newLeadsCount} lead${newLeadsCount > 1 ? "s" : ""} still in New status. Update them before claiming more.` },
+      { status: 403 }
+    )
+  }
+
   const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000)
   const recentClaims = await db.lead.count({
     where: { assignedToId: session.user.id, claimedAt: { gte: fifteenMinsAgo } },

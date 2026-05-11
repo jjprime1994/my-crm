@@ -70,19 +70,38 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
   const [status, setStatus] = useState(lead.status)
   const [assignedToId, setAssignedToId] = useState(lead.assignedTo?.id ?? "")
   const [noteContent, setNoteContent] = useState("")
+  const [statusNote, setStatusNote] = useState("")
   const [notes, setNotes] = useState<Note[]>(lead.notes)
   const [saving, setSaving] = useState(false)
   const [postingNote, setPostingNote] = useState(false)
+
+  const statusChanged = status !== lead.status
 
   async function saveChanges() {
     setSaving(true)
     const body: Record<string, unknown> = { status }
     if (isAdmin) body.assignedToId = assignedToId || null
-    await fetch(`/api/leads/${lead.id}`, {
+
+    const patchRes = fetch(`/api/leads/${lead.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
+
+    if (statusChanged && statusNote.trim()) {
+      const noteRes = await fetch(`/api/leads/${lead.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: statusNote.trim() }),
+      })
+      if (noteRes.ok) {
+        const note = await noteRes.json()
+        setNotes([note, ...notes])
+      }
+    }
+
+    await patchRes
+    setStatusNote("")
     setSaving(false)
     router.refresh()
   }
@@ -101,7 +120,8 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
     setPostingNote(false)
   }
 
-  const changed = status !== lead.status || (isAdmin && assignedToId !== (lead.assignedTo?.id ?? ""))
+  const changed = statusChanged || (isAdmin && assignedToId !== (lead.assignedTo?.id ?? ""))
+  const canSave = changed && (!statusChanged || statusNote.trim().length > 0)
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -268,11 +288,29 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
               </div>
             )}
 
+            {statusChanged && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-gray-600">
+                  Why are you changing the status? <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={statusNote}
+                  onChange={(e) => setStatusNote(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Customer confirmed interest, sending proposal…"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-50 focus:bg-white transition"
+                />
+                {!statusNote.trim() && (
+                  <p className="text-xs text-rose-500">A note is required when changing status.</p>
+                )}
+              </div>
+            )}
+
             {changed && (
               <button
                 onClick={saveChanges}
-                disabled={saving}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition disabled:opacity-50 shadow-sm shadow-blue-200"
+                disabled={saving || !canSave}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-blue-200"
               >
                 {saving ? "Saving…" : "Save changes"}
               </button>
