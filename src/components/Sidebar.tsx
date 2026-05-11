@@ -78,13 +78,13 @@ export default function Sidebar({ user }: Props) {
     <aside className="w-60 flex flex-col bg-slate-900 h-full shrink-0">
       {/* Brand */}
       <div className="px-5 py-5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-          </div>
-          <span className="font-bold text-white text-base tracking-tight">Sales CRM</span>
+        <div className="flex items-center gap-3">
+          <img
+            src="https://sfa.nuvending.my/assets/images/logo/nuvending.png"
+            alt="Nu Vending"
+            className="h-8 w-auto object-contain"
+          />
+          <span className="font-bold text-white text-base tracking-tight">Nu Vending</span>
         </div>
       </div>
 

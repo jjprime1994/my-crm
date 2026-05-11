@@ -31,12 +31,12 @@ export default function LoginPage() {
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col justify-between p-12">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-          </div>
-          <span className="text-white font-bold text-lg tracking-tight">Sales CRM</span>
+          <img
+            src="https://sfa.nuvending.my/assets/images/logo/nuvending.png"
+            alt="Nu Vending"
+            className="h-9 w-auto object-contain"
+          />
+          <span className="text-white font-bold text-lg tracking-tight">Nu Vending</span>
         </div>
 
         <div>
@@ -61,12 +61,12 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
-            </div>
-            <span className="font-bold text-gray-900">Sales CRM</span>
+            <img
+              src="https://sfa.nuvending.my/assets/images/logo/nuvending.png"
+              alt="Nu Vending"
+              className="h-8 w-auto object-contain"
+            />
+            <span className="font-bold text-gray-900">Nu Vending</span>
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
