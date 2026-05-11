@@ -46,17 +46,19 @@ export async function POST(req: NextRequest) {
 
       const { leadgen_id, form_id, ad_id, campaign_id, adgroup_id } = change.value
 
-      // Fetch full lead data from Meta Graph API
+      // Fetch full lead data from Meta Graph API (ad_name + campaign_name come from the leadgen object directly)
       let firstName, lastName, email, phone, adName, campaignName
       try {
         const res = await fetch(
-          `https://graph.facebook.com/v19.0/${leadgen_id}?access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
+          `https://graph.facebook.com/v19.0/${leadgen_id}?fields=field_data,ad_name,campaign_name&access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
         )
         const data = await res.json()
         const fields: { name: string; values: string[] }[] = data.field_data ?? []
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
         email = get("email")
         phone = get("phone_number") ?? get("phone")
+        adName = data.ad_name ?? undefined
+        campaignName = data.campaign_name ?? undefined
 
         // Handle both first_name/last_name and full_name field formats
         const fullName = get("full_name")
@@ -67,23 +69,6 @@ export async function POST(req: NextRequest) {
         } else {
           firstName = get("first_name")
           lastName = get("last_name")
-        }
-
-        // Fetch ad name if we have an ad_id
-        if (ad_id) {
-          const adRes = await fetch(
-            `https://graph.facebook.com/v19.0/${ad_id}?fields=name&access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
-          )
-          const adData = await adRes.json()
-          adName = adData.name
-        }
-
-        if (campaign_id) {
-          const campRes = await fetch(
-            `https://graph.facebook.com/v19.0/${campaign_id}?fields=name&access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
-          )
-          const campData = await campRes.json()
-          campaignName = campData.name
         }
       } catch {
         // store whatever we have
