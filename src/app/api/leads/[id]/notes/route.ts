@@ -7,11 +7,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
   const { id } = await params
-  const { content } = await req.json()
+  const isAdmin = session.user.role === "ADMIN"
 
-  if (!content?.trim()) {
-    return new NextResponse("Content is required", { status: 400 })
-  }
+  // Verify ownership before allowing note creation
+  const lead = await db.lead.findUnique({ where: { id }, select: { assignedToId: true } })
+  if (!lead) return new NextResponse("Not found", { status: 404 })
+  if (!isAdmin && lead.assignedToId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
+
+  const { content } = await req.json()
+  if (!content?.trim()) return new NextResponse("Content is required", { status: 400 })
 
   const note = await db.leadNote.create({
     data: {
