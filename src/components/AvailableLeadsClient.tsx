@@ -23,7 +23,6 @@ interface Props {
 
 function useCountdown(resetAt: string | null) {
   const [secondsLeft, setSecondsLeft] = useState(0)
-
   useEffect(() => {
     if (!resetAt) return
     const update = () => {
@@ -34,7 +33,6 @@ function useCountdown(resetAt: string | null) {
     const interval = setInterval(update, 1000)
     return () => clearInterval(interval)
   }, [resetAt])
-
   return secondsLeft
 }
 
@@ -48,109 +46,149 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
 
   const remaining = Math.max(0, claimLimit - recentClaims)
   const atLimit = remaining === 0 && secondsLeft > 0
+  const mins = Math.floor(secondsLeft / 60)
+  const secs = secondsLeft % 60
 
   async function claim(leadId: string) {
     if (atLimit) return
     setClaiming(leadId)
     setError("")
-
     const res = await fetch(`/api/leads/${leadId}/claim`, { method: "POST" })
     const data = await res.json()
-
     setClaiming(null)
-
     if (!res.ok) {
       setError(data.error ?? "Failed to claim lead.")
       if (res.status === 429) setRecentClaims(claimLimit)
       return
     }
-
     setLeads(leads.filter((l) => l.id !== leadId))
     setRecentClaims((n) => n + 1)
     router.refresh()
   }
 
-  const mins = Math.floor(secondsLeft / 60)
-  const secs = secondsLeft % 60
+  const pct = claimLimit > 0 ? Math.round((recentClaims / claimLimit) * 100) : 0
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 max-w-5xl">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Available Leads</h1>
-          <p className="text-sm text-gray-500 mt-1">{leads.length} unclaimed leads</p>
+          <p className="text-sm text-gray-500 mt-0.5">{leads.length} unclaimed leads waiting</p>
         </div>
 
-        {/* Claim quota indicator */}
-        <div className={`rounded-xl px-4 py-3 text-right border ${atLimit ? "bg-red-50 border-red-200" : "bg-white border-gray-100"}`}>
-          <p className="text-xs text-gray-500">Claims this window</p>
-          <p className={`text-2xl font-bold ${atLimit ? "text-red-600" : remaining <= 1 ? "text-orange-500" : "text-gray-900"}`}>
-            {recentClaims} / {claimLimit}
-          </p>
+        {/* Quota card */}
+        <div className={`rounded-2xl px-5 py-4 border min-w-[180px] ${atLimit ? "bg-rose-50 border-rose-200" : "bg-white border-gray-100 shadow-sm"}`}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-gray-500">Claims this window</p>
+            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
+              atLimit ? "bg-rose-100 text-rose-600" : remaining <= 1 ? "bg-orange-100 text-orange-600" : "bg-emerald-100 text-emerald-600"
+            }`}>
+              {atLimit ? "Limit reached" : `${remaining} left`}
+            </span>
+          </div>
+          <div className="flex items-end gap-1 mb-2">
+            <span className={`text-2xl font-bold ${atLimit ? "text-rose-600" : "text-gray-900"}`}>{recentClaims}</span>
+            <span className="text-sm text-gray-400 mb-0.5">/ {claimLimit}</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${atLimit ? "bg-rose-500" : remaining <= 1 ? "bg-orange-400" : "bg-blue-500"}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
           {atLimit && secondsLeft > 0 && (
-            <p className="text-xs text-red-500 mt-0.5">
-              Resets in {mins}m {secs}s
-            </p>
-          )}
-          {!atLimit && (
-            <p className="text-xs text-gray-400">{remaining} left (per 15 min)</p>
+            <p className="text-xs text-rose-500 mt-1.5 font-medium">Resets in {mins}m {secs}s</p>
           )}
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
           {error}
         </div>
       )}
 
       {atLimit && (
-        <div className="bg-orange-50 border border-orange-200 text-orange-700 text-sm rounded-lg px-4 py-3">
-          You've reached your claim limit of {claimLimit} leads per 15 minutes. Come back in {mins}m {secs}s.
+        <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 text-orange-700 text-sm rounded-xl px-4 py-3.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>
+            Claim limit of <strong>{claimLimit}</strong> reached. Resets in <strong>{mins}m {secs}s</strong>.
+          </span>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Received</th>
-              <th className="px-4 py-3"></th>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50/60">
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Received</th>
+              <th className="px-5 py-3.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-sm text-gray-400">
-                  No available leads right now.
+                <td colSpan={5} className="text-center py-16">
+                  <div className="flex flex-col items-center gap-2 text-sm text-gray-400">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300">
+                      <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+                      <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+                    </svg>
+                    No available leads right now.
+                  </div>
                 </td>
               </tr>
             )}
             {leads.map((lead) => (
-              <tr key={lead.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-gray-900">
-                  {lead.firstName} {lead.lastName}
+              <tr key={lead.id} className={`transition ${claiming === lead.id ? "bg-blue-50/50" : "hover:bg-gray-50/70"}`}>
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-blue-600">
+                        {(lead.firstName?.[0] ?? "?").toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="font-medium text-gray-900 text-sm">
+                      {lead.firstName} {lead.lastName}
+                    </span>
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  <div>{lead.email ?? "—"}</div>
-                  <div className="text-gray-400">{lead.phone ?? ""}</div>
+                <td className="px-5 py-3.5 text-sm">
+                  <div className="text-gray-700">{lead.email ?? "—"}</div>
+                  {lead.phone && <div className="text-gray-400 text-xs mt-0.5">{lead.phone}</div>}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500 max-w-[150px] truncate">
+                <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
                   {lead.adName ?? lead.campaignName ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-400">
-                  {new Date(lead.createdAt).toLocaleDateString()}
+                <td className="px-5 py-3.5 text-xs text-gray-400">
+                  {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-5 py-3.5 text-right">
                   <button
                     onClick={() => claim(lead.id)}
                     disabled={atLimit || claiming === lead.id}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition disabled:opacity-40"
+                    className={`text-xs font-semibold px-4 py-2 rounded-lg transition ${
+                      atLimit
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
+                    } disabled:opacity-60`}
                   >
-                    {claiming === lead.id ? "Claiming…" : "Claim"}
+                    {claiming === lead.id ? (
+                      <span className="flex items-center gap-1.5">
+                        <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                        </svg>
+                        Claiming…
+                      </span>
+                    ) : "Claim"}
                   </button>
                 </td>
               </tr>

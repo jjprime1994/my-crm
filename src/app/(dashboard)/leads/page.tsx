@@ -14,12 +14,21 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
 }
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
-  NEW: "bg-blue-100 text-blue-700",
-  CONTACTED: "bg-yellow-100 text-yellow-700",
-  QUALIFIED: "bg-purple-100 text-purple-700",
-  PROPOSAL: "bg-orange-100 text-orange-700",
-  CLOSED_WON: "bg-green-100 text-green-700",
-  CLOSED_LOST: "bg-red-100 text-red-700",
+  NEW: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+  CONTACTED: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+  QUALIFIED: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  PROPOSAL: "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
+  CLOSED_WON: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+  CLOSED_LOST: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
+}
+
+const STATUS_DOT: Record<LeadStatus, string> = {
+  NEW: "bg-blue-500",
+  CONTACTED: "bg-amber-500",
+  QUALIFIED: "bg-violet-500",
+  PROPOSAL: "bg-orange-500",
+  CLOSED_WON: "bg-emerald-500",
+  CLOSED_LOST: "bg-rose-500",
 }
 
 export default async function LeadsPage({
@@ -54,64 +63,98 @@ export default async function LeadsPage({
   ])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-6xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-        <span className="text-sm text-gray-500">{leads.length} total</span>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{leads.length} leads total</p>
+        </div>
       </div>
 
       <LeadsFilters isAdmin={isAdmin} salespeople={salespeople} />
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50/60">
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
               {isAdmin && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned To</th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>
               )}
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Notes</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Added</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-sm text-gray-400">
-                  No leads found.
+                <td colSpan={7} className="text-center py-16 text-sm text-gray-400">
+                  <div className="flex flex-col items-center gap-2">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    No leads found.
+                  </div>
                 </td>
               </tr>
             )}
             {leads.map((lead) => (
-              <tr key={lead.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  <Link href={`/leads/${lead.id}`} className="font-medium text-blue-600 hover:underline">
-                    {lead.firstName} {lead.lastName}
-                  </Link>
+              <tr key={lead.id} className="hover:bg-gray-50/70 transition">
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-blue-600">
+                        {(lead.firstName?.[0] ?? "?").toUpperCase()}
+                      </span>
+                    </div>
+                    <Link href={`/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-blue-600 transition text-sm">
+                      {lead.firstName} {lead.lastName}
+                    </Link>
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  <div>{lead.email ?? "—"}</div>
-                  <div className="text-gray-400">{lead.phone ?? ""}</div>
+                <td className="px-5 py-3.5 text-sm">
+                  <div className="text-gray-700">{lead.email ?? "—"}</div>
+                  {lead.phone && <div className="text-gray-400 text-xs mt-0.5">{lead.phone}</div>}
                 </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[lead.status]}`}>
+                <td className="px-5 py-3.5">
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[lead.status]}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[lead.status]}`} />
                     {STATUS_LABELS[lead.status]}
                   </span>
                 </td>
                 {isAdmin && (
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {lead.assignedTo?.name ?? <span className="text-gray-300">Unassigned</span>}
+                  <td className="px-5 py-3.5 text-sm text-gray-600">
+                    {lead.assignedTo ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-violet-600">{lead.assignedTo.name[0].toUpperCase()}</span>
+                        </div>
+                        <span>{lead.assignedTo.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-300 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">Unassigned</span>
+                    )}
                   </td>
                 )}
-                <td className="px-4 py-3 text-sm text-gray-500 max-w-[150px] truncate">
+                <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
                   {lead.adName ?? lead.campaignName ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500">{lead._count.notes}</td>
-                <td className="px-4 py-3 text-sm text-gray-400">
-                  {new Date(lead.createdAt).toLocaleDateString()}
+                <td className="px-5 py-3.5">
+                  {lead._count.notes > 0 ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      {lead._count.notes}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-5 py-3.5 text-xs text-gray-400">
+                  {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </td>
               </tr>
             ))}

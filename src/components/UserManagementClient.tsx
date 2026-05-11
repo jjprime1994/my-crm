@@ -18,6 +18,11 @@ interface Props {
   currentUserId: string
 }
 
+function initials(name: string) {
+  const parts = name.trim().split(" ")
+  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase()
+}
+
 export default function UserManagementClient({ users: initial, currentUserId }: Props) {
   const router = useRouter()
   const [users, setUsers] = useState(initial)
@@ -58,108 +63,129 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ claimLimit: value }),
     })
-    if (res.ok) {
-      setUsers(users.map((u) => (u.id === id ? { ...u, claimLimit: value } : u)))
-    }
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, claimLimit: value } : u)))
     setEditingLimit(null)
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-5xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Team</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Manage Team</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{users.length} team members</p>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+          className={`text-sm font-semibold px-4 py-2 rounded-xl transition ${
+            showForm
+              ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
+          }`}
         >
-          {showForm ? "Cancel" : "+ Add Salesperson"}
+          {showForm ? "Cancel" : "+ Add Member"}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={addUser} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+        <form onSubmit={addUser} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
           <h2 className="font-semibold text-gray-900">New Team Member</h2>
-          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          {error && (
+            <div className="flex items-center gap-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              {error}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "Full Name", key: "name", type: "text", placeholder: "Juan dela Cruz" },
+              { label: "Email", key: "email", type: "email", placeholder: "juan@example.com" },
+              { label: "Password", key: "password", type: "password", placeholder: "••••••••" },
+            ].map(({ label, key, type, placeholder }) => (
+              <div key={key}>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>
+                <input
+                  type={type}
+                  required
+                  value={form[key as keyof typeof form]}
+                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
+                  placeholder={placeholder}
+                />
+              </div>
+            ))}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Name</label>
-              <input
-                required
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Juan dela Cruz"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Email</label>
-              <input
-                type="email"
-                required
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="juan@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Password</label>
-              <input
-                type="password"
-                required
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Role</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Role</label>
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
               >
                 <option value="SALESPERSON">Salesperson</option>
                 <option value="ADMIN">Admin</option>
               </select>
             </div>
           </div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
-          >
-            {saving ? "Creating…" : "Create Account"}
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition disabled:opacity-50 shadow-sm shadow-blue-200"
+            >
+              {saving ? "Creating…" : "Create Account"}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-100 transition">
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Leads</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Claim Limit / 15min</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
-              <th className="px-4 py-3"></th>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50/60">
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claim Limit / 15min</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Joined</th>
+              <th className="px-5 py-3.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{user.email}</td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${user.role === "ADMIN" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"}`}>
+              <tr key={user.id} className="hover:bg-gray-50/70 transition">
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                      user.role === "ADMIN" ? "bg-violet-100" : "bg-blue-100"
+                    }`}>
+                      <span className={`text-xs font-bold ${user.role === "ADMIN" ? "text-violet-600" : "text-blue-600"}`}>
+                        {initials(user.name)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{user.name}</p>
+                      <p className="text-xs text-gray-400">{user.email}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-5 py-4">
+                  <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${
+                    user.role === "ADMIN"
+                      ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
+                      : "bg-gray-100 text-gray-600"
+                  }`}>
                     {user.role === "ADMIN" ? "Admin" : "Salesperson"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{user._count.leads}</td>
-                <td className="px-4 py-3">
+                <td className="px-5 py-4">
+                  <span className="text-sm font-semibold text-gray-900">{user._count.leads}</span>
+                  <span className="text-xs text-gray-400 ml-1">leads</span>
+                </td>
+                <td className="px-5 py-4">
                   {user.role === "SALESPERSON" ? (
                     editingLimit?.id === user.id ? (
                       <div className="flex items-center gap-2">
@@ -169,44 +195,46 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                           max={50}
                           value={editingLimit.value}
                           onChange={(e) => setEditingLimit({ id: user.id, value: Number(e.target.value) })}
-                          className="w-16 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                         />
                         <button
                           onClick={() => saveClaimLimit(user.id, editingLimit.value)}
-                          className="text-xs text-blue-600 hover:underline"
+                          className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 rounded-lg transition"
                         >
                           Save
                         </button>
                         <button
                           onClick={() => setEditingLimit(null)}
-                          className="text-xs text-gray-400 hover:underline"
+                          className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
                         >
                           Cancel
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">{user.claimLimit}</span>
+                        <span className="text-sm font-semibold text-gray-900 bg-gray-100 px-2.5 py-1 rounded-lg">
+                          {user.claimLimit}
+                        </span>
                         <button
                           onClick={() => setEditingLimit({ id: user.id, value: user.claimLimit })}
-                          className="text-xs text-blue-500 hover:underline"
+                          className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition"
                         >
                           Edit
                         </button>
                       </div>
                     )
                   ) : (
-                    <span className="text-sm text-gray-400">—</span>
+                    <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-400">
-                  {new Date(user.createdAt).toLocaleDateString()}
+                <td className="px-5 py-4 text-sm text-gray-400">
+                  {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-5 py-4 text-right">
                   {user.id !== currentUserId && (
                     <button
                       onClick={() => deleteUser(user.id)}
-                      className="text-xs text-red-500 hover:text-red-700 transition"
+                      className="text-xs font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition"
                     >
                       Remove
                     </button>
