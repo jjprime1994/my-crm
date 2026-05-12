@@ -196,6 +196,18 @@ export default function Sidebar({ user, onClose }: Props) {
         })}
       </div>
 
+      {/* Copyright */}
+      <div className="px-5 pb-2">
+        <a
+          href="/disclaimer"
+          target="_blank"
+          className="text-[10px] text-slate-600 hover:text-slate-400 transition leading-tight block"
+        >
+          © {new Date().getFullYear()} Tan Jia Jin. All rights reserved.<br />
+          Proprietary software — unauthorised use prohibited.
+        </a>
+      </div>
+
       {/* User */}
       <div className="px-3 py-4 border-t border-slate-800">
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
