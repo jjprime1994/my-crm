@@ -12,7 +12,7 @@ export default async function AvailableLeadsPage() {
 
   const [leads, user, recentClaims, newLeadsCount] = await Promise.all([
     db.lead.findMany({
-      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
+      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false },
       orderBy: { createdAt: "desc" },
     }),
     db.user.findUnique({
@@ -42,7 +42,7 @@ export default async function AvailableLeadsPage() {
     ? new Date(oldestClaim.claimedAt.getTime() + 15 * 60 * 1000).toISOString()
     : null
 
-  const threshold = user?.newLeadThreshold ?? 1
+  const threshold = user?.newLeadThreshold ?? 0
 
   return (
     <AvailableLeadsClient
