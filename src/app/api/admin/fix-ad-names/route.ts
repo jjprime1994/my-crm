@@ -19,6 +19,7 @@ export async function POST() {
 
   let updated = 0
   let failed = 0
+  let sampleError: unknown = null
 
   for (const lead of leads) {
     try {
@@ -30,6 +31,7 @@ export async function POST() {
           `https://graph.facebook.com/v19.0/${lead.adId}?fields=name,campaign{name}&access_token=${token}`
         )
         const data = await res.json()
+        if (data.error && !sampleError) sampleError = data.error
         if (data.name) adName = data.name
         if (data.campaign?.name) campaignName = data.campaign.name
       }
@@ -39,6 +41,7 @@ export async function POST() {
           `https://graph.facebook.com/v19.0/${lead.campaignId}?fields=name&access_token=${token}`
         )
         const data = await res.json()
+        if (data.error && !sampleError) sampleError = data.error
         if (data.name) campaignName = data.name
       }
 
@@ -57,5 +60,5 @@ export async function POST() {
     }
   }
 
-  return NextResponse.json({ total: leads.length, updated, failed })
+  return NextResponse.json({ total: leads.length, updated, failed, sampleError })
 }
