@@ -85,16 +85,11 @@ export default async function SuperAdminOverviewPage({
   const active = total - won - lost
   const conversionRate = total > 0 ? Math.round((won / total) * 100) : 0
 
-  // Include null campaignName as "No Source" so counts tally with total
-  const sourceRows = sourceStats.map((s) => ({
-    name: s.campaignName ?? "No Source",
-    count: s._count,
-  }))
+  // Only show leads with a known campaign name
+  const sourceRows = sourceStats
+    .filter((s) => s.campaignName)
+    .map((s) => ({ name: s.campaignName!, count: s._count }))
   const sourcedCount = sourceRows.reduce((sum, s) => sum + s.count, 0)
-  if (sourcedCount < total) {
-    sourceRows.push({ name: "No Source", count: total - sourcedCount })
-  }
-  sourceRows.sort((a, b) => b.count - a.count)
 
   const individuals = salespersonStats
     .map((s) => {
@@ -209,26 +204,25 @@ export default async function SuperAdminOverviewPage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-gray-900">Lead Sources</h2>
-            <span className="text-xs text-gray-400">{total} total</span>
+            <span className="text-xs text-gray-400">{sourcedCount} of {total} tracked</span>
           </div>
           {sourceRows.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No source data yet.</p>
           ) : (
             <div className="space-y-3">
               {sourceRows.map((s, i) => {
-                const pct = total > 0 ? Math.round((s.count / total) * 100) : 0
-                const isUnknown = s.name === "No Source"
+                const pct = sourcedCount > 0 ? Math.round((s.count / sourcedCount) * 100) : 0
                 return (
                   <div key={i}>
                     <div className="flex items-center justify-between text-sm mb-1.5">
-                      <span className={`truncate max-w-[200px] ${isUnknown ? "text-gray-400 italic" : "text-gray-600"}`}>{s.name}</span>
+                      <span className="text-gray-600 truncate max-w-[200px]">{s.name}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-gray-400 text-xs">{pct}%</span>
                         <span className="font-semibold text-gray-900 w-6 text-right">{s.count}</span>
                       </div>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${isUnknown ? "bg-gray-300" : "bg-violet-400"}`} style={{ width: `${pct}%` }} />
+                      <div className="h-full bg-violet-400 rounded-full" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 )
