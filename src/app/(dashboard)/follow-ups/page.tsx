@@ -30,18 +30,33 @@ function daysAgo(date: Date) {
 
 export default async function FollowUpsPage() {
   const session = await auth()
-  const isAdmin = session?.user.role === "ADMIN"
+  const role = session?.user.role
+  const isSuperAdmin = role === "SUPER_ADMIN"
+  const isManager = role === "ADMIN"
+  const isAdmin = isSuperAdmin || isManager
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 
-  const userFilter = isAdmin ? {} : { assignedToId: session?.user.id }
-  const where = {
-    status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] as LeadStatus[] },
+  const statusFilter = { status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] as LeadStatus[] } }
+  const staleness = {
     OR: [
       { followUpAt: { lte: new Date() } },
       { followUpAt: null, updatedAt: { lt: twoDaysAgo } },
     ],
-    ...userFilter,
   }
+
+  let scopeFilter: Record<string, unknown> = {}
+  if (isManager) {
+    scopeFilter = {
+      OR: [
+        { assignedToId: session!.user.id },
+        { assignedTo: { managerId: session!.user.id } },
+      ],
+    }
+  } else if (!isSuperAdmin) {
+    scopeFilter = { assignedToId: session?.user.id }
+  }
+
+  const where = { AND: [statusFilter, staleness, ...(Object.keys(scopeFilter).length ? [scopeFilter] : [])] }
 
   const leads = await db.lead.findMany({
     where,
