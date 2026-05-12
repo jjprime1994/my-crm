@@ -55,13 +55,10 @@ export async function POST(req: NextRequest) {
   const token = process.env.META_PAGE_ACCESS_TOKEN
   if (!token) return new NextResponse("META_PAGE_ACCESS_TOKEN not set", { status: 500 })
 
-  // Target all leads missing a campaign name that have at least one Meta ID to look up
+  // All leads missing a campaign name
   const leads = await db.lead.findMany({
-    where: {
-      campaignName: null,
-      OR: [{ adId: { not: null } }, { campaignId: { not: null } }],
-    },
-    select: { id: true, adId: true, campaignId: true },
+    where: { campaignName: null },
+    select: { id: true, adId: true, campaignId: true, metaLeadId: true },
   })
 
   let updated = 0
@@ -71,43 +68,60 @@ export async function POST(req: NextRequest) {
 
   for (const lead of leads) {
     try {
+      let adId = lead.adId
+      let campaignId = lead.campaignId
       let adName: string | undefined
       let campaignName: string | undefined
 
-      if (lead.adId) {
+      // If no adId/campaignId stored, fetch from the leadgen object using metaLeadId
+      if (!adId && !campaignId && lead.metaLeadId) {
+        const lgRes = await fetch(
+          `https://graph.facebook.com/v19.0/${lead.metaLeadId}?fields=ad_id,campaign_id&access_token=${token}`
+        )
+        const lgData = await lgRes.json()
+        if (!lgData.error) {
+          adId = lgData.ad_id ?? null
+          campaignId = lgData.campaign_id ?? null
+        }
+      }
+
+      if (adId) {
         const res = await fetch(
-          `https://graph.facebook.com/v19.0/${lead.adId}?fields=name,campaign{name}&access_token=${token}`
+          `https://graph.facebook.com/v19.0/${adId}?fields=name,campaign{name}&access_token=${token}`
         )
         const data = await res.json()
         if (data.error) {
-          errors.push(`adId ${lead.adId}: ${data.error.message}`)
+          errors.push(`adId ${adId}: ${data.error.message}`)
         } else {
           if (data.name) adName = data.name
           if (data.campaign?.name) campaignName = data.campaign.name
         }
       }
 
-      if (!campaignName && lead.campaignId) {
+      if (!campaignName && campaignId) {
         const res = await fetch(
-          `https://graph.facebook.com/v19.0/${lead.campaignId}?fields=name&access_token=${token}`
+          `https://graph.facebook.com/v19.0/${campaignId}?fields=name&access_token=${token}`
         )
         const data = await res.json()
         if (data.error) {
-          errors.push(`campaignId ${lead.campaignId}: ${data.error.message}`)
+          errors.push(`campaignId ${campaignId}: ${data.error.message}`)
         } else if (data.name) {
           campaignName = data.name
         }
       }
 
-      if (adName || campaignName) {
+      if (adName || campaignName || adId || campaignId) {
         await db.lead.update({
           where: { id: lead.id },
           data: {
+            ...(adId ? { adId } : {}),
+            ...(campaignId ? { campaignId } : {}),
             ...(adName ? { adName } : {}),
             ...(campaignName ? { campaignName } : {}),
           },
         })
-        updated++
+        if (campaignName || adName) updated++
+        else noData++
       } else {
         noData++
       }
