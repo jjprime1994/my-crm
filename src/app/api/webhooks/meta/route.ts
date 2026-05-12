@@ -46,19 +46,19 @@ export async function POST(req: NextRequest) {
 
       const { leadgen_id, form_id, ad_id, campaign_id, adgroup_id } = change.value
 
-      // Fetch full lead data from Meta Graph API (ad_name + campaign_name come from the leadgen object directly)
+      // Fetch full lead data from Meta Graph API
       let firstName, lastName, email, phone, adName, campaignName
+      const token = process.env.META_PAGE_ACCESS_TOKEN
       try {
-        const res = await fetch(
-          `https://graph.facebook.com/v19.0/${leadgen_id}?fields=field_data,ad_name,campaign_name&access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
+        // Fetch form fields (contact info)
+        const leadRes = await fetch(
+          `https://graph.facebook.com/v19.0/${leadgen_id}?fields=field_data&access_token=${token}`
         )
-        const data = await res.json()
-        const fields: { name: string; values: string[] }[] = data.field_data ?? []
+        const leadData = await leadRes.json()
+        const fields: { name: string; values: string[] }[] = leadData.field_data ?? []
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
         email = get("email")
         phone = get("phone_number") ?? get("phone")
-        adName = data.ad_name ?? undefined
-        campaignName = data.campaign_name ?? undefined
 
         // Handle both first_name/last_name and full_name field formats
         const fullName = get("full_name")
@@ -69,6 +69,25 @@ export async function POST(req: NextRequest) {
         } else {
           firstName = get("first_name")
           lastName = get("last_name")
+        }
+
+        // Fetch ad name directly from the ad object using ad_id — more reliable than leadgen.ad_name
+        if (ad_id) {
+          const adRes = await fetch(
+            `https://graph.facebook.com/v19.0/${ad_id}?fields=name,campaign{name}&access_token=${token}`
+          )
+          const adData = await adRes.json()
+          if (adData.name) adName = adData.name
+          if (adData.campaign?.name) campaignName = adData.campaign.name
+        }
+
+        // Fallback: try campaign name from campaign_id if still missing
+        if (!campaignName && campaign_id) {
+          const campRes = await fetch(
+            `https://graph.facebook.com/v19.0/${campaign_id}?fields=name&access_token=${token}`
+          )
+          const campData = await campRes.json()
+          if (campData.name) campaignName = campData.name
         }
       } catch {
         // store whatever we have
