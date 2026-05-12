@@ -37,18 +37,26 @@ export default async function LeadsPage({
   searchParams: Promise<{ status?: string; assignedToId?: string; search?: string; source?: string }>
 }) {
   const session = await auth()
-  const isAdmin = session?.user.role === "ADMIN" || session?.user.role === "SUPER_ADMIN"
+  const role = session?.user.role
+  const isSuperAdmin = role === "SUPER_ADMIN"
+  const isManager = role === "ADMIN"
+  const isAdmin = isSuperAdmin || isManager
   const { status, assignedToId, search, source } = await searchParams
 
   const where: Record<string, unknown> = {}
   if (status) where.status = status as LeadStatus
   if (source) where.campaignName = source
-  if (!isAdmin) {
+  if (isSuperAdmin) {
+    // super admin sees everything
+    if (assignedToId === "unassigned") where.assignedToId = null
+    else if (assignedToId) where.assignedToId = assignedToId
+  } else if (isManager) {
+    // manager sees only leads assigned to their team members
+    where.assignedTo = { managerId: session!.user.id }
+    if (assignedToId) where.assignedToId = assignedToId
+  } else {
+    // salesperson sees only their own leads
     where.assignedToId = session?.user.id
-  } else if (assignedToId === "unassigned") {
-    where.assignedToId = null
-  } else if (assignedToId) {
-    where.assignedToId = assignedToId
   }
   if (search) {
     where.OR = [
@@ -69,7 +77,11 @@ export default async function LeadsPage({
       orderBy: { createdAt: "desc" },
     }),
     isAdmin
-      ? db.user.findMany({ where: { role: "SALESPERSON" }, select: { id: true, name: true }, orderBy: { name: "asc" } })
+      ? db.user.findMany({
+          where: { role: "SALESPERSON", ...(isManager ? { managerId: session!.user.id } : {}) },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        })
       : Promise.resolve([]),
     db.lead.findMany({ where: { campaignName: { not: null } }, select: { campaignName: true }, distinct: ["campaignName"], orderBy: { campaignName: "asc" } }),
   ])
