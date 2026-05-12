@@ -42,7 +42,7 @@ export default async function LeadsPage({
 
   const where: Record<string, unknown> = {}
   if (status) where.status = status as LeadStatus
-  if (source) where.adName = source
+  if (source) where.campaignName = source
   if (!isAdmin) {
     where.assignedToId = session?.user.id
   } else if (assignedToId === "unassigned") {
@@ -71,7 +71,7 @@ export default async function LeadsPage({
     isAdmin
       ? db.user.findMany({ where: { role: "SALESPERSON" }, select: { id: true, name: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
-    db.lead.findMany({ where: { adName: { not: null } }, select: { adName: true }, distinct: ["adName"], orderBy: { adName: "asc" } }),
+    db.lead.findMany({ where: { campaignName: { not: null } }, select: { campaignName: true }, distinct: ["campaignName"], orderBy: { campaignName: "asc" } }),
   ])
 
   return (
@@ -83,7 +83,7 @@ export default async function LeadsPage({
         </div>
       </div>
 
-      <LeadsFilters isAdmin={isAdmin} salespeople={salespeople} sources={sources.map(s => s.adName!)} />
+      <LeadsFilters isAdmin={isAdmin} salespeople={salespeople} sources={sources.map(s => s.campaignName!)} />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <table className="min-w-full">
@@ -158,7 +158,7 @@ export default async function LeadsPage({
                   </td>
                 )}
                 <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
-                  {lead.adName ?? lead.campaignName ?? "—"}
+                  {lead.campaignName ?? lead.adName ?? "—"}
                 </td>
                 <td className="px-5 py-3.5">
                   {lead._count.notes > 0 ? (

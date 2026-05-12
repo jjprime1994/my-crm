@@ -183,7 +183,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                   </div>
                 </td>
                 <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
-                  {lead.adName ?? lead.campaignName ?? "—"}
+                  {lead.campaignName ?? lead.adName ?? "—"}
                 </td>
                 <td className="px-5 py-3.5 text-xs text-gray-400">
                   {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

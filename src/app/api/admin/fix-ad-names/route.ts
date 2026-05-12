@@ -11,9 +11,9 @@ export async function POST() {
   const token = process.env.META_PAGE_ACCESS_TOKEN
   if (!token) return new NextResponse("META_PAGE_ACCESS_TOKEN not set", { status: 500 })
 
-  // Get all leads that have an adId so we can re-fetch their real ad name
+  // Get all leads that have a campaignId but missing or inaccurate campaign name
   const leads = await db.lead.findMany({
-    where: { adId: { not: null } },
+    where: { campaignId: { not: null } },
     select: { id: true, adId: true, campaignId: true },
   })
 
