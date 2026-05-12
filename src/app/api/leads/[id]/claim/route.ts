@@ -6,7 +6,7 @@ import { isAdmin } from "@/lib/roles"
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
-  if (isAdmin(session.user.role)) return new NextResponse("Admins assign, not claim", { status: 400 })
+  if (session.user.role === "SUPER_ADMIN") return new NextResponse("Super admins assign, not claim", { status: 400 })
 
   const { id } = await params
 
