@@ -1,5 +1,6 @@
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 
 const STATUS_COLORS: Record<string, string> = {
@@ -34,7 +35,7 @@ export default async function FollowUpsPage() {
 
   const userFilter = isAdmin ? {} : { assignedToId: session?.user.id }
   const where = {
-    status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] as const },
+    status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] as LeadStatus[] },
     OR: [
       { followUpAt: { lte: new Date() } },
       { followUpAt: null, updatedAt: { lt: twoDaysAgo } },
