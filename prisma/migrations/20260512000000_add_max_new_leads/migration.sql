@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "maxNewLeads" INTEGER NOT NULL DEFAULT 20;

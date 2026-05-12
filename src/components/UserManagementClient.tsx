@@ -9,6 +9,7 @@ type User = {
   email: string
   role: string
   claimLimit: number
+  maxNewLeads: number
   createdAt: Date | string
   _count: { leads: number }
 }
@@ -16,6 +17,7 @@ type User = {
 interface Props {
   users: User[]
   currentUserId: string
+  currentUserRole: string
 }
 
 function initials(name: string) {
@@ -23,7 +25,7 @@ function initials(name: string) {
   return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase()
 }
 
-export default function UserManagementClient({ users: initial, currentUserId }: Props) {
+export default function UserManagementClient({ users: initial, currentUserId, currentUserRole }: Props) {
   const router = useRouter()
   const [users, setUsers] = useState(initial)
   const [showForm, setShowForm] = useState(false)
@@ -31,6 +33,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [editingLimit, setEditingLimit] = useState<{ id: string; value: number } | null>(null)
+  const [editingMaxNew, setEditingMaxNew] = useState<{ id: string; value: number } | null>(null)
   const [resettingPassword, setResettingPassword] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [resetSaving, setResetSaving] = useState(false)
@@ -86,6 +89,25 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
     })
     if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, claimLimit: value } : u)))
     setEditingLimit(null)
+  }
+
+  async function saveMaxNewLeads(id: string, value: number) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ maxNewLeads: value }),
+    })
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, maxNewLeads: value } : u)))
+    setEditingMaxNew(null)
+  }
+
+  async function saveRole(id: string, role: string) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    })
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, role } : u)))
   }
 
   return (
@@ -179,6 +201,7 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claim Limit / 15min</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Max New Leads</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Joined</th>
               <th className="px-5 py-3.5" />
             </tr>
@@ -189,9 +212,11 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                      user.role === "ADMIN" ? "bg-violet-100" : "bg-blue-100"
+                      user.role === "SUPER_ADMIN" ? "bg-amber-100" : user.role === "ADMIN" ? "bg-violet-100" : "bg-blue-100"
                     }`}>
-                      <span className={`text-xs font-bold ${user.role === "ADMIN" ? "text-violet-600" : "text-blue-600"}`}>
+                      <span className={`text-xs font-bold ${
+                        user.role === "SUPER_ADMIN" ? "text-amber-600" : user.role === "ADMIN" ? "text-violet-600" : "text-blue-600"
+                      }`}>
                         {initials(user.name)}
                       </span>
                     </div>
@@ -202,13 +227,27 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                   </div>
                 </td>
                 <td className="px-5 py-4">
-                  <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${
-                    user.role === "ADMIN"
-                      ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
-                      : "bg-gray-100 text-gray-600"
-                  }`}>
-                    {user.role === "ADMIN" ? "Admin" : "Salesperson"}
-                  </span>
+                  {currentUserRole === "SUPER_ADMIN" && user.id !== currentUserId ? (
+                    <select
+                      value={user.role}
+                      onChange={(e) => saveRole(user.id, e.target.value)}
+                      className="text-xs font-semibold border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
+                    >
+                      <option value="SALESPERSON">Salesperson</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="SUPER_ADMIN">Super Admin</option>
+                    </select>
+                  ) : (
+                    <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${
+                      user.role === "SUPER_ADMIN"
+                        ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                        : user.role === "ADMIN"
+                        ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
+                        : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Admin" : "Salesperson"}
+                    </span>
+                  )}
                 </td>
                 <td className="px-5 py-4">
                   <span className="text-sm font-semibold text-gray-900">{user._count.leads}</span>
@@ -246,6 +285,48 @@ export default function UserManagementClient({ users: initial, currentUserId }: 
                         </span>
                         <button
                           onClick={() => setEditingLimit({ id: user.id, value: user.claimLimit })}
+                          className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-5 py-4">
+                  {user.role === "SALESPERSON" ? (
+                    editingMaxNew?.id === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={200}
+                          value={editingMaxNew.value}
+                          onChange={(e) => setEditingMaxNew({ id: user.id, value: Number(e.target.value) })}
+                          className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                        />
+                        <button
+                          onClick={() => saveMaxNewLeads(user.id, editingMaxNew.value)}
+                          className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 rounded-lg transition"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingMaxNew(null)}
+                          className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900 bg-gray-100 px-2.5 py-1 rounded-lg">
+                          {user.maxNewLeads}
+                        </span>
+                        <button
+                          onClick={() => setEditingMaxNew({ id: user.id, value: user.maxNewLeads })}
                           className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition"
                         >
                           Edit

@@ -15,11 +15,12 @@ export default async function UsersPage() {
       email: true,
       role: true,
       claimLimit: true,
+      maxNewLeads: true,
       createdAt: true,
       _count: { select: { leads: true } },
     },
     orderBy: { createdAt: "desc" },
   })
 
-  return <UserManagementClient users={users} currentUserId={session.user.id} />
+  return <UserManagementClient users={users} currentUserId={session.user.id} currentUserRole={session.user.role} />
 }
