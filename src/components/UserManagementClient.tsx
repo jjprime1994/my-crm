@@ -266,7 +266,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   <span className="text-xs text-gray-400 ml-1">leads</span>
                 </td>
                 <td className="px-5 py-4">
-                  {user.role === "SALESPERSON" ? (
+                  {user.role !== "SUPER_ADMIN" ? (
                     editingLimit?.id === user.id ? (
                       <div className="flex items-center gap-2">
                         <input
@@ -308,7 +308,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   )}
                 </td>
                 <td className="px-5 py-4">
-                  {user.role === "SALESPERSON" ? (
+                  {user.role !== "SUPER_ADMIN" ? (
                     editingThreshold?.id === user.id ? (
                       <div className="flex items-center gap-2">
                         <input
