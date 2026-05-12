@@ -181,6 +181,7 @@ export default async function LeadsPage({
 
   let myLeads: LeadRow[] = []
   let teamLeads: LeadRow[] = []
+  let otherLeads: LeadRow[] = []
   let leads: LeadRow[] = []
 
   const [salespeople, sources] = await Promise.all([
@@ -200,7 +201,7 @@ export default async function LeadsPage({
   ])
 
   if (splitView) {
-    ;[myLeads, teamLeads] = await Promise.all([
+    const queries: Promise<LeadRow[]>[] = [
       db.lead.findMany({
         where: { AND: [{ assignedToId: session!.user.id }, ...commonClauses] },
         include: includeOpts,
@@ -211,7 +212,23 @@ export default async function LeadsPage({
         include: includeOpts,
         orderBy,
       }),
-    ])
+    ]
+    if (isSuperAdmin) {
+      queries.push(
+        db.lead.findMany({
+          where: {
+            AND: [
+              { NOT: { assignedToId: session!.user.id } },
+              { NOT: { assignedTo: { managerId: session!.user.id } } },
+              ...commonClauses,
+            ],
+          },
+          include: includeOpts,
+          orderBy,
+        })
+      )
+    }
+    ;[myLeads, teamLeads, otherLeads] = await Promise.all(queries) as [LeadRow[], LeadRow[], LeadRow[]]
   } else {
     const andClauses = [...commonClauses]
 
@@ -228,7 +245,7 @@ export default async function LeadsPage({
     leads = await db.lead.findMany({ where, include: includeOpts, orderBy })
   }
 
-  const totalCount = splitView ? myLeads.length + teamLeads.length : leads.length
+  const totalCount = splitView ? myLeads.length + teamLeads.length + otherLeads.length : leads.length
 
   return (
     <div className="space-y-5 max-w-6xl">
@@ -258,6 +275,16 @@ export default async function LeadsPage({
             </h2>
             <LeadsTable leads={teamLeads} showAssignedTo={true} />
           </div>
+
+          {isSuperAdmin && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                All Other Leads
+                <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{otherLeads.length} leads</span>
+              </h2>
+              <LeadsTable leads={otherLeads} showAssignedTo={true} />
+            </div>
+          )}
         </div>
       ) : (
         <LeadsTable leads={leads} showAssignedTo={isAdmin} />
