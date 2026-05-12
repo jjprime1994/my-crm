@@ -1,5 +1,6 @@
 import { auth } from "@/auth"
 import ChangePasswordClient from "@/components/ChangePasswordClient"
+import EnableNotifications from "@/components/EnableNotifications"
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -22,10 +23,16 @@ export default async function SettingsPage() {
             <p className="font-semibold text-gray-900">{session?.user.name}</p>
             <p className="text-sm text-gray-400">{session?.user.email}</p>
             <p className="text-xs text-gray-400 capitalize mt-0.5">
-              {session?.user.role === "SUPER_ADMIN" ? "Super Admin" : session?.user.role === "ADMIN" ? "Admin" : "Salesperson"}
+              {session?.user.role === "SUPER_ADMIN" ? "Super Admin" : session?.user.role === "ADMIN" ? "Manager" : "Salesperson"}
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Notifications</p>
+        <p className="text-sm text-gray-500">Get alerted when a lead is assigned to you.</p>
+        <EnableNotifications />
       </div>
 
       <ChangePasswordClient />

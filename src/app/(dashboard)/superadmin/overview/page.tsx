@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/roles"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
+import LeaderboardTabs from "@/components/LeaderboardTabs"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -22,17 +23,30 @@ export default async function SuperAdminOverviewPage() {
   const session = await auth()
   if (!isSuperAdmin(session?.user.role)) redirect("/")
 
-  const [total, byStatus, teamStats, sourceStats, recentLeads] = await Promise.all([
+  const [total, byStatus, salespersonStats, managerStats, sourceStats, recentLeads] = await Promise.all([
     db.lead.count(),
     db.lead.groupBy({ by: ["status"], _count: true }),
     db.user.findMany({
-      where: { role: { in: ["SALESPERSON", "ADMIN"] } },
+      where: { role: "SALESPERSON" },
       select: {
-        id: true, name: true, role: true,
+        id: true, name: true,
         _count: { select: { leads: true } },
         leads: { select: { status: true } },
       },
       orderBy: { name: "asc" },
+    }),
+    db.user.findMany({
+      where: { role: "ADMIN" },
+      select: {
+        id: true, name: true,
+        teamMembers: {
+          where: { role: "SALESPERSON" },
+          select: {
+            _count: { select: { leads: true } },
+            leads: { select: { status: true } },
+          },
+        },
+      },
     }),
     db.lead.groupBy({ by: ["adName"], _count: true, orderBy: { _count: { adName: "desc" } }, take: 10 }),
     db.lead.findMany({
@@ -47,6 +61,22 @@ export default async function SuperAdminOverviewPage() {
   const lost = statusMap["CLOSED_LOST"] ?? 0
   const active = total - won - lost
   const conversionRate = total > 0 ? Math.round((won / total) * 100) : 0
+
+  const individuals = salespersonStats
+    .map((s) => {
+      const wonCount = s.leads.filter((l) => l.status === "CLOSED_WON").length
+      return { id: s.id, name: s.name, totalLeads: s._count.leads, won: wonCount, rate: s._count.leads > 0 ? Math.round((wonCount / s._count.leads) * 100) : 0 }
+    })
+    .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
+
+  const teams = managerStats
+    .map((m) => {
+      const totalLeads = m.teamMembers.reduce((sum, tm) => sum + tm._count.leads, 0)
+      const wonCount = m.teamMembers.reduce((sum, tm) => sum + tm.leads.filter((l) => l.status === "CLOSED_WON").length, 0)
+      return { managerId: m.id, managerName: m.name, memberCount: m.teamMembers.length, totalLeads, won: wonCount, rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0 }
+    })
+    .filter((t) => t.memberCount > 0)
+    .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -151,57 +181,8 @@ export default async function SuperAdminOverviewPage() {
         </div>
       </div>
 
-      {/* Team leaderboard */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-          <h2 className="font-semibold text-gray-900">Team Leaderboard</h2>
-          <Link href="/admin/users" className="text-sm text-blue-600 hover:text-blue-700 font-medium">Manage →</Link>
-        </div>
-        <table className="min-w-full">
-          <thead>
-            <tr className="border-b border-gray-50 bg-gray-50/40">
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide min-w-[160px]">Conversion</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {teamStats.map((member) => {
-              const memberWon = member.leads.filter((l) => l.status === "CLOSED_WON").length
-              const rate = member._count.leads > 0 ? Math.round((memberWon / member._count.leads) * 100) : 0
-              return (
-                <tr key={member.id} className="hover:bg-gray-50/70 transition">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
-                        <span className="text-xs font-bold text-violet-600">{member.name[0].toUpperCase()}</span>
-                      </div>
-                      <span className="font-medium text-gray-900 text-sm">{member.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${member.role === "ADMIN" ? "bg-violet-50 text-violet-700" : "bg-gray-100 text-gray-600"}`}>
-                      {member.role === "ADMIN" ? "Admin" : "Salesperson"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">{member._count.leads}</td>
-                  <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{memberWon}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${rate}%` }} />
-                      </div>
-                      <span className="text-sm font-bold text-emerald-600 w-10 text-right">{rate}%</span>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* Leaderboard */}
+      <LeaderboardTabs individuals={individuals} teams={teams} />
 
       {/* Recent leads */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">

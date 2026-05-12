@@ -9,7 +9,8 @@ type User = {
   email: string
   role: string
   claimLimit: number
-  maxNewLeads: number
+  newLeadThreshold: number
+  managerId: string | null
   createdAt: Date | string
   _count: { leads: number }
 }
@@ -17,7 +18,8 @@ type User = {
 interface Props {
   users: User[]
   currentUserId: string
-  currentUserRole: string
+  isSuperAdmin: boolean
+  managers: { id: string; name: string }[]
 }
 
 function initials(name: string) {
@@ -25,7 +27,7 @@ function initials(name: string) {
   return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase()
 }
 
-export default function UserManagementClient({ users: initial, currentUserId, currentUserRole }: Props) {
+export default function UserManagementClient({ users: initial, currentUserId, isSuperAdmin, managers }: Props) {
   const router = useRouter()
   const [users, setUsers] = useState(initial)
   const [showForm, setShowForm] = useState(false)
@@ -33,7 +35,7 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [editingLimit, setEditingLimit] = useState<{ id: string; value: number } | null>(null)
-  const [editingMaxNew, setEditingMaxNew] = useState<{ id: string; value: number } | null>(null)
+  const [editingThreshold, setEditingThreshold] = useState<{ id: string; value: number } | null>(null)
   const [resettingPassword, setResettingPassword] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [resetSaving, setResetSaving] = useState(false)
@@ -91,14 +93,23 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
     setEditingLimit(null)
   }
 
-  async function saveMaxNewLeads(id: string, value: number) {
+  async function saveThreshold(id: string, value: number) {
     const res = await fetch(`/api/users/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ maxNewLeads: value }),
+      body: JSON.stringify({ newLeadThreshold: value }),
     })
-    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, maxNewLeads: value } : u)))
-    setEditingMaxNew(null)
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, newLeadThreshold: value } : u)))
+    setEditingThreshold(null)
+  }
+
+  async function saveManagerId(id: string, managerId: string) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ managerId: managerId || null }),
+    })
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, managerId: managerId || null } : u)))
   }
 
   async function saveRole(id: string, role: string) {
@@ -174,7 +185,7 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
               >
                 <option value="SALESPERSON">Salesperson</option>
-                <option value="ADMIN">Admin</option>
+                {isSuperAdmin && <option value="ADMIN">Manager</option>}
               </select>
             </div>
           </div>
@@ -202,6 +213,7 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claim Limit / 15min</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Max New Leads</th>
+              {isSuperAdmin && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Manager</th>}
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Joined</th>
               <th className="px-5 py-3.5" />
             </tr>
@@ -227,14 +239,14 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
                   </div>
                 </td>
                 <td className="px-5 py-4">
-                  {currentUserRole === "SUPER_ADMIN" && user.id !== currentUserId ? (
+                  {isSuperAdmin && user.id !== currentUserId ? (
                     <select
                       value={user.role}
                       onChange={(e) => saveRole(user.id, e.target.value)}
                       className="text-xs font-semibold border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
                     >
                       <option value="SALESPERSON">Salesperson</option>
-                      <option value="ADMIN">Admin</option>
+                      <option value="ADMIN">Manager</option>
                       <option value="SUPER_ADMIN">Super Admin</option>
                     </select>
                   ) : (
@@ -245,7 +257,7 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
                         ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
                         : "bg-gray-100 text-gray-600"
                     }`}>
-                      {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Admin" : "Salesperson"}
+                      {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Manager" : "Salesperson"}
                     </span>
                   )}
                 </td>
@@ -297,24 +309,24 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
                 </td>
                 <td className="px-5 py-4">
                   {user.role === "SALESPERSON" ? (
-                    editingMaxNew?.id === user.id ? (
+                    editingThreshold?.id === user.id ? (
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
-                          min={1}
+                          min={0}
                           max={200}
-                          value={editingMaxNew.value}
-                          onChange={(e) => setEditingMaxNew({ id: user.id, value: Number(e.target.value) })}
+                          value={editingThreshold.value}
+                          onChange={(e) => setEditingThreshold({ id: user.id, value: Number(e.target.value) })}
                           className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                         />
                         <button
-                          onClick={() => saveMaxNewLeads(user.id, editingMaxNew.value)}
+                          onClick={() => saveThreshold(user.id, editingThreshold.value)}
                           className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 rounded-lg transition"
                         >
                           Save
                         </button>
                         <button
-                          onClick={() => setEditingMaxNew(null)}
+                          onClick={() => setEditingThreshold(null)}
                           className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
                         >
                           Cancel
@@ -322,11 +334,11 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900 bg-gray-100 px-2.5 py-1 rounded-lg">
-                          {user.maxNewLeads}
+                        <span className={`text-sm font-semibold px-2.5 py-1 rounded-lg ${user.newLeadThreshold === 0 ? "bg-gray-100 text-gray-400" : "bg-amber-50 text-amber-700"}`}>
+                          {user.newLeadThreshold === 0 ? "Off" : user.newLeadThreshold}
                         </span>
                         <button
-                          onClick={() => setEditingMaxNew({ id: user.id, value: user.maxNewLeads })}
+                          onClick={() => setEditingThreshold({ id: user.id, value: user.newLeadThreshold })}
                           className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition"
                         >
                           Edit
@@ -337,6 +349,24 @@ export default function UserManagementClient({ users: initial, currentUserId, cu
                     <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
+                {isSuperAdmin && (
+                  <td className="px-5 py-4">
+                    {user.role === "SALESPERSON" ? (
+                      <select
+                        value={user.managerId ?? ""}
+                        onChange={(e) => saveManagerId(user.id, e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 max-w-[140px]"
+                      >
+                        <option value="">Unassigned</option>
+                        {managers.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-5 py-4 text-sm text-gray-400">
                   {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </td>

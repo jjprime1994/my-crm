@@ -10,20 +10,23 @@ export default async function AvailableLeadsPage() {
 
   const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000)
 
-  const [leads, user, recentClaims] = await Promise.all([
+  const [leads, user, recentClaims, newLeadsCount] = await Promise.all([
     db.lead.findMany({
       where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
       orderBy: { createdAt: "desc" },
     }),
     db.user.findUnique({
       where: { id: session.user.id },
-      select: { claimLimit: true },
+      select: { claimLimit: true, newLeadThreshold: true },
     }),
     db.lead.count({
       where: {
         assignedToId: session.user.id,
         claimedAt: { gte: fifteenMinsAgo },
       },
+    }),
+    db.lead.count({
+      where: { assignedToId: session.user.id, status: "NEW" },
     }),
   ])
 
@@ -39,12 +42,16 @@ export default async function AvailableLeadsPage() {
     ? new Date(oldestClaim.claimedAt.getTime() + 15 * 60 * 1000).toISOString()
     : null
 
+  const threshold = user?.newLeadThreshold ?? 1
+
   return (
     <AvailableLeadsClient
       leads={leads}
       claimLimit={user?.claimLimit ?? 5}
       recentClaims={recentClaims}
       resetAt={resetAt}
+      newLeadsCount={newLeadsCount}
+      newLeadThreshold={threshold}
     />
   )
 }

@@ -46,38 +46,48 @@ export async function POST(req: NextRequest) {
 
       const { leadgen_id, form_id, ad_id, campaign_id, adgroup_id } = change.value
 
-      // Fetch full lead data from Meta Graph API
+      // Fetch full lead data from Meta Graph API (ad_name + campaign_name come from the leadgen object directly)
       let firstName, lastName, email, phone, adName, campaignName
       try {
         const res = await fetch(
-          `https://graph.facebook.com/v19.0/${leadgen_id}?access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
+          `https://graph.facebook.com/v19.0/${leadgen_id}?fields=field_data,ad_name,campaign_name&access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
         )
         const data = await res.json()
         const fields: { name: string; values: string[] }[] = data.field_data ?? []
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
-        firstName = get("first_name")
-        lastName = get("last_name")
         email = get("email")
         phone = get("phone_number") ?? get("phone")
+        adName = data.ad_name ?? undefined
+        campaignName = data.campaign_name ?? undefined
 
-        // Fetch ad name if we have an ad_id
-        if (ad_id) {
-          const adRes = await fetch(
-            `https://graph.facebook.com/v19.0/${ad_id}?fields=name&access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
-          )
-          const adData = await adRes.json()
-          adName = adData.name
-        }
-
-        if (campaign_id) {
-          const campRes = await fetch(
-            `https://graph.facebook.com/v19.0/${campaign_id}?fields=name&access_token=${process.env.META_PAGE_ACCESS_TOKEN}`
-          )
-          const campData = await campRes.json()
-          campaignName = campData.name
+        // Handle both first_name/last_name and full_name field formats
+        const fullName = get("full_name")
+        if (fullName) {
+          const parts = fullName.trim().split(" ")
+          firstName = parts[0]
+          lastName = parts.slice(1).join(" ") || undefined
+        } else {
+          firstName = get("first_name")
+          lastName = get("last_name")
         }
       } catch {
         // store whatever we have
+      }
+
+      // Check for duplicate phone/email
+      let isDuplicate = false
+      if (phone || email) {
+        const existing = await db.lead.findFirst({
+          where: {
+            metaLeadId: { not: leadgen_id },
+            OR: [
+              phone ? { phone } : undefined,
+              email ? { email } : undefined,
+            ].filter(Boolean) as object[],
+          },
+          select: { id: true },
+        })
+        if (existing) isDuplicate = true
       }
 
       await db.lead.upsert({
@@ -94,6 +104,7 @@ export async function POST(req: NextRequest) {
           lastName,
           email,
           phone,
+          isDuplicate,
           rawData: change.value,
         },
       })

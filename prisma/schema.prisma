@@ -8,17 +8,21 @@ datasource db {
 }
 
 model User {
-  id         String     @id @default(cuid())
-  name       String
-  email      String     @unique
-  password   String
-  role       Role       @default(SALESPERSON)
-  claimLimit  Int        @default(5)
-  maxNewLeads Int        @default(20)
-  leads      Lead[]     @relation("AssignedLeads")
-  notes      LeadNote[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id                String             @id @default(cuid())
+  name              String
+  email             String             @unique
+  password          String
+  role              Role               @default(SALESPERSON)
+  claimLimit        Int                @default(5)
+  newLeadThreshold  Int                @default(0)
+  managerId         String?
+  manager           User?              @relation("TeamMembers", fields: [managerId], references: [id])
+  teamMembers       User[]             @relation("TeamMembers")
+  leads             Lead[]             @relation("AssignedLeads")
+  notes             LeadNote[]
+  pushSubscriptions PushSubscription[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
 enum Role {
@@ -43,6 +47,8 @@ model Lead {
   assignedTo   User?      @relation("AssignedLeads", fields: [assignedToId], references: [id])
   assignedToId String?
   claimedAt    DateTime?
+  followUpAt   DateTime?
+  isDuplicate  Boolean    @default(false)
   notes        LeadNote[]
   rawData      Json?
   createdAt    DateTime   @default(now())
@@ -56,6 +62,16 @@ enum LeadStatus {
   PROPOSAL
   CLOSED_WON
   CLOSED_LOST
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }
 
 model LeadNote {

@@ -34,21 +34,32 @@ const STATUS_DOT: Record<LeadStatus, string> = {
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; assignedToId?: string }>
+  searchParams: Promise<{ status?: string; assignedToId?: string; search?: string; source?: string }>
 }) {
   const session = await auth()
-  const isAdmin = session?.user.role === "ADMIN"
-  const { status, assignedToId } = await searchParams
+  const isAdmin = session?.user.role === "ADMIN" || session?.user.role === "SUPER_ADMIN"
+  const { status, assignedToId, search, source } = await searchParams
 
   const where: Record<string, unknown> = {}
   if (status) where.status = status as LeadStatus
+  if (source) where.adName = source
   if (!isAdmin) {
     where.assignedToId = session?.user.id
+  } else if (assignedToId === "unassigned") {
+    where.assignedToId = null
   } else if (assignedToId) {
     where.assignedToId = assignedToId
   }
+  if (search) {
+    where.OR = [
+      { firstName: { contains: search, mode: "insensitive" } },
+      { lastName: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search } },
+    ]
+  }
 
-  const [leads, salespeople] = await Promise.all([
+  const [leads, salespeople, sources] = await Promise.all([
     db.lead.findMany({
       where,
       include: {
@@ -58,8 +69,9 @@ export default async function LeadsPage({
       orderBy: { createdAt: "desc" },
     }),
     isAdmin
-      ? db.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+      ? db.user.findMany({ where: { role: "SALESPERSON" }, select: { id: true, name: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
+    db.lead.findMany({ where: { adName: { not: null } }, select: { adName: true }, distinct: ["adName"], orderBy: { adName: "asc" } }),
   ])
 
   return (
@@ -71,7 +83,7 @@ export default async function LeadsPage({
         </div>
       </div>
 
-      <LeadsFilters isAdmin={isAdmin} salespeople={salespeople} />
+      <LeadsFilters isAdmin={isAdmin} salespeople={salespeople} sources={sources.map(s => s.adName!)} />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <table className="min-w-full">
@@ -111,9 +123,14 @@ export default async function LeadsPage({
                         {(lead.firstName?.[0] ?? "?").toUpperCase()}
                       </span>
                     </div>
-                    <Link href={`/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-blue-600 transition text-sm">
-                      {lead.firstName} {lead.lastName}
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      <Link href={`/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-blue-600 transition text-sm">
+                        {lead.firstName} {lead.lastName}
+                      </Link>
+                      {lead.isDuplicate && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 ring-1 ring-amber-200">DUP</span>
+                      )}
+                    </div>
                   </div>
                 </td>
                 <td className="px-5 py-3.5 text-sm">

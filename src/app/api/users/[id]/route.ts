@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/lib/roles"
+import { isAdmin, isSuperAdmin } from "@/lib/roles"
 import { Role } from "@/generated/prisma/client"
 import bcrypt from "bcryptjs"
 
@@ -28,20 +28,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return new NextResponse(null, { status: 204 })
   }
 
-  const { claimLimit, maxNewLeads, role } = body
-  const data: { claimLimit?: number; maxNewLeads?: number; role?: Role } = {}
-  if (claimLimit !== undefined) data.claimLimit = Number(claimLimit)
-  if (maxNewLeads !== undefined) data.maxNewLeads = Number(maxNewLeads)
-  if (role !== undefined) {
-    if (session.user.role !== "SUPER_ADMIN") return new NextResponse("Forbidden", { status: 403 })
-    if (!["SALESPERSON", "ADMIN", "SUPER_ADMIN"].includes(role))
-      return new NextResponse("Invalid role", { status: 400 })
-    data.role = role as Role
+  const data: Record<string, unknown> = {}
+  if ("claimLimit" in body) data.claimLimit = Number(body.claimLimit)
+  if ("newLeadThreshold" in body) data.newLeadThreshold = Number(body.newLeadThreshold)
+  if ("managerId" in body) {
+    if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+    data.managerId = body.managerId || null
   }
+  if ("role" in body) {
+    if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+    if (!["SALESPERSON", "ADMIN", "SUPER_ADMIN"].includes(body.role))
+      return new NextResponse("Invalid role", { status: 400 })
+    data.role = body.role as Role
+  }
+
   const user = await db.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, claimLimit: true, maxNewLeads: true, role: true },
+    select: { id: true, name: true, claimLimit: true, newLeadThreshold: true, role: true },
   })
   return NextResponse.json(user)
 }

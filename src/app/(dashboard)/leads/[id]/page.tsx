@@ -5,7 +5,8 @@ import LeadDetailClient from "@/components/LeadDetailClient"
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  const isAdmin = session?.user.role === "ADMIN"
+  const role = session?.user.role
+  const adminAccess = role === "ADMIN" || role === "SUPER_ADMIN"
   const { id } = await params
 
   const [lead, salespeople] = await Promise.all([
@@ -19,21 +20,27 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         },
       },
     }),
-    isAdmin
-      ? db.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+    adminAccess
+      ? db.user.findMany({
+          where: role === "ADMIN"
+            ? { role: "SALESPERSON", managerId: session!.user.id }
+            : { role: "SALESPERSON" },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        })
       : Promise.resolve([]),
   ])
 
   if (!lead) notFound()
 
   // Salespeople can only view leads assigned to them
-  if (!isAdmin && lead.assignedToId !== session?.user.id) notFound()
+  if (!adminAccess && lead.assignedToId !== session?.user.id) notFound()
 
   return (
     <LeadDetailClient
       lead={lead}
       salespeople={salespeople}
-      currentUser={{ id: session!.user.id, role: session!.user.role }}
+      currentUser={{ id: session!.user.id, role: role }}
     />
   )
 }
