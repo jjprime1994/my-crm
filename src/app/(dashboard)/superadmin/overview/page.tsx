@@ -48,7 +48,7 @@ export default async function SuperAdminOverviewPage() {
         },
       },
     }),
-    db.lead.groupBy({ by: ["adName"], _count: true, orderBy: { _count: { adName: "desc" } }, take: 10 }),
+    db.lead.groupBy({ by: ["campaignName"], _count: true, where: { campaignName: { not: null } }, orderBy: { _count: { campaignName: "desc" } }, take: 10 }),
     db.lead.findMany({
       orderBy: { createdAt: "desc" },
       take: 10,
@@ -164,7 +164,7 @@ export default async function SuperAdminOverviewPage() {
                 return (
                   <div key={i}>
                     <div className="flex items-center justify-between text-sm mb-1.5">
-                      <span className="text-gray-600 truncate max-w-[200px]">{s.adName ?? "Unknown"}</span>
+                      <span className="text-gray-600 truncate max-w-[200px]">{s.campaignName ?? "Unknown"}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-gray-400 text-xs">{pct}%</span>
                         <span className="font-semibold text-gray-900 w-6 text-right">{s._count}</span>
@@ -214,7 +214,7 @@ export default async function SuperAdminOverviewPage() {
                   </Link>
                 </td>
                 <td className="px-6 py-3.5 text-sm text-gray-600">{lead.email ?? lead.phone ?? "—"}</td>
-                <td className="px-6 py-3.5 text-sm text-gray-500 max-w-[150px] truncate">{lead.adName ?? "—"}</td>
+                <td className="px-6 py-3.5 text-sm text-gray-500 max-w-[150px] truncate">{lead.campaignName ?? lead.adName ?? "—"}</td>
                 <td className="px-6 py-3.5 text-sm text-gray-600">{lead.assignedTo?.name ?? <span className="text-gray-300 text-xs">Unassigned</span>}</td>
                 <td className="px-6 py-3.5 text-xs text-gray-400">
                   {new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric" })}
