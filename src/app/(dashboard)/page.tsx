@@ -56,19 +56,24 @@ function StatCard({ label, value, valueClass = "text-gray-900", sub, icon }: {
 
 export default async function DashboardPage() {
   const session = await auth()
-  const isAdmin = session?.user.role === "ADMIN"
+  const role = session?.user.role
+  const isSuperAdmin = role === "SUPER_ADMIN"
+  const isManager = role === "ADMIN"
+  const isAdmin = isSuperAdmin || isManager
   const where = isAdmin ? {} : { assignedToId: session?.user.id }
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 
   const [total, byStatus, recent, followUpCount, unassignedCount, teamStats] = await Promise.all([
     db.lead.count({ where }),
     db.lead.groupBy({ by: ["status"], _count: true, where }),
-    db.lead.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: { assignedTo: { select: { name: true } } },
-    }),
+    isSuperAdmin
+      ? db.lead.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { assignedTo: { select: { name: true } } },
+        })
+      : Promise.resolve([]),
     db.lead.count({
       where: {
         ...where,
@@ -168,40 +173,42 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent leads */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-            <h2 className="font-semibold text-gray-900">Recent Leads</h2>
-            <Link href="/leads" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-              View all →
-            </Link>
-          </div>
-          <ul className="divide-y divide-gray-50">
-            {recent.length === 0 && (
-              <li className="px-6 py-10 text-center text-sm text-gray-400">No leads yet.</li>
-            )}
-            {recent.map((lead) => (
-              <li key={lead.id}>
-                <Link href={`/leads/${lead.id}`} className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-blue-600">
-                      {(lead.firstName?.[0] ?? "?").toUpperCase()}
+        {/* Recent leads — super admin only */}
+        {isSuperAdmin && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+              <h2 className="font-semibold text-gray-900">Recent Leads</h2>
+              <Link href="/leads" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                View all →
+              </Link>
+            </div>
+            <ul className="divide-y divide-gray-50">
+              {recent.length === 0 && (
+                <li className="px-6 py-10 text-center text-sm text-gray-400">No leads yet.</li>
+              )}
+              {recent.map((lead) => (
+                <li key={lead.id}>
+                  <Link href={`/leads/${lead.id}`} className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-blue-600">
+                        {(lead.firstName?.[0] ?? "?").toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate text-sm">
+                        {lead.firstName} {lead.lastName}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">{lead.email ?? lead.phone ?? "—"}</p>
+                    </div>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[lead.status]}`}>
+                      {STATUS_LABELS[lead.status]}
                     </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate text-sm">
-                      {lead.firstName} {lead.lastName}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate">{lead.email ?? lead.phone ?? "—"}</p>
-                  </div>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[lead.status]}`}>
-                    {STATUS_LABELS[lead.status]}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Team performance */}
         {isAdmin && teamStats.length > 0 && (
