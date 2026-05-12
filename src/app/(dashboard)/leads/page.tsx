@@ -176,8 +176,8 @@ export default async function LeadsPage({
 
   const orderBy = { createdAt: "desc" } as const
 
-  // Manager with no assignedToId filter → split into two sections
-  const splitView = isManager && !assignedToId
+  // Admin (manager or super admin) with no assignedToId filter → split into two sections
+  const splitView = isAdmin && !assignedToId
 
   let myLeads: LeadRow[] = []
   let teamLeads: LeadRow[] = []
@@ -186,7 +186,7 @@ export default async function LeadsPage({
   const [salespeople, sources] = await Promise.all([
     isAdmin
       ? db.user.findMany({
-          where: { role: "SALESPERSON", ...(isManager ? { managerId: session!.user.id } : {}) },
+          where: { role: "SALESPERSON", managerId: session!.user.id },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
@@ -215,12 +215,11 @@ export default async function LeadsPage({
   } else {
     const andClauses = [...commonClauses]
 
-    if (isSuperAdmin) {
-      if (assignedToId === "unassigned") andClauses.push({ assignedToId: null })
+    if (isAdmin) {
+      // assignedToId filter active — filter to that person (super admin: also supports "unassigned")
+      if (isSuperAdmin && assignedToId === "unassigned") andClauses.push({ assignedToId: null })
       else if (assignedToId) andClauses.push({ assignedToId })
-    } else if (isManager) {
-      // assignedToId filter is active — show that person's leads only
-      andClauses.push({ assignedToId })
+      else andClauses.push({ OR: [{ assignedToId: session!.user.id }, { assignedTo: { managerId: session!.user.id } }] })
     } else {
       andClauses.push({ assignedToId: session?.user.id })
     }
