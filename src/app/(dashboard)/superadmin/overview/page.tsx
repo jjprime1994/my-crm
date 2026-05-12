@@ -19,19 +19,35 @@ const STATUS_DOT: Record<LeadStatus, string> = {
   PROPOSAL: "bg-orange-500", CLOSED_WON: "bg-emerald-500", CLOSED_LOST: "bg-rose-500",
 }
 
-export default async function SuperAdminOverviewPage() {
+const PERIODS = [
+  { label: "7d", days: 7 },
+  { label: "30d", days: 30 },
+  { label: "90d", days: 90 },
+  { label: "All time", days: 0 },
+]
+
+export default async function SuperAdminOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>
+}) {
   const session = await auth()
   if (!isSuperAdmin(session?.user.role)) redirect("/")
 
+  const { period } = await searchParams
+  const days = Number(period ?? 30)
+  const since = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
+  const dateFilter = since ? { createdAt: { gte: since } } : {}
+
   const [total, byStatus, salespersonStats, managerStats, sourceStats, recentLeads] = await Promise.all([
-    db.lead.count(),
-    db.lead.groupBy({ by: ["status"], _count: true }),
+    db.lead.count({ where: dateFilter }),
+    db.lead.groupBy({ by: ["status"], _count: true, where: dateFilter }),
     db.user.findMany({
       where: { role: "SALESPERSON" },
       select: {
         id: true, name: true,
         _count: { select: { leads: true } },
-        leads: { select: { status: true } },
+        leads: { where: dateFilter, select: { status: true } },
       },
       orderBy: { name: "asc" },
     }),
@@ -43,13 +59,20 @@ export default async function SuperAdminOverviewPage() {
           where: { role: "SALESPERSON" },
           select: {
             _count: { select: { leads: true } },
-            leads: { select: { status: true } },
+            leads: { where: dateFilter, select: { status: true } },
           },
         },
       },
     }),
-    db.lead.groupBy({ by: ["campaignName"], _count: true, where: { campaignName: { not: null } }, orderBy: { _count: { campaignName: "desc" } }, take: 10 }),
+    db.lead.groupBy({
+      by: ["campaignName"],
+      _count: true,
+      where: dateFilter,
+      orderBy: { _count: { campaignName: "desc" } },
+      take: 10,
+    }),
     db.lead.findMany({
+      where: dateFilter,
       orderBy: { createdAt: "desc" },
       take: 10,
       include: { assignedTo: { select: { name: true } } },
@@ -62,39 +85,72 @@ export default async function SuperAdminOverviewPage() {
   const active = total - won - lost
   const conversionRate = total > 0 ? Math.round((won / total) * 100) : 0
 
+  // Include null campaignName as "No Source" so counts tally with total
+  const sourceRows = sourceStats.map((s) => ({
+    name: s.campaignName ?? "No Source",
+    count: s._count,
+  }))
+  const sourcedCount = sourceRows.reduce((sum, s) => sum + s.count, 0)
+  if (sourcedCount < total) {
+    sourceRows.push({ name: "No Source", count: total - sourcedCount })
+  }
+  sourceRows.sort((a, b) => b.count - a.count)
+
   const individuals = salespersonStats
     .map((s) => {
       const wonCount = s.leads.filter((l) => l.status === "CLOSED_WON").length
-      return { id: s.id, name: s.name, totalLeads: s._count.leads, won: wonCount, rate: s._count.leads > 0 ? Math.round((wonCount / s._count.leads) * 100) : 0 }
+      const totalLeads = s.leads.length
+      return { id: s.id, name: s.name, totalLeads, won: wonCount, rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0 }
     })
     .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
   const teams = managerStats
     .map((m) => {
-      const totalLeads = m.teamMembers.reduce((sum, tm) => sum + tm._count.leads, 0)
+      const totalLeads = m.teamMembers.reduce((sum, tm) => sum + tm.leads.length, 0)
       const wonCount = m.teamMembers.reduce((sum, tm) => sum + tm.leads.filter((l) => l.status === "CLOSED_WON").length, 0)
       return { managerId: m.id, managerName: m.name, memberCount: m.teamMembers.length, totalLeads, won: wonCount, rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0 }
     })
     .filter((t) => t.memberCount > 0)
     .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
+  const periodLabel = days === 0 ? "All time" : `Last ${days} days`
+
   return (
     <div className="space-y-8 max-w-6xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs font-semibold text-violet-600 uppercase tracking-widest mb-1">Super Admin</p>
           <h1 className="text-2xl font-bold text-gray-900">Business Overview</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Complete view of all leads and team performance</p>
+          <p className="text-sm text-gray-500 mt-0.5">{periodLabel}</p>
         </div>
-        <Link
-          href="/superadmin/export"
-          className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-sm shadow-violet-200"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Export Leads
-        </Link>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Period selector */}
+          <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5">
+            {PERIODS.map(({ label, days: d }) => {
+              const active = (days === d) || (d === 30 && !period)
+              return (
+                <Link
+                  key={label}
+                  href={d === 0 ? "?period=0" : d === 30 ? "?" : `?period=${d}`}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
+                    active ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {label}
+                </Link>
+              )
+            })}
+          </div>
+          <Link
+            href={`/superadmin/export${period ? `?period=${period}` : ""}`}
+            className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-sm shadow-violet-200"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export Leads
+          </Link>
+        </div>
       </div>
 
       {/* Top stats */}
@@ -153,25 +209,26 @@ export default async function SuperAdminOverviewPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-gray-900">Lead Sources</h2>
-            <span className="text-xs text-gray-400">Top 10 by volume</span>
+            <span className="text-xs text-gray-400">{total} total</span>
           </div>
-          {sourceStats.length === 0 ? (
+          {sourceRows.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No source data yet.</p>
           ) : (
             <div className="space-y-3">
-              {sourceStats.map((s, i) => {
-                const pct = total > 0 ? Math.round((s._count / total) * 100) : 0
+              {sourceRows.map((s, i) => {
+                const pct = total > 0 ? Math.round((s.count / total) * 100) : 0
+                const isUnknown = s.name === "No Source"
                 return (
                   <div key={i}>
                     <div className="flex items-center justify-between text-sm mb-1.5">
-                      <span className="text-gray-600 truncate max-w-[200px]">{s.campaignName ?? "Unknown"}</span>
+                      <span className={`truncate max-w-[200px] ${isUnknown ? "text-gray-400 italic" : "text-gray-600"}`}>{s.name}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-gray-400 text-xs">{pct}%</span>
-                        <span className="font-semibold text-gray-900 w-6 text-right">{s._count}</span>
+                        <span className="font-semibold text-gray-900 w-6 text-right">{s.count}</span>
                       </div>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-violet-400 rounded-full" style={{ width: `${pct}%` }} />
+                      <div className={`h-full rounded-full ${isUnknown ? "bg-gray-300" : "bg-violet-400"}`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 )
@@ -201,6 +258,9 @@ export default async function SuperAdminOverviewPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
+            {recentLeads.length === 0 && (
+              <tr><td colSpan={5} className="text-center py-10 text-sm text-gray-400">No leads in this period.</td></tr>
+            )}
             {recentLeads.map((lead) => (
               <tr key={lead.id} className="hover:bg-gray-50/70 transition">
                 <td className="px-6 py-3.5">
