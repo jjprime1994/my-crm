@@ -77,8 +77,12 @@ export async function POST(req: NextRequest) {
             `https://graph.facebook.com/v19.0/${ad_id}?fields=name,campaign{name}&access_token=${token}`
           )
           const adData = await adRes.json()
-          if (adData.name) adName = adData.name
-          if (adData.campaign?.name) campaignName = adData.campaign.name
+          if (adData.error) {
+            console.error("[meta-webhook] ad fetch error:", JSON.stringify(adData.error), "ad_id:", ad_id)
+          } else {
+            if (adData.name) adName = adData.name
+            if (adData.campaign?.name) campaignName = adData.campaign.name
+          }
         }
 
         // Fallback: try campaign name from campaign_id if still missing
@@ -87,10 +91,14 @@ export async function POST(req: NextRequest) {
             `https://graph.facebook.com/v19.0/${campaign_id}?fields=name&access_token=${token}`
           )
           const campData = await campRes.json()
-          if (campData.name) campaignName = campData.name
+          if (campData.error) {
+            console.error("[meta-webhook] campaign fetch error:", JSON.stringify(campData.error), "campaign_id:", campaign_id)
+          } else if (campData.name) {
+            campaignName = campData.name
+          }
         }
-      } catch {
-        // store whatever we have
+      } catch (err) {
+        console.error("[meta-webhook] fetch exception:", err)
       }
 
       // Check for duplicate phone/email
