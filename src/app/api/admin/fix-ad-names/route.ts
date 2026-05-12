@@ -3,45 +3,43 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/roles"
 
-// GET: diagnostic — visit in browser to see Meta API status without changing anything
-export async function GET() {
-  const session = await auth()
-  if (!session || !isSuperAdmin(session.user.role))
-    return new NextResponse("Forbidden", { status: 403 })
+// GET: diagnostic — shows leads missing campaign name and attempts Meta lookup on them
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url)
+  const key = url.searchParams.get("key")
+  if (key !== process.env.BACKFILL_SECRET) {
+    const session = await auth()
+    if (!session || !isSuperAdmin(session.user.role))
+      return new NextResponse("Forbidden", { status: 403 })
+  }
 
   const token = process.env.META_PAGE_ACCESS_TOKEN
-  if (!token) return NextResponse.json({ error: "META_PAGE_ACCESS_TOKEN is not set in environment variables" })
+  if (!token) return NextResponse.json({ error: "META_PAGE_ACCESS_TOKEN is not set" })
 
-  const tokenPreview = token.slice(0, 12) + "…"
-
-  const sample = await db.lead.findFirst({
-    where: { adId: { not: null } },
-    select: { id: true, adId: true, campaignId: true, adName: true, campaignName: true },
+  const missing = await db.lead.findMany({
+    where: { campaignName: null },
+    select: { id: true, adId: true, campaignId: true, adName: true, metaLeadId: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   })
 
-  if (!sample) {
-    return NextResponse.json({ tokenPreview, error: "No leads with an adId found in the database" })
-  }
-
-  const adRes = await fetch(
-    `https://graph.facebook.com/v19.0/${sample.adId}?fields=name,campaign{name}&access_token=${token}`
-  )
-  const adData = await adRes.json()
-
-  let campData: unknown = null
-  if (!adData.name && sample.campaignId) {
-    const campRes = await fetch(
-      `https://graph.facebook.com/v19.0/${sample.campaignId}?fields=name&access_token=${token}`
-    )
-    campData = await campRes.json()
+  // For the first one that has any Meta ID, try a live lookup to see what the API returns
+  const sample = missing.find((l) => l.adId || l.campaignId)
+  let sampleLookup: unknown = null
+  if (sample?.adId) {
+    const r = await fetch(`https://graph.facebook.com/v19.0/${sample.adId}?fields=name,campaign{name}&access_token=${token}`)
+    sampleLookup = await r.json()
+  } else if (sample?.campaignId) {
+    const r = await fetch(`https://graph.facebook.com/v19.0/${sample.campaignId}?fields=name&access_token=${token}`)
+    sampleLookup = await r.json()
   }
 
   return NextResponse.json({
-    tokenPreview,
-    sampleLead: { id: sample.id, adId: sample.adId, campaignId: sample.campaignId, currentAdName: sample.adName, currentCampaignName: sample.campaignName },
-    metaAdResponse: adData,
-    metaCampaignResponse: campData,
+    totalMissingCampaignName: missing.length,
+    withAdId: missing.filter((l) => l.adId).length,
+    withCampaignId: missing.filter((l) => l.campaignId).length,
+    withNoIds: missing.filter((l) => !l.adId && !l.campaignId).length,
+    leads: missing.map((l) => ({ id: l.id, adId: l.adId, campaignId: l.campaignId, adName: l.adName, metaLeadId: l.metaLeadId, createdAt: l.createdAt })),
+    sampleLookup,
   })
 }
 
