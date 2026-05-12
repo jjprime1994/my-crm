@@ -74,6 +74,22 @@ export async function POST(req: NextRequest) {
         // store whatever we have
       }
 
+      // Check for duplicate phone/email
+      let isDuplicate = false
+      if (phone || email) {
+        const existing = await db.lead.findFirst({
+          where: {
+            metaLeadId: { not: leadgen_id },
+            OR: [
+              phone ? { phone } : undefined,
+              email ? { email } : undefined,
+            ].filter(Boolean) as object[],
+          },
+          select: { id: true },
+        })
+        if (existing) isDuplicate = true
+      }
+
       await db.lead.upsert({
         where: { metaLeadId: leadgen_id },
         update: {},
@@ -88,6 +104,7 @@ export async function POST(req: NextRequest) {
           lastName,
           email,
           phone,
+          isDuplicate,
           rawData: change.value,
         },
       })
