@@ -6,7 +6,6 @@ import AvailableLeadsClient from "@/components/AvailableLeadsClient"
 export default async function AvailableLeadsPage() {
   const session = await auth()
   if (!session) redirect("/login")
-  if (session.user.role === "SUPER_ADMIN") redirect("/admin/assign")
 
   const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000)
 

@@ -88,7 +88,7 @@ export default function Sidebar({ user, onClose }: Props) {
     { href: "/", label: "Dashboard", icon: Icons.dashboard },
     { href: "/leads", label: "Leads", icon: Icons.leads },
     { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell },
-    ...(!superAdmin ? [{ href: "/available-leads", label: "Available Leads", icon: Icons.inbox }] : []),
+    { href: "/available-leads", label: "Available Leads", icon: Icons.inbox },
     ...(admin ? [{ href: "/admin/users", label: "Manage Team", icon: Icons.team }] : []),
   ]
 
