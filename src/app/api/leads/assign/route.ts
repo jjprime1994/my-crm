@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/lib/roles"
+import { isSuperAdmin } from "@/lib/roles"
 
 export async function POST(req: NextRequest) {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) {
+  if (!session || !isSuperAdmin(session.user.role)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 

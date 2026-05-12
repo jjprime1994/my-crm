@@ -89,16 +89,12 @@ export default function Sidebar({ user, onClose }: Props) {
     { href: "/leads", label: "Leads", icon: Icons.leads },
     { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell },
     ...(!superAdmin ? [{ href: "/available-leads", label: "Available Leads", icon: Icons.inbox }] : []),
-    ...(admin
-      ? [
-          { href: "/admin/assign", label: "Assign Leads", icon: Icons.assign },
-          { href: "/admin/users", label: "Manage Team", icon: Icons.team },
-        ]
-      : []),
+    ...(admin ? [{ href: "/admin/users", label: "Manage Team", icon: Icons.team }] : []),
   ]
 
   const superAdminNav = superAdmin
     ? [
+        { href: "/admin/assign", label: "Assign Leads", icon: Icons.assign },
         { href: "/superadmin/overview", label: "Overview", icon: Icons.overview },
         { href: "/superadmin/export", label: "Export Leads", icon: Icons.export },
       ]

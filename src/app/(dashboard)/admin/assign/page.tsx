@@ -6,7 +6,7 @@ import BulkAssignClient from "@/components/BulkAssignClient"
 
 export default async function AssignPage() {
   const session = await auth()
-  if (!isAdmin(session?.user.role)) redirect("/")
+  if (!isSuperAdmin(session?.user.role)) redirect("/")
 
   const superAdmin = isSuperAdmin(session?.user.role)
 
