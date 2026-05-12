@@ -43,29 +43,37 @@ export default async function LeadsPage({
   const isAdmin = isSuperAdmin || isManager
   const { status, assignedToId, search, source } = await searchParams
 
-  const where: Record<string, unknown> = {}
-  if (status) where.status = status as LeadStatus
-  if (source) where.campaignName = source
+  const andClauses: Record<string, unknown>[] = []
+
+  if (status) andClauses.push({ status: status as LeadStatus })
+  if (source) andClauses.push({ campaignName: source })
+
   if (isSuperAdmin) {
-    // super admin sees everything
-    if (assignedToId === "unassigned") where.assignedToId = null
-    else if (assignedToId) where.assignedToId = assignedToId
+    if (assignedToId === "unassigned") andClauses.push({ assignedToId: null })
+    else if (assignedToId) andClauses.push({ assignedToId })
   } else if (isManager) {
-    // manager sees only leads assigned to their team members
-    where.assignedTo = { managerId: session!.user.id }
-    if (assignedToId) where.assignedToId = assignedToId
+    // manager sees their own leads + their team's leads
+    const teamScope = assignedToId
+      ? { assignedToId }
+      : { OR: [
+          { assignedToId: session!.user.id },
+          { assignedTo: { managerId: session!.user.id } },
+        ]}
+    andClauses.push(teamScope)
   } else {
-    // salesperson sees only their own leads
-    where.assignedToId = session?.user.id
+    andClauses.push({ assignedToId: session?.user.id })
   }
+
   if (search) {
-    where.OR = [
+    andClauses.push({ OR: [
       { firstName: { contains: search, mode: "insensitive" } },
       { lastName: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
       { phone: { contains: search } },
-    ]
+    ]})
   }
+
+  const where = andClauses.length > 0 ? { AND: andClauses } : {}
 
   const [leads, salespeople, sources] = await Promise.all([
     db.lead.findMany({
