@@ -12,7 +12,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const user = await db.user.findUnique({ where: { id: session.user.id } })
   if (!user) return new NextResponse("User not found", { status: 404 })
 
-  if (user.newLeadThreshold > 0) {
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN"
+
+  if (!isSuperAdmin && user.newLeadThreshold > 0) {
     const newLeadsCount = await db.lead.count({
       where: { assignedToId: session.user.id, status: "NEW" },
     })
@@ -22,6 +24,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         { status: 403 }
       )
     }
+  }
+
+  if (isSuperAdmin) {
+    const lead = await db.lead.update({ where: { id, assignedToId: null }, data: { assignedToId: session.user.id, claimedAt: new Date() } }).catch(() => null)
+    if (!lead) return NextResponse.json({ error: "This lead has already been claimed." }, { status: 409 })
+    return NextResponse.json(lead)
   }
 
   const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000)
