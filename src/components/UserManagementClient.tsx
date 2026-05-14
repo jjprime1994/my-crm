@@ -246,31 +246,31 @@ export default function UserManagementClient({ users: initial, currentUserId, is
         </form>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
+        <table className="w-full table-fixed">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
               <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claim / 15min</th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Max New</th>
-              {isSuperAdmin && <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Manager</th>}
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Joined</th>
-              <th className="px-4 py-3.5" />
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Role</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-16">Leads</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Claim / 15min</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-20">Max New</th>
+              {isSuperAdmin && <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Manager</th>}
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-24">Joined</th>
+              <th className="px-4 py-3.5 w-16" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {users.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50/70 transition">
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-3">
+                <td className="px-4 py-4 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${avatarClass(user.role)}`}>
                       <span className={`text-xs font-bold ${avatarTextClass(user.role)}`}>
                         {initials(user.name)}
                       </span>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       {editingName?.id === user.id ? (
                         <div className="flex items-center gap-2">
                           <input
@@ -289,14 +289,14 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         </div>
                       ) : (
                         <p
-                          className="font-medium text-gray-900 text-sm cursor-pointer hover:text-blue-600 transition"
+                          className="font-medium text-gray-900 text-sm cursor-pointer hover:text-blue-600 transition truncate"
                           onClick={() => setEditingName({ id: user.id, value: user.name })}
-                          title="Click to edit name"
+                          title={user.name}
                         >
                           {user.name}
                         </p>
                       )}
-                      <p className="text-xs text-gray-400">{user.email}</p>
+                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
                     </div>
                   </div>
                 </td>
