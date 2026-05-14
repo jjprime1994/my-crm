@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 
 type User = {
   id: string
@@ -19,6 +18,8 @@ interface Props {
   users: User[]
   currentUserId: string
   isSuperAdmin: boolean
+  isTeamLeader: boolean
+  isManager: boolean
   managers: { id: string; name: string }[]
 }
 
@@ -27,8 +28,35 @@ function initials(name: string) {
   return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase()
 }
 
-export default function UserManagementClient({ users: initial, currentUserId, isSuperAdmin, managers }: Props) {
-  const router = useRouter()
+function roleLabel(role: string) {
+  if (role === "SUPER_ADMIN") return "Super Admin"
+  if (role === "ADMIN") return "Manager"
+  if (role === "TEAM_LEADER") return "Team Leader"
+  return "Salesperson"
+}
+
+function roleBadgeClass(role: string) {
+  if (role === "SUPER_ADMIN") return "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+  if (role === "ADMIN") return "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
+  if (role === "TEAM_LEADER") return "bg-teal-50 text-teal-700 ring-1 ring-teal-200"
+  return "bg-gray-100 text-gray-600"
+}
+
+function avatarClass(role: string) {
+  if (role === "SUPER_ADMIN") return "bg-amber-100"
+  if (role === "ADMIN") return "bg-violet-100"
+  if (role === "TEAM_LEADER") return "bg-teal-100"
+  return "bg-blue-100"
+}
+
+function avatarTextClass(role: string) {
+  if (role === "SUPER_ADMIN") return "text-amber-600"
+  if (role === "ADMIN") return "text-violet-600"
+  if (role === "TEAM_LEADER") return "text-teal-600"
+  return "text-blue-600"
+}
+
+export default function UserManagementClient({ users: initial, currentUserId, isSuperAdmin, isTeamLeader, isManager, managers }: Props) {
   const [users, setUsers] = useState(initial)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "SALESPERSON" })
@@ -72,9 +100,10 @@ export default function UserManagementClient({ users: initial, currentUserId, is
       setError("Failed to create user. Email may already exist.")
       return
     }
+    const newUser = await res.json()
+    setUsers((prev) => [...prev, newUser])
     setForm({ name: "", email: "", password: "", role: "SALESPERSON" })
     setShowForm(false)
-    router.refresh()
   }
 
   async function deleteUser(id: string) {
@@ -185,6 +214,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
               >
                 <option value="SALESPERSON">Salesperson</option>
+                {(isSuperAdmin || isManager) && <option value="TEAM_LEADER">Team Leader</option>}
                 {isSuperAdmin && <option value="ADMIN">Manager</option>}
               </select>
             </div>
@@ -223,12 +253,8 @@ export default function UserManagementClient({ users: initial, currentUserId, is
               <tr key={user.id} className="hover:bg-gray-50/70 transition">
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                      user.role === "SUPER_ADMIN" ? "bg-amber-100" : user.role === "ADMIN" ? "bg-violet-100" : "bg-blue-100"
-                    }`}>
-                      <span className={`text-xs font-bold ${
-                        user.role === "SUPER_ADMIN" ? "text-amber-600" : user.role === "ADMIN" ? "text-violet-600" : "text-blue-600"
-                      }`}>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${avatarClass(user.role)}`}>
+                      <span className={`text-xs font-bold ${avatarTextClass(user.role)}`}>
                         {initials(user.name)}
                       </span>
                     </div>
@@ -239,25 +265,20 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   </div>
                 </td>
                 <td className="px-5 py-4">
-                  {isSuperAdmin && true ? (
+                  {isSuperAdmin ? (
                     <select
                       value={user.role}
                       onChange={(e) => saveRole(user.id, e.target.value)}
                       className="text-xs font-semibold border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
                     >
                       <option value="SALESPERSON">Salesperson</option>
+                      <option value="TEAM_LEADER">Team Leader</option>
                       <option value="ADMIN">Manager</option>
                       <option value="SUPER_ADMIN">Super Admin</option>
                     </select>
                   ) : (
-                    <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${
-                      user.role === "SUPER_ADMIN"
-                        ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-                        : user.role === "ADMIN"
-                        ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200"
-                        : "bg-gray-100 text-gray-600"
-                    }`}>
-                      {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Manager" : "Salesperson"}
+                    <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeClass(user.role)}`}>
+                      {roleLabel(user.role)}
                     </span>
                   )}
                 </td>
@@ -351,7 +372,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                 </td>
                 {isSuperAdmin && (
                   <td className="px-5 py-4">
-                    {user.role === "SALESPERSON" ? (
+                    {user.role === "SALESPERSON" || user.role === "TEAM_LEADER" ? (
                       <select
                         value={user.managerId ?? ""}
                         onChange={(e) => saveManagerId(user.id, e.target.value)}

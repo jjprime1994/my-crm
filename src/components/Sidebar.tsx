@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { isAdmin, isSuperAdmin } from "@/lib/roles"
+import { isAdmin, isSuperAdmin, isManagerLevel } from "@/lib/roles"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
@@ -83,13 +83,17 @@ export default function Sidebar({ user, onClose }: Props) {
   const pathname = usePathname()
   const admin = isAdmin(user.role)
   const superAdmin = isSuperAdmin(user.role)
+  const managerLevel = isManagerLevel(user.role)
 
   const nav = [
     { href: "/", label: "Dashboard", icon: Icons.dashboard },
     { href: "/leads", label: "Leads", icon: Icons.leads },
     { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell },
     { href: "/available-leads", label: "Available Leads", icon: Icons.inbox },
-    ...(admin ? [{ href: "/admin/users", label: "Manage Team", icon: Icons.team }] : []),
+    ...(managerLevel ? [{ href: "/admin/users", label: "Manage Team", icon: Icons.team }] : []),
+    ...(managerLevel && !superAdmin ? [
+      { href: "/admin/overview", label: "Team Overview", icon: Icons.overview },
+    ] : []),
   ]
 
   const superAdminNav = superAdmin
@@ -213,7 +217,7 @@ export default function Sidebar({ user, onClose }: Props) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{user.name}</p>
             <p className="text-xs text-slate-400 truncate">
-              {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Manager" : "Salesperson"}
+              {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Manager" : user.role === "TEAM_LEADER" ? "Team Leader" : "Salesperson"}
             </p>
           </div>
         </div>

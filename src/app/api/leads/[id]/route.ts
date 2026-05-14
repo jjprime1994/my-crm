@@ -3,7 +3,7 @@ export const runtime = "nodejs"
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/lib/roles"
+import { isManagerLevel } from "@/lib/roles"
 import { LeadStatus } from "@/generated/prisma/client"
 import { sendPushToUser } from "@/lib/push"
 
@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
   const { id } = await params
-  const admin = isAdmin(session.user.role)
+  const admin = isManagerLevel(session.user.role)
 
   const lead = await db.lead.findUnique({
     where: { id },
@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
   const { id } = await params
-  const admin = isAdmin(session.user.role)
+  const admin = isManagerLevel(session.user.role)
 
   const existing = await db.lead.findUnique({ where: { id }, select: { assignedToId: true } })
   if (!existing) return new NextResponse("Not found", { status: 404 })

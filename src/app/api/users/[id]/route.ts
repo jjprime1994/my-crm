@@ -1,24 +1,37 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
-import { isAdmin, isSuperAdmin } from "@/lib/roles"
+import { isManagerLevel, isSuperAdmin, isTeamLeader } from "@/lib/roles"
 import { Role } from "@/generated/prisma/client"
 import bcrypt from "bcryptjs"
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+  if (!session || !isManagerLevel(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
   const { id } = await params
   if (id === session.user.id) return new NextResponse("Cannot delete yourself", { status: 400 })
+
+  // Team leaders can only delete their own direct reports
+  if (isTeamLeader(session.user.role)) {
+    const target = await db.user.findUnique({ where: { id }, select: { managerId: true } })
+    if (target?.managerId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
+  }
+
   await db.user.delete({ where: { id } })
   return new NextResponse(null, { status: 204 })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+  if (!session || !isManagerLevel(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
   const { id } = await params
   const body = await req.json()
+
+  // Team leaders can only patch their own direct reports
+  if (isTeamLeader(session.user.role)) {
+    const target = await db.user.findUnique({ where: { id }, select: { managerId: true } })
+    if (target?.managerId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
+  }
 
   if ("newPassword" in body) {
     if (!body.newPassword || body.newPassword.length < 8)
@@ -37,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   if ("role" in body) {
     if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
-    if (!["SALESPERSON", "ADMIN", "SUPER_ADMIN"].includes(body.role))
+    if (!["SALESPERSON", "TEAM_LEADER", "ADMIN", "SUPER_ADMIN"].includes(body.role))
       return new NextResponse("Invalid role", { status: 400 })
     data.role = body.role as Role
   }

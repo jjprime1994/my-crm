@@ -9,8 +9,8 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   CONTACTED: "Contacted",
   QUALIFIED: "Qualified",
   PROPOSAL: "Proposal",
-  CLOSED_WON: "Closed Won",
-  CLOSED_LOST: "Closed Lost",
+  CLOSED_WON: "Won",
+  CLOSED_LOST: "Lost",
 }
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
@@ -42,6 +42,7 @@ type LeadRow = {
   campaignName?: string | null
   adName?: string | null
   createdAt: Date
+  updatedAt: Date
   assignedTo?: { id: string; name: string } | null
   _count: { notes: number }
 }
@@ -101,10 +102,21 @@ function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]; showAssignedT
                 {lead.phone && <div className="text-gray-400 text-xs mt-0.5">{lead.phone}</div>}
               </td>
               <td className="px-5 py-3.5">
-                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[lead.status]}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[lead.status]}`} />
-                  {STATUS_LABELS[lead.status]}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[lead.status]}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[lead.status]}`} />
+                    {STATUS_LABELS[lead.status]}
+                  </span>
+                  {lead.status !== "CLOSED_WON" && lead.status !== "CLOSED_LOST" && (() => {
+                    const days = Math.floor((Date.now() - new Date(lead.updatedAt).getTime()) / 86400000)
+                    if (days < 2) return null
+                    return (
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded w-fit ${days >= 7 ? "bg-rose-50 text-rose-500" : "bg-amber-50 text-amber-600"}`}>
+                        {days}d untouched
+                      </span>
+                    )
+                  })()}
+                </div>
               </td>
               {showAssignedTo && (
                 <td className="px-5 py-3.5 text-sm text-gray-600">
@@ -158,7 +170,8 @@ export default async function LeadsPage({
   const role = session?.user.role
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
-  const isAdmin = isSuperAdmin || isManager
+  const isTeamLeaderRole = role === "TEAM_LEADER"
+  const isAdmin = isSuperAdmin || isManager || isTeamLeaderRole
   const { status, assignedToId, search, source } = await searchParams
 
   // Common filters that apply regardless of role
@@ -187,7 +200,15 @@ export default async function LeadsPage({
   const [salespeople, sources] = await Promise.all([
     isAdmin
       ? db.user.findMany({
-          where: { role: "SALESPERSON", managerId: session!.user.id },
+          where: isManager
+            ? {
+                role: "SALESPERSON",
+                OR: [
+                  { managerId: session!.user.id },
+                  { manager: { managerId: session!.user.id } },
+                ],
+              }
+            : { role: "SALESPERSON", managerId: session!.user.id },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
@@ -201,6 +222,21 @@ export default async function LeadsPage({
   ])
 
   if (splitView) {
+    // ADMIN sees team leads from both direct reports and team leaders' reports
+    const teamLeadsWhere = isManager
+      ? {
+          AND: [
+            {
+              OR: [
+                { assignedTo: { managerId: session!.user.id } },
+                { assignedTo: { manager: { managerId: session!.user.id } } },
+              ],
+            },
+            ...commonClauses,
+          ],
+        }
+      : { AND: [{ assignedTo: { managerId: session!.user.id } }, ...commonClauses] }
+
     const queries: Promise<LeadRow[]>[] = [
       db.lead.findMany({
         where: { AND: [{ assignedToId: session!.user.id }, ...commonClauses] },
@@ -208,7 +244,7 @@ export default async function LeadsPage({
         orderBy,
       }),
       db.lead.findMany({
-        where: { AND: [{ assignedTo: { managerId: session!.user.id } }, ...commonClauses] },
+        where: teamLeadsWhere,
         include: includeOpts,
         orderBy,
       }),
@@ -228,7 +264,10 @@ export default async function LeadsPage({
         })
       )
     }
-    ;[myLeads, teamLeads, otherLeads] = await Promise.all(queries) as [LeadRow[], LeadRow[], LeadRow[]]
+    const results = await Promise.all(queries)
+    myLeads = results[0]
+    teamLeads = results[1]
+    if (isSuperAdmin) otherLeads = results[2] ?? []
   } else {
     const andClauses = [...commonClauses]
 

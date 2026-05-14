@@ -8,8 +8,8 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   CONTACTED: "Contacted",
   QUALIFIED: "Qualified",
   PROPOSAL: "Proposal",
-  CLOSED_WON: "Closed Won",
-  CLOSED_LOST: "Closed Lost",
+  CLOSED_WON: "Won",
+  CLOSED_LOST: "Lost",
 }
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
@@ -59,8 +59,16 @@ export default async function DashboardPage() {
   const role = session?.user.role
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
-  const isAdmin = isSuperAdmin || isManager
-  const where = isAdmin ? {} : { assignedToId: session?.user.id }
+  const isTeamLeaderRole = role === "TEAM_LEADER"
+  const isAdmin = isSuperAdmin || isManager || isTeamLeaderRole
+
+  // TEAM_LEADER sees their own leads + team members' leads
+  const where = isTeamLeaderRole
+    ? { OR: [{ assignedToId: session?.user.id }, { assignedTo: { managerId: session?.user.id } }] }
+    : isAdmin
+    ? {}
+    : { assignedToId: session?.user.id }
+
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 
   const [total, byStatus, recent, followUpCount, unassignedCount, teamStats] = await Promise.all([
@@ -141,7 +149,7 @@ export default async function DashboardPage() {
           />
         ) : (
           <StatCard
-            label="Closed Won"
+            label="Won"
             value={wonCount}
             valueClass="text-emerald-600"
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>}
