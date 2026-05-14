@@ -12,10 +12,10 @@ export const db = globalForPrisma.prisma ?? createClient()
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
 
-// Create any tables that migrations haven't applied yet.
-// Runs once per process; safe to call concurrently (IF NOT EXISTS).
+// Runs once per process on startup.
 if (!globalForPrisma.dbInitialized) {
   globalForPrisma.dbInitialized = true
+
   db.$executeRaw`
     CREATE TABLE IF NOT EXISTS "LeadStatusHistory" (
       "id"          TEXT         NOT NULL,
@@ -32,10 +32,48 @@ if (!globalForPrisma.dbInitialized) {
         FOREIGN KEY ("changedById") REFERENCES "User"("id")
         ON DELETE SET NULL ON UPDATE CASCADE
     )
-  `.then(() =>
+  `
+  .then(() =>
     db.$executeRaw`
       CREATE INDEX IF NOT EXISTS "LeadStatusHistory_leadId_idx"
         ON "LeadStatusHistory"("leadId")
     `
-  ).catch(() => {})
+  )
+  .then(() => backfillStatusHistory())
+  .catch(() => {})
+}
+
+async function backfillStatusHistory() {
+  // Find leads that have no history entries yet
+  const leads = await db.lead.findMany({
+    where: { statusHistory: { none: {} } },
+    select: { id: true, status: true, createdAt: true, updatedAt: true, assignedToId: true },
+  })
+  if (leads.length === 0) return
+
+  type Row = Parameters<typeof db.leadStatusHistory.createMany>[0]["data"][number]
+  const rows: Row[] = []
+
+  for (const lead of leads) {
+    // Every lead started as NEW
+    rows.push({
+      leadId: lead.id,
+      from: null,
+      to: "NEW" as Row["to"],
+      createdAt: lead.createdAt,
+      changedById: null,
+    })
+    // If it's no longer NEW, record the last known transition
+    if (lead.status !== "NEW") {
+      rows.push({
+        leadId: lead.id,
+        from: "NEW" as Row["from"],
+        to: lead.status,
+        createdAt: lead.updatedAt,
+        changedById: lead.assignedToId,
+      })
+    }
+  }
+
+  await db.leadStatusHistory.createMany({ data: rows })
 }
