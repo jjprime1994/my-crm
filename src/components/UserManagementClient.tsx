@@ -246,8 +246,8 @@ export default function UserManagementClient({ users: initial, currentUserId, is
         </form>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
-        <table className="min-w-full">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
               <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
