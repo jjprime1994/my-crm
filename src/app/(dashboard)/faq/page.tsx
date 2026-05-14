@@ -1,6 +1,45 @@
 import { auth } from "@/auth"
 import FAQItem from "@/components/FAQItem"
 
+type PatchEntry = {
+  date: string
+  label?: string
+  changes: string[]
+}
+
+const patchNotes: PatchEntry[] = [
+  {
+    date: "14 May 2026",
+    label: "Latest",
+    changes: [
+      "Status history timeline — see how a lead progressed through each stage on the lead detail page",
+      "Feedback page — submit bug reports or feature suggestions; managers can track and update their status",
+      "Claim animation — leads fade out with a green flash after being claimed on the Available Leads page",
+      "Age badges on Available Leads — colour-coded indicators showing how old each unclaimed lead is",
+    ],
+  },
+  {
+    date: "12 May 2026",
+    changes: [
+      "Team Leader role — a new role between Manager and Salesperson with managerial capabilities scoped to their team",
+      "Inline name editing — admins can rename team members directly in Manage Team without a separate form",
+      "Self name editing — all users can update their own display name from the Settings page",
+      "Super Admin overview — now shows full nested team counts including team leaders and their sub-teams",
+      "Push notifications — salespersons are notified when a lead is assigned to them",
+      "Claim rate limit — managers can set how many leads a salesperson can claim per 15-minute window",
+    ],
+  },
+  {
+    date: "1 May 2026",
+    changes: [
+      "Follow-ups page — view all leads with upcoming or overdue follow-up reminders in one place",
+      "Export leads — super admins can export leads to CSV with filters by status, campaign, and date range",
+      "Business overview — super admin dashboard with pipeline funnel, campaign performance, and leaderboards",
+      "Duplicate detection — leads with the same phone number are automatically flagged as duplicates",
+    ],
+  },
+]
+
 type FAQSection = {
   category: string
   roles?: string[]
@@ -159,6 +198,42 @@ export default async function FAQPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Help & FAQ</h1>
         <p className="text-sm text-gray-500 mt-0.5">Answers to common questions about using the CRM</p>
+      </div>
+
+      {/* Patch notes */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 pt-4 pb-3 border-b border-gray-50">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">What&apos;s New</p>
+        </div>
+        <div className="px-5 py-4 space-y-6">
+          {patchNotes.map((entry, i) => (
+            <div key={entry.date} className="relative pl-5">
+              {/* Timeline line */}
+              {i < patchNotes.length - 1 && (
+                <span className="absolute left-[5px] top-5 bottom-0 w-px bg-gray-100" />
+              )}
+              {/* Dot */}
+              <span className={`absolute left-0 top-1 w-2.5 h-2.5 rounded-full border-2 ${i === 0 ? "bg-blue-500 border-blue-500" : "bg-white border-gray-300"}`} />
+
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold text-gray-700">{entry.date}</span>
+                {entry.label && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-200">
+                    {entry.label}
+                  </span>
+                )}
+              </div>
+              <ul className="space-y-1.5">
+                {entry.changes.map((change) => (
+                  <li key={change} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="mt-1.5 w-1 h-1 rounded-full bg-gray-300 shrink-0" />
+                    {change}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
 
       {visible.map((section) => (
