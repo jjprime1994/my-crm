@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import LeadsFilters from "@/components/LeadsFilters"
+import { getViewAsRole } from "@/lib/viewas"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
@@ -214,7 +215,7 @@ export default async function LeadsPage({
   searchParams: Promise<{ status?: string; assignedToId?: string; search?: string; source?: string }>
 }) {
   const session = await auth()
-  const role = session?.user.role
+  const role = await getViewAsRole(session?.user.role)
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
   const isTeamLeaderRole = role === "TEAM_LEADER"

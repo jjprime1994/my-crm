@@ -3,14 +3,16 @@ import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import { isAdmin, isSuperAdmin, isManagerLevel, isTeamLeader } from "@/lib/roles"
 import UserManagementClient from "@/components/UserManagementClient"
+import { getViewAsRole } from "@/lib/viewas"
 
 export default async function UsersPage() {
   const session = await auth()
-  if (!isManagerLevel(session?.user.role)) redirect("/")
+  const role = await getViewAsRole(session?.user.role)
+  if (!isManagerLevel(role)) redirect("/")
 
-  const superAdmin = isSuperAdmin(session?.user.role)
-  const teamLeader = isTeamLeader(session?.user.role)
-  const manager = isAdmin(session?.user.role) && !superAdmin
+  const superAdmin = isSuperAdmin(role)
+  const teamLeader = isTeamLeader(role)
+  const manager = isAdmin(role) && !superAdmin
 
   let where: object | undefined
   if (superAdmin) {

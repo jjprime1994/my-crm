@@ -2,6 +2,7 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
+import { getViewAsRole } from "@/lib/viewas"
 
 const STATUS_COLORS: Record<string, string> = {
   NEW: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
@@ -30,7 +31,7 @@ function daysAgo(date: Date) {
 
 export default async function FollowUpsPage() {
   const session = await auth()
-  const role = session?.user.role
+  const role = await getViewAsRole(session?.user.role)
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
   const isAdmin = isSuperAdmin || isManager

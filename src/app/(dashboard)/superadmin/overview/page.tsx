@@ -5,6 +5,7 @@ import { isSuperAdmin } from "@/lib/roles"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import LeaderboardTabs from "@/components/LeaderboardTabs"
+import { getViewAsRole } from "@/lib/viewas"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -35,7 +36,8 @@ export default async function SuperAdminOverviewPage({
   searchParams: Promise<{ period?: string }>
 }) {
   const session = await auth()
-  if (!isSuperAdmin(session?.user.role)) redirect("/")
+  const role = await getViewAsRole(session?.user.role)
+  if (!isSuperAdmin(role)) redirect("/")
 
   const { period } = await searchParams
   const days = Number(period ?? 30)

@@ -2,10 +2,11 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isManagerLevel } from "@/lib/roles"
 import FeedbackClient from "@/components/FeedbackClient"
+import { getViewAsRole } from "@/lib/viewas"
 
 export default async function FeedbackPage() {
   const session = await auth()
-  const role = session?.user.role
+  const role = await getViewAsRole(session?.user.role)
   const isAdmin = isManagerLevel(role)
 
   const suggestions = await db.suggestion.findMany({

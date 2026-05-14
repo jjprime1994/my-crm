@@ -4,9 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { isAdmin, isSuperAdmin, isManagerLevel } from "@/lib/roles"
+import ViewAsSelector from "@/components/ViewAsSelector"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
+  isSuperAdmin: boolean
+  viewingAs: string | null
   onClose?: () => void
 }
 
@@ -84,7 +87,7 @@ const Icons = {
   ),
 }
 
-export default function Sidebar({ user, onClose }: Props) {
+export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs }: Props) {
   const pathname = usePathname()
   const admin = isAdmin(user.role)
   const superAdmin = isSuperAdmin(user.role)
@@ -177,6 +180,9 @@ export default function Sidebar({ user, onClose }: Props) {
           </>
         )}
       </nav>
+
+      {/* View As selector — super admins only */}
+      {actualSuperAdmin && <ViewAsSelector currentViewAs={viewingAs} />}
 
       {/* Settings + FAQ */}
       <div className="px-3 pb-1 border-t border-slate-800 pt-2">

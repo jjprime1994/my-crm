@@ -1,14 +1,14 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { isAdmin, isSuperAdmin } from "@/lib/roles"
+import { isSuperAdmin } from "@/lib/roles"
 import BulkAssignClient from "@/components/BulkAssignClient"
+import { getViewAsRole } from "@/lib/viewas"
 
 export default async function AssignPage() {
   const session = await auth()
-  if (!isSuperAdmin(session?.user.role)) redirect("/")
-
-  const superAdmin = isSuperAdmin(session?.user.role)
+  const role = await getViewAsRole(session?.user.role)
+  if (!isSuperAdmin(role)) redirect("/")
 
   const [leads, salespeople] = await Promise.all([
     db.lead.findMany({
@@ -16,9 +16,7 @@ export default async function AssignPage() {
       orderBy: { createdAt: "desc" },
     }),
     db.user.findMany({
-      where: superAdmin
-        ? { role: "SALESPERSON" }
-        : { role: "SALESPERSON", managerId: session!.user.id },
+      where: { role: "SALESPERSON" },
       select: { id: true, name: true, _count: { select: { leads: true } } },
       orderBy: { name: "asc" },
     }),

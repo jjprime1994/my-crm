@@ -3,10 +3,12 @@ import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/roles"
 import ExportClient from "@/components/ExportClient"
+import { getViewAsRole } from "@/lib/viewas"
 
 export default async function ExportPage() {
   const session = await auth()
-  if (!isSuperAdmin(session?.user.role)) redirect("/")
+  const role = await getViewAsRole(session?.user.role)
+  if (!isSuperAdmin(role)) redirect("/")
 
   const sources = await db.lead.findMany({
     where: { adName: { not: null } },

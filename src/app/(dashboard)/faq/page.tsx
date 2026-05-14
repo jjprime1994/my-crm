@@ -1,5 +1,6 @@
 import { auth } from "@/auth"
 import FAQItem from "@/components/FAQItem"
+import { getViewAsRole } from "@/lib/viewas"
 
 type PatchEntry = {
   date: string
@@ -189,7 +190,7 @@ const faqs: FAQSection[] = [
 
 export default async function FAQPage() {
   const session = await auth()
-  const role = session?.user.role ?? "SALESPERSON"
+  const role = await getViewAsRole(session?.user.role)
 
   const visible = faqs.filter((s) => !s.roles || s.roles.includes(role))
 

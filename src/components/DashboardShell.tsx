@@ -2,13 +2,16 @@
 
 import { useState } from "react"
 import Sidebar from "@/components/Sidebar"
+import ViewAsBanner from "@/components/ViewAsBanner"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
+  viewingAs: string | null
+  isSuperAdmin: boolean
   children: React.ReactNode
 }
 
-export default function DashboardShell({ user, children }: Props) {
+export default function DashboardShell({ user, viewingAs, isSuperAdmin, children }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -25,11 +28,14 @@ export default function DashboardShell({ user, children }: Props) {
       <div className={`fixed inset-y-0 left-0 z-30 transition-transform duration-200 lg:static lg:translate-x-0 lg:z-auto ${
         open ? "translate-x-0" : "-translate-x-full"
       }`}>
-        <Sidebar user={user} onClose={() => setOpen(false)} />
+        <Sidebar user={user} onClose={() => setOpen(false)} isSuperAdmin={isSuperAdmin} viewingAs={viewingAs} />
       </div>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* View-as banner */}
+        {viewingAs && <ViewAsBanner viewAs={viewingAs} />}
+
         {/* Mobile top bar */}
         <header className="lg:hidden flex items-center gap-3 bg-slate-900 px-4 py-3 shrink-0">
           <button

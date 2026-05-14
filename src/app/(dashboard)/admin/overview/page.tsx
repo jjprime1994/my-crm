@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { isAdmin, isManagerLevel } from "@/lib/roles"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
+import { getViewAsRole } from "@/lib/viewas"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -31,8 +32,9 @@ export default async function ManagerOverviewPage({
   searchParams: Promise<{ period?: string }>
 }) {
   const session = await auth()
-  if (!isManagerLevel(session?.user.role)) redirect("/")
-  if (session?.user.role === "SUPER_ADMIN") redirect("/superadmin/overview")
+  const role = await getViewAsRole(session?.user.role)
+  if (!isManagerLevel(role)) redirect("/")
+  if (role === "SUPER_ADMIN") redirect("/superadmin/overview")
 
   const { period } = await searchParams
   const days = Number(period ?? 30)
@@ -40,7 +42,7 @@ export default async function ManagerOverviewPage({
   const dateFilter = since ? { createdAt: { gte: since } } : {}
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 
-  const isFullManager = isAdmin(session!.user.role)
+  const isFullManager = isAdmin(role)
 
   // ADMIN sees all salespeople in their extended team (including under team leaders)
   // TEAM_LEADER sees only their direct salesperson reports
@@ -62,6 +64,7 @@ export default async function ManagerOverviewPage({
         ],
       }
     : { assignedTo: { managerId: session!.user.id } }
+
 
   const [teamMembers, byStatus, overdueCount] = await Promise.all([
     db.user.findMany({
@@ -132,7 +135,7 @@ export default async function ManagerOverviewPage({
     <div className="space-y-8 max-w-5xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">{session!.user.role === "TEAM_LEADER" ? "Team Leader" : "Manager"}</p>
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">{role === "TEAM_LEADER" ? "Team Leader" : "Manager"}</p>
           <h1 className="text-2xl font-bold text-gray-900">Team Overview</h1>
           <p className="text-sm text-gray-500 mt-0.5">{periodLabel}</p>
         </div>

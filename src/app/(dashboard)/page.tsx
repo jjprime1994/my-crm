@@ -2,6 +2,7 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
+import { getViewAsRole } from "@/lib/viewas"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
@@ -56,7 +57,7 @@ function StatCard({ label, value, valueClass = "text-gray-900", sub, icon }: {
 
 export default async function DashboardPage() {
   const session = await auth()
-  const role = session?.user.role
+  const role = await getViewAsRole(session?.user.role)
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
   const isTeamLeaderRole = role === "TEAM_LEADER"
