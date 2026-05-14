@@ -10,6 +10,14 @@ type Note = {
   author: { id: string; name: string }
 }
 
+type StatusHistoryEntry = {
+  id: string
+  from: string | null
+  to: string
+  createdAt: string | Date
+  changedBy: { name: string } | null
+}
+
 type Lead = {
   id: string
   firstName?: string | null
@@ -26,6 +34,7 @@ type Lead = {
   createdAt: string | Date
   assignedTo?: { id: string; name: string; email: string } | null
   notes: Note[]
+  statusHistory: StatusHistoryEntry[]
 }
 
 interface Props {
@@ -39,8 +48,8 @@ const STATUS_OPTIONS = [
   { value: "CONTACTED", label: "Contacted" },
   { value: "QUALIFIED", label: "Qualified" },
   { value: "PROPOSAL", label: "Proposal" },
-  { value: "CLOSED_WON", label: "Closed Won" },
-  { value: "CLOSED_LOST", label: "Closed Lost" },
+  { value: "CLOSED_WON", label: "Won" },
+  { value: "CLOSED_LOST", label: "Lost" },
 ]
 
 const STATUS_STYLES: Record<string, string> = {
@@ -67,7 +76,7 @@ function initials(first?: string | null, last?: string | null) {
 
 export default function LeadDetailClient({ lead, salespeople, currentUser }: Props) {
   const router = useRouter()
-  const isAdmin = currentUser.role === "ADMIN"
+  const isAdmin = currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN" || currentUser.role === "TEAM_LEADER"
 
   const [status, setStatus] = useState(lead.status)
   const [assignedToId, setAssignedToId] = useState(lead.assignedTo?.id ?? "")
@@ -369,6 +378,41 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
               </div>
             )}
           </div>
+
+          {/* Status history timeline */}
+          {lead.statusHistory.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Status History</h2>
+              <ol className="relative border-l border-gray-100 space-y-5 ml-1.5">
+                {lead.statusHistory.map((entry, i) => {
+                  const toLabel = STATUS_OPTIONS.find((s) => s.value === entry.to)?.label ?? entry.to
+                  const fromLabel = entry.from
+                    ? (STATUS_OPTIONS.find((s) => s.value === entry.from)?.label ?? entry.from)
+                    : null
+                  return (
+                    <li key={entry.id} className="ml-4">
+                      <span className={`absolute -left-1.5 flex h-3 w-3 items-center justify-center rounded-full ring-2 ring-white ${STATUS_DOT[entry.to] ?? "bg-gray-400"}`} />
+                      <div>
+                        <p className="text-xs font-semibold text-gray-800">
+                          {fromLabel ? (
+                            <span className="text-gray-400">{fromLabel} → </span>
+                          ) : null}
+                          <span>{toLabel}</span>
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          {new Date(entry.createdAt).toLocaleString("en-US", {
+                            month: "short", day: "numeric", year: i === 0 ? "numeric" : undefined,
+                            hour: "numeric", minute: "2-digit",
+                          })}
+                          {entry.changedBy ? ` · ${entry.changedBy.name}` : ""}
+                        </p>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -7,8 +7,8 @@ const STATUS_OPTIONS = [
   { value: "CONTACTED", label: "Contacted", color: "text-amber-700 bg-amber-50 border-amber-200" },
   { value: "QUALIFIED", label: "Qualified", color: "text-violet-700 bg-violet-50 border-violet-200" },
   { value: "PROPOSAL", label: "Proposal", color: "text-orange-700 bg-orange-50 border-orange-200" },
-  { value: "CLOSED_WON", label: "Closed Won", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-  { value: "CLOSED_LOST", label: "Closed Lost", color: "text-rose-700 bg-rose-50 border-rose-200" },
+  { value: "CLOSED_WON", label: "Won", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+  { value: "CLOSED_LOST", label: "Lost", color: "text-rose-700 bg-rose-50 border-rose-200" },
 ]
 
 interface Props {
@@ -177,7 +177,7 @@ export default function ExportClient({ sources, counts }: Props) {
         <ul className="space-y-1.5 text-xs text-violet-700">
           <li className="flex items-start gap-2">
             <span className="mt-0.5">•</span>
-            <span><strong>Closed Lost</strong> — Re-target with a discount or different offer on Facebook Ads</span>
+            <span><strong>Lost</strong> — Re-target with a discount or different offer on Facebook Ads</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-0.5">•</span>

@@ -1,18 +1,23 @@
-"use client"
+import { auth } from "@/auth"
+import FAQItem from "@/components/FAQItem"
 
-import { useState } from "react"
+type FAQSection = {
+  category: string
+  roles?: string[]
+  items: { q: string; a: string }[]
+}
 
-const faqs = [
+const faqs: FAQSection[] = [
   {
     category: "Getting Started",
     items: [
       {
         q: "What is the dashboard and what does it show?",
-        a: "The dashboard gives you a quick overview of your performance. It shows the total leads assigned to you, how many are in each status (New, Contacted, Won, Lost), and any upcoming follow-ups due today.",
+        a: "The dashboard gives you a quick overview of your performance. It shows the total leads assigned to you, how many are in each status (New, Contacted, Qualified, Proposal, Won, Lost), and any upcoming follow-ups due today.",
       },
       {
         q: "What do the different lead statuses mean?",
-        a: "NEW — the lead has just been assigned and you haven't contacted them yet.\n\nCONTACTED — you've reached out to the lead at least once.\n\nFOLLOW_UP — you're in ongoing discussions with the lead.\n\nWON — the deal has been closed successfully.\n\nLOST — the lead is no longer interested or the deal fell through.",
+        a: "NEW — the lead has just been assigned and you haven't contacted them yet.\n\nCONTACTED — you've reached out to the lead at least once.\n\nQUALIFIED — the lead has shown genuine interest and is a good fit.\n\nPROPOSAL — you've sent or presented a proposal to the lead.\n\nWON — the deal has been closed successfully.\n\nLOST — the lead is no longer interested or the deal fell through.",
       },
     ],
   },
@@ -25,7 +30,7 @@ const faqs = [
       },
       {
         q: "Why is the Claim button disabled?",
-        a: "If you have a minimum contact requirement set by your manager, you won't be able to claim new leads until you've contacted your existing NEW leads. You'll see an amber warning message at the top of the Available Leads page explaining how many leads you need to contact first.",
+        a: "There are two reasons the Claim button may be disabled:\n\n1. Claim rate limit — you've reached the maximum number of leads you can claim within a 15-minute window (set by your manager). A countdown timer will show when your limit resets.\n\n2. Uncontacted leads threshold — your manager has set a maximum number of NEW (uncontacted) leads you can hold. Once you hit that limit, you must contact those leads and update their status before claiming more. You'll see an amber warning at the top of the page.",
       },
       {
         q: "How does a lead get assigned to me by a manager?",
@@ -107,6 +112,7 @@ const faqs = [
   },
   {
     category: "For Managers",
+    roles: ["ADMIN", "SUPER_ADMIN"],
     items: [
       {
         q: "How do I assign a lead to a salesperson?",
@@ -114,47 +120,40 @@ const faqs = [
       },
       {
         q: "How do I set a claim limit for a salesperson?",
-        a: "Go to Manage Team and click Edit next to the salesperson. You can set a Claim Limit (maximum number of leads they can hold at once) and a New Lead Threshold (they can't claim new leads until they contact this many NEW leads).",
+        a: "Go to Manage Team and find the salesperson's row. You can set two controls:\n\nClaim Limit / 15min — the maximum number of leads they can claim within any 15-minute window. Once hit, they must wait for the timer to reset.\n\nMax New Leads — if set, they cannot claim more leads until they've contacted their existing NEW leads and updated the status. Set to 0 to disable this restriction.",
       },
       {
         q: "How do I view my team's performance?",
-        a: "Your dashboard shows a summary for your team. Super Admins also have access to a full Overview page with individual and team leaderboards.",
+        a: "Your dashboard shows a summary for your team. You can also go to the Leads page to see your leads and your team's leads in separate sections — My Leads shows leads assigned directly to you, and Team Leads shows leads assigned to your salespersons.",
+      },
+    ],
+  },
+  {
+    category: "For Super Admins",
+    roles: ["SUPER_ADMIN"],
+    items: [
+      {
+        q: "What is the Business Overview page?",
+        a: "The Business Overview page (under the Super Admin menu) gives a full picture of the business across all teams. It shows total leads, active pipeline, won deals, conversion rate, a pipeline funnel, lead sources, campaign performance, leaderboards, and recent leads.\n\nYou can filter everything by period — Last 7 days, 30 days, 90 days, or All time.",
+      },
+      {
+        q: "What does the Campaign Performance table show?",
+        a: "The Campaign Performance table shows each Meta ad campaign's results side by side:\n\nStatus — whether the campaign is currently Active or Paused on Meta.\n\nDaily Budget — the daily spend limit set on Meta.\n\nToday Spend — how much has been spent today, with a progress bar showing how much of the daily budget is used.\n\nPeriod Spend — total spend for the selected period.\n\nCPL (Cost Per Lead) — period spend divided by the number of leads from that campaign in the CRM.\n\nLeads / Unclaimed / Won / Conversion — CRM data for that campaign.",
+      },
+      {
+        q: "How do I add a new team member as a Super Admin?",
+        a: "Go to Manage Team and click Add Member. You can create Salesperson or Manager accounts. Salespersons can then be assigned to a manager using the Manager dropdown in their row.",
       },
     ],
   },
 ]
 
-function FAQItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="border-b border-gray-100 last:border-0">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left text-sm font-medium text-gray-800 hover:bg-gray-50 transition"
-      >
-        <span>{q}</span>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          className={`shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {open && (
-        <div className="px-5 pb-4 text-sm text-gray-600 whitespace-pre-line leading-relaxed">
-          {a}
-        </div>
-      )}
-    </div>
-  )
-}
+export default async function FAQPage() {
+  const session = await auth()
+  const role = session?.user.role ?? "SALESPERSON"
 
-export default function FAQPage() {
+  const visible = faqs.filter((s) => !s.roles || s.roles.includes(role))
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -162,7 +161,7 @@ export default function FAQPage() {
         <p className="text-sm text-gray-500 mt-0.5">Answers to common questions about using the CRM</p>
       </div>
 
-      {faqs.map((section) => (
+      {visible.map((section) => (
         <div key={section.category} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-5 pt-4 pb-2">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{section.category}</p>

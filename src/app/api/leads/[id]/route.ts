@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params
   const admin = isManagerLevel(session.user.role)
 
-  const existing = await db.lead.findUnique({ where: { id }, select: { assignedToId: true } })
+  const existing = await db.lead.findUnique({ where: { id }, select: { assignedToId: true, status: true } })
   if (!existing) return new NextResponse("Not found", { status: 404 })
   if (!admin && existing.assignedToId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
 
@@ -55,6 +55,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const lead = await db.lead.update({ where: { id }, data, include: { assignedTo: { select: { name: true } } } })
+
+  // Record status change history
+  if (status && status !== existing.status) {
+    db.leadStatusHistory.create({
+      data: {
+        leadId: id,
+        from: existing.status,
+        to: status as LeadStatus,
+        changedById: session.user.id,
+      },
+    }).catch(() => {})
+  }
 
   // Notify salesperson when a lead is assigned to them
   if ("assignedToId" in body && data.assignedToId && data.assignedToId !== existing.assignedToId) {

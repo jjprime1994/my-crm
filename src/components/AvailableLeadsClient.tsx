@@ -43,6 +43,8 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
   const [leads, setLeads] = useState(initial)
   const [recentClaims, setRecentClaims] = useState(initialClaims)
   const [claiming, setClaiming] = useState<string | null>(null)
+  const [claimedIds, setClaimedIds] = useState<Set<string>>(new Set())
+  const [fadingIds, setFadingIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState("")
   const secondsLeft = useCountdown(recentClaims >= claimLimit ? resetAt : null)
 
@@ -64,9 +66,15 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
       if (res.status === 429) setRecentClaims(claimLimit)
       return
     }
-    setLeads(leads.filter((l) => l.id !== leadId))
     setRecentClaims((n) => n + 1)
-    router.refresh()
+    setClaimedIds((prev) => new Set(prev).add(leadId))
+    setTimeout(() => setFadingIds((prev) => new Set(prev).add(leadId)), 800)
+    setTimeout(() => {
+      setLeads((prev) => prev.filter((l) => l.id !== leadId))
+      setClaimedIds((prev) => { const s = new Set(prev); s.delete(leadId); return s })
+      setFadingIds((prev) => { const s = new Set(prev); s.delete(leadId); return s })
+      router.refresh()
+    }, 1400)
   }
 
   const pct = claimLimit > 0 ? Math.round((recentClaims / claimLimit) * 100) : 0
@@ -163,7 +171,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
               </tr>
             )}
             {leads.map((lead) => (
-              <tr key={lead.id} className={`transition ${claiming === lead.id ? "bg-blue-50/50" : "hover:bg-gray-50/70"}`}>
+              <tr key={lead.id} className={`transition-all duration-500 ${fadingIds.has(lead.id) ? "opacity-0" : "opacity-100"} ${claiming === lead.id ? "bg-blue-50/50" : claimedIds.has(lead.id) ? "bg-emerald-50/50" : "hover:bg-gray-50/70"}`}>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
@@ -185,28 +193,46 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                 <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
                   {lead.campaignName ?? lead.adName ?? "—"}
                 </td>
-                <td className="px-5 py-3.5 text-xs text-gray-400">
-                  {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                <td className="px-5 py-3.5">
+                  {(() => {
+                    const days = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000)
+                    const label = days === 0 ? "Today" : `${days}d ago`
+                    const cls = days === 0
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                      : days <= 3 ? "bg-blue-50 text-blue-600 ring-1 ring-blue-200"
+                      : days <= 7 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                      : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
+                    return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{label}</span>
+                  })()}
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <button
-                    onClick={() => claim(lead.id)}
-                    disabled={atLimit || blockedByNew || claiming === lead.id}
-                    className={`text-xs font-semibold px-4 py-2 rounded-lg transition ${
-                      atLimit || blockedByNew
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
-                    } disabled:opacity-60`}
-                  >
-                    {claiming === lead.id ? (
-                      <span className="flex items-center gap-1.5">
-                        <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                        </svg>
-                        Claiming…
-                      </span>
-                    ) : "Claim"}
-                  </button>
+                  {claimedIds.has(lead.id) ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Claimed
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => claim(lead.id)}
+                      disabled={atLimit || blockedByNew || claiming === lead.id}
+                      className={`text-xs font-semibold px-4 py-2 rounded-lg transition ${
+                        atLimit || blockedByNew
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
+                      } disabled:opacity-60`}
+                    >
+                      {claiming === lead.id ? (
+                        <span className="flex items-center gap-1.5">
+                          <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                          </svg>
+                          Claiming…
+                        </span>
+                      ) : "Claim"}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

@@ -6,7 +6,7 @@ import LeadDetailClient from "@/components/LeadDetailClient"
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   const role = session?.user.role
-  const adminAccess = role === "ADMIN" || role === "SUPER_ADMIN"
+  const adminAccess = role === "ADMIN" || role === "SUPER_ADMIN" || role === "TEAM_LEADER"
   const { id } = await params
 
   const [lead, salespeople] = await Promise.all([
@@ -17,6 +17,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         notes: {
           include: { author: { select: { id: true, name: true } } },
           orderBy: { createdAt: "desc" },
+        },
+        statusHistory: {
+          include: { changedBy: { select: { name: true } } },
+          orderBy: { createdAt: "asc" },
         },
       },
     }),

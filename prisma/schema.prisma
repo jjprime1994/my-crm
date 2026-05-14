@@ -8,21 +8,22 @@ datasource db {
 }
 
 model User {
-  id                String             @id @default(cuid())
+  id                String               @id @default(cuid())
   name              String
-  email             String             @unique
+  email             String               @unique
   password          String
-  role              Role               @default(SALESPERSON)
-  claimLimit        Int                @default(5)
-  newLeadThreshold  Int                @default(0)
+  role              Role                 @default(SALESPERSON)
+  claimLimit        Int                  @default(5)
+  newLeadThreshold  Int                  @default(0)
   managerId         String?
-  manager           User?              @relation("TeamMembers", fields: [managerId], references: [id])
-  teamMembers       User[]             @relation("TeamMembers")
-  leads             Lead[]             @relation("AssignedLeads")
+  manager           User?                @relation("TeamMembers", fields: [managerId], references: [id])
+  teamMembers       User[]               @relation("TeamMembers")
+  leads             Lead[]               @relation("AssignedLeads")
   notes             LeadNote[]
+  statusChanges     LeadStatusHistory[]
   pushSubscriptions PushSubscription[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 }
 
 enum Role {
@@ -33,27 +34,28 @@ enum Role {
 }
 
 model Lead {
-  id           String     @id @default(cuid())
-  metaLeadId   String?    @unique
-  formId       String?
-  adId         String?
-  adName       String?
-  campaignId   String?
-  campaignName String?
-  firstName    String?
-  lastName     String?
-  email        String?
-  phone        String?
-  status       LeadStatus @default(NEW)
-  assignedTo   User?      @relation("AssignedLeads", fields: [assignedToId], references: [id])
-  assignedToId String?
-  claimedAt    DateTime?
-  followUpAt   DateTime?
-  isDuplicate  Boolean    @default(false)
-  notes        LeadNote[]
-  rawData      Json?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id            String              @id @default(cuid())
+  metaLeadId    String?             @unique
+  formId        String?
+  adId          String?
+  adName        String?
+  campaignId    String?
+  campaignName  String?
+  firstName     String?
+  lastName      String?
+  email         String?
+  phone         String?
+  status        LeadStatus          @default(NEW)
+  assignedTo    User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  assignedToId  String?
+  claimedAt     DateTime?
+  followUpAt    DateTime?
+  isDuplicate   Boolean             @default(false)
+  notes         LeadNote[]
+  statusHistory LeadStatusHistory[]
+  rawData       Json?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }
 
 enum LeadStatus {
@@ -83,4 +85,17 @@ model LeadNote {
   authorId  String
   content   String
   createdAt DateTime @default(now())
+}
+
+model LeadStatusHistory {
+  id          String     @id @default(cuid())
+  lead        Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId      String
+  from        LeadStatus?
+  to          LeadStatus
+  changedBy   User?      @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  changedById String?
+  createdAt   DateTime   @default(now())
+
+  @@index([leadId])
 }
