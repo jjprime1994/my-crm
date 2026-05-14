@@ -1,4 +1,4 @@
-import { PrismaClient } from "@/generated/prisma/client"
+import { PrismaClient, Prisma } from "@/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient; dbInitialized: boolean }
@@ -51,27 +51,13 @@ async function backfillStatusHistory() {
   })
   if (leads.length === 0) return
 
-  type Row = Parameters<typeof db.leadStatusHistory.createMany>[0]["data"][number]
-  const rows: Row[] = []
+  const rows: Prisma.LeadStatusHistoryCreateManyInput[] = []
 
   for (const lead of leads) {
     // Every lead started as NEW
-    rows.push({
-      leadId: lead.id,
-      from: null,
-      to: "NEW" as Row["to"],
-      createdAt: lead.createdAt,
-      changedById: null,
-    })
-    // If it's no longer NEW, record the last known transition
+    rows.push({ leadId: lead.id, from: null, to: "NEW", createdAt: lead.createdAt, changedById: null })
     if (lead.status !== "NEW") {
-      rows.push({
-        leadId: lead.id,
-        from: "NEW" as Row["from"],
-        to: lead.status,
-        createdAt: lead.updatedAt,
-        changedById: lead.assignedToId,
-      })
+      rows.push({ leadId: lead.id, from: "NEW", to: lead.status, createdAt: lead.updatedAt, changedById: lead.assignedToId })
     }
   }
 
