@@ -250,20 +250,20 @@ export default function UserManagementClient({ users: initial, currentUserId, is
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claim Limit / 15min</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Max New Leads</th>
-              {isSuperAdmin && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Manager</th>}
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Joined</th>
-              <th className="px-5 py-3.5" />
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claim / 15min</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Max New</th>
+              {isSuperAdmin && <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Manager</th>}
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Joined</th>
+              <th className="px-4 py-3.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {users.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50/70 transition">
-                <td className="px-5 py-4">
+                <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${avatarClass(user.role)}`}>
                       <span className={`text-xs font-bold ${avatarTextClass(user.role)}`}>
@@ -300,7 +300,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                     </div>
                   </div>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-4">
                   {isSuperAdmin ? (
                     <select
                       value={user.role}
@@ -318,11 +318,11 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                     </span>
                   )}
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-4">
                   <span className="text-sm font-semibold text-gray-900">{user._count.leads}</span>
                   <span className="text-xs text-gray-400 ml-1">leads</span>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-4">
                   {user.role !== "SUPER_ADMIN" ? (
                     editingLimit?.id === user.id ? (
                       <div className="flex items-center gap-2">
@@ -364,7 +364,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                     <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-4">
                   {user.role !== "SUPER_ADMIN" ? (
                     editingThreshold?.id === user.id ? (
                       <div className="flex items-center gap-2">
@@ -407,7 +407,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   )}
                 </td>
                 {isSuperAdmin && (
-                  <td className="px-5 py-4">
+                  <td className="px-4 py-4">
                     {user.role === "SALESPERSON" || user.role === "TEAM_LEADER" ? (
                       <select
                         value={user.managerId ?? ""}
@@ -424,20 +424,20 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                     )}
                   </td>
                 )}
-                <td className="px-5 py-4 text-sm text-gray-400">
+                <td className="px-4 py-4 text-sm text-gray-400">
                   {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </td>
-                <td className="px-5 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="px-4 py-4 text-right">
+                  <div className="flex items-center justify-end gap-1">
                     {resettingPassword === user.id ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         {resetError && <span className="text-xs text-rose-500">{resetError}</span>}
                         <input
                           type="password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="New password"
-                          className="w-32 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                           autoFocus
                         />
                         <button
@@ -449,25 +449,31 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         </button>
                         <button
                           onClick={() => { setResettingPassword(null); setNewPassword(""); setResetError("") }}
-                          className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                          className="text-xs text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"
                         >
-                          Cancel
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
                       </div>
                     ) : (
                       <button
                         onClick={() => { setResettingPassword(user.id); setResetError("") }}
-                        className="text-xs font-medium text-gray-400 hover:text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition"
+                        title="Reset password"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
                       >
-                        Reset pw
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
                       </button>
                     )}
                     {user.id !== currentUserId && resettingPassword !== user.id && (
                       <button
                         onClick={() => deleteUser(user.id)}
-                        className="text-xs font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition"
+                        title="Remove user"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
                       >
-                        Remove
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
                       </button>
                     )}
                   </div>
