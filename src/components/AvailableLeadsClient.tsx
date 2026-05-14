@@ -88,7 +88,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
         </div>
 
         {/* Quota card */}
-        <div className={`rounded-2xl px-5 py-4 border min-w-[180px] ${atLimit ? "bg-rose-50 border-rose-200" : "bg-white border-gray-100 shadow-sm"}`}>
+        <div className={`rounded-2xl px-5 py-4 border w-full sm:w-auto sm:min-w-[180px] ${atLimit ? "bg-rose-50 border-rose-200" : "bg-white border-gray-100 shadow-sm"}`}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-medium text-gray-500">Claims this window</p>
             <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
@@ -145,7 +145,58 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-2">
+        {leads.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-sm text-gray-400">No available leads right now.</div>
+        ) : leads.map((lead) => {
+          const days = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000)
+          const label = days === 0 ? "Today" : `${days}d ago`
+          const ageCls = days === 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+            : days <= 3 ? "bg-blue-50 text-blue-600 ring-1 ring-blue-200"
+            : days <= 7 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+            : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
+          return (
+            <div key={lead.id} className={`bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3.5 flex items-center gap-3 transition-all duration-500 ${fadingIds.has(lead.id) ? "opacity-0" : "opacity-100"} ${claimedIds.has(lead.id) ? "bg-emerald-50/50" : claiming === lead.id ? "bg-blue-50/50" : ""}`}>
+              <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-500 italic">Hidden until claimed</p>
+                {(lead.campaignName ?? lead.adName) && (
+                  <p className="text-xs text-gray-400 truncate mt-0.5">{lead.campaignName ?? lead.adName}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ageCls}`}>{label}</span>
+                {claimedIds.has(lead.id) ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg bg-emerald-100 text-emerald-700">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Claimed
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => claim(lead.id)}
+                    disabled={atLimit || blockedByNew || claiming === lead.id}
+                    className={`text-sm font-semibold px-4 py-2 rounded-lg transition min-h-[40px] ${
+                      atLimit || blockedByNew ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
+                    } disabled:opacity-60`}
+                  >
+                    {claiming === lead.id ? (
+                      <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    ) : "Claim"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
@@ -197,8 +248,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                   {(() => {
                     const days = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000)
                     const label = days === 0 ? "Today" : `${days}d ago`
-                    const cls = days === 0
-                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                    const cls = days === 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
                       : days <= 3 ? "bg-blue-50 text-blue-600 ring-1 ring-blue-200"
                       : days <= 7 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
                       : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
@@ -208,9 +258,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                 <td className="px-5 py-3.5 text-right">
                   {claimedIds.has(lead.id) ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                       Claimed
                     </span>
                   ) : (
@@ -218,16 +266,12 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                       onClick={() => claim(lead.id)}
                       disabled={atLimit || blockedByNew || claiming === lead.id}
                       className={`text-xs font-semibold px-4 py-2 rounded-lg transition ${
-                        atLimit || blockedByNew
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
+                        atLimit || blockedByNew ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
                       } disabled:opacity-60`}
                     >
                       {claiming === lead.id ? (
                         <span className="flex items-center gap-1.5">
-                          <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                          </svg>
+                          <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                           Claiming…
                         </span>
                       ) : "Claim"}

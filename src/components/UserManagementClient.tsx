@@ -200,7 +200,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
               {error}
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
               { label: "Full Name", key: "name", type: "text", placeholder: "Juan dela Cruz" },
               { label: "Email", key: "email", type: "email", placeholder: "juan@example.com" },

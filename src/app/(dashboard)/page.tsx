@@ -46,7 +46,7 @@ function StatCard({ label, value, valueClass = "text-gray-900", sub, icon }: {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start justify-between gap-4">
       <div>
         <p className="text-sm text-gray-500 font-medium">{label}</p>
-        <p className={`text-3xl font-bold mt-1 ${valueClass}`}>{value}</p>
+        <p className={`text-2xl sm:text-3xl font-bold mt-1 ${valueClass}`}>{value}</p>
         {sub && <div className="mt-1">{sub}</div>}
       </div>
       <div className="p-2.5 bg-gray-50 rounded-xl text-gray-400 shrink-0">{icon}</div>
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
       {/* Pipeline */}
       <div>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Pipeline Breakdown</h2>
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {Object.values(LeadStatus).map((status) => {
             const count = statusMap[status] ?? 0
             const pct = total > 0 ? Math.round((count / total) * 100) : 0

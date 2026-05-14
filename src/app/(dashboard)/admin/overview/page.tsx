@@ -229,7 +229,7 @@ export default async function ManagerOverviewPage({
       </div>
 
       {/* Team leaderboard */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-50">
           <h2 className="font-semibold text-gray-900">Team Performance</h2>
           <p className="text-xs text-gray-400 mt-0.5">{members.length} salesperson{members.length !== 1 ? "s" : ""}</p>
@@ -237,58 +237,87 @@ export default async function ManagerOverviewPage({
         {members.length === 0 ? (
           <div className="text-center py-12 text-sm text-gray-400">No team members yet.</div>
         ) : (
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-gray-50 bg-gray-50/40">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salesperson</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Stale Leads</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Progress</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
+          <>
+            {/* Mobile cards */}
+            <ul className="sm:hidden divide-y divide-gray-50">
               {members.map((m, i) => (
-                <tr key={m.id} className="hover:bg-gray-50/70 transition">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
+                <li key={m.id} className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
+                        {i === 0 && m.won > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">⭐ Top</span>}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{m.name}</p>
-                        {i === 0 && m.won > 0 && <p className="text-[10px] text-amber-600 font-semibold">Top performer</p>}
+                      <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
+                        <span>{m.totalLeads} leads</span>
+                        <span className="text-emerald-600 font-semibold">{m.won} won</span>
+                        <span className={`font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
+                        {m.stale > 0 && <span className="text-rose-500 font-medium">{m.stale} stale</span>}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">{m.totalLeads}</td>
-                  <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>
-                  <td className="px-6 py-4">
-                    <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>
-                      {m.rate}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {m.stale > 0 ? (
-                      <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">
-                        {m.stale} stale
-                      </span>
-                    ) : (
-                      <span className="text-xs text-emerald-600 font-medium">All active</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden w-28">
-                      {m.totalLeads > 0 && (
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.rate}%` }} />
-                      )}
+                    <div className="shrink-0 w-16">
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        {m.totalLeads > 0 && <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.rate}%` }} />}
+                      </div>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-gray-50 bg-gray-50/40">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salesperson</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Stale Leads</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Progress</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {members.map((m, i) => (
+                    <tr key={m.id} className="hover:bg-gray-50/70 transition">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{m.name}</p>
+                            {i === 0 && m.won > 0 && <p className="text-[10px] text-amber-600 font-semibold">Top performer</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">{m.totalLeads}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>
+                      <td className="px-6 py-4">
+                        <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {m.stale > 0 ? (
+                          <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{m.stale} stale</span>
+                        ) : (
+                          <span className="text-xs text-emerald-600 font-medium">All active</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden w-28">
+                          {m.totalLeads > 0 && <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.rate}%` }} />}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
