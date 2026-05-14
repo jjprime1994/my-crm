@@ -42,6 +42,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const data: Record<string, unknown> = {}
+  if ("name" in body) {
+    if (!body.name?.trim()) return new NextResponse("Name is required", { status: 400 })
+    data.name = body.name.trim()
+  }
   if ("claimLimit" in body) data.claimLimit = Number(body.claimLimit)
   if ("newLeadThreshold" in body) data.newLeadThreshold = Number(body.newLeadThreshold)
   if ("managerId" in body) {

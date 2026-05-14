@@ -62,6 +62,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "SALESPERSON" })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [editingName, setEditingName] = useState<{ id: string; value: string } | null>(null)
   const [editingLimit, setEditingLimit] = useState<{ id: string; value: number } | null>(null)
   const [editingThreshold, setEditingThreshold] = useState<{ id: string; value: number } | null>(null)
   const [resettingPassword, setResettingPassword] = useState<string | null>(null)
@@ -84,6 +85,17 @@ export default function UserManagementClient({ users: initial, currentUserId, is
     setResetSuccess(users.find((u) => u.id === id)?.name ?? "User")
     setResettingPassword(null)
     setNewPassword("")
+  }
+
+  async function saveName(id: string, name: string) {
+    if (!name.trim()) return
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    })
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, name: name.trim() } : u)))
+    setEditingName(null)
   }
 
   async function addUser(e: React.FormEvent) {
@@ -259,7 +271,31 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 text-sm">{user.name}</p>
+                      {editingName?.id === user.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editingName.value}
+                            onChange={(e) => setEditingName({ id: user.id, value: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveName(user.id, editingName.value)
+                              if (e.key === "Escape") setEditingName(null)
+                            }}
+                            className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
+                            autoFocus
+                          />
+                          <button onClick={() => saveName(user.id, editingName.value)} className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded-lg transition">Save</button>
+                          <button onClick={() => setEditingName(null)} className="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1 rounded-lg hover:bg-gray-100 transition">✕</button>
+                        </div>
+                      ) : (
+                        <p
+                          className="font-medium text-gray-900 text-sm cursor-pointer hover:text-blue-600 transition"
+                          onClick={() => setEditingName({ id: user.id, value: user.name })}
+                          title="Click to edit name"
+                        >
+                          {user.name}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-400">{user.email}</p>
                     </div>
                   </div>
