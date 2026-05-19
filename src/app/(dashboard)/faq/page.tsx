@@ -25,6 +25,9 @@ const patchNotes: PatchEntry[] = [
       "Smarter DUP badge — duplicate leads in Assign Leads now show exactly which campaign the other lead came from, who is handling it (or 'Unassigned'), and what status it is in, so managers can make an informed decision instead of guessing",
       "Mobile layout fixes — Assign Leads mobile cards now show the age badge pinned to the top-right corner and duplicate sibling info on its own line so nothing overlaps or wraps awkwardly on small screens",
       "Team Breakdown — the Manager overview and Business Overview pages now include a Team Breakdown section showing each salesperson's claimed leads, assigned leads, total leads, won count, conversion rate, and stale count, grouped by team",
+      "Leaderboard team totals fix — the Teams tab on the Business Overview leaderboard now correctly includes a manager's own leads in their team's total, not just their team members' leads",
+      "Management leads in Team Breakdown — managers and team leaders who handle leads directly now appear as highlighted header rows (with a role badge) at the top of their section in the Team Breakdown; only shown when they have leads in the selected period",
+      "Full org hierarchy in Business Overview — the Team Breakdown on the Business Overview page now groups salespeople by their top-level manager, with sub-sections per team leader, so the entire org structure is visible at a glance",
     ],
   },
   {
@@ -211,7 +214,7 @@ const faqs: FAQSection[] = [
       },
       {
         q: "Where can I see who claimed vs was assigned a lead?",
-        a: "The Team Breakdown section on the Manager Overview page shows each salesperson's Claimed count (leads they picked up from Available Leads) and Assigned count (leads pushed to them by a manager) side by side. This lets you quickly see who is proactively claiming leads vs who is waiting to be assigned.\n\nFor an individual lead, you can also check the status history timeline on the lead detail page — a 'Claimed' event means the salesperson took it themselves.",
+        a: "The Team Breakdown section on the Manager Overview page shows each person's Claimed count (leads they picked up from Available Leads) and Assigned count (leads pushed to them by a manager) side by side. This includes salespersons, team leaders, and the manager themselves if they have leads in the period.\n\nThis lets you quickly see who is proactively claiming leads vs who is waiting to be assigned.\n\nFor an individual lead, you can also check the status history timeline on the lead detail page — a 'Claimed' event means the person took it themselves.",
       },
     ],
   },
@@ -229,7 +232,7 @@ const faqs: FAQSection[] = [
       },
       {
         q: "What does the Team Breakdown section show?",
-        a: "The Team Breakdown section appears on both the Manager Overview and Business Overview pages. It lists every salesperson grouped by their manager (or team leader), with these columns:\n\nClaimed — leads the salesperson picked up themselves from Available Leads.\n\nAssigned — leads a manager pushed to them directly.\n\nTotal — Claimed + Assigned.\n\nWon — leads closed as won.\n\nConv. — conversion rate (Won ÷ Total).\n\nStale — open leads with no activity in more than 2 days.\n\nThe top performer in each group is highlighted. All numbers are scoped to the period you have selected at the top of the page.",
+        a: "The Team Breakdown section appears on both the Manager Overview and Business Overview pages. It lists every member with leads in the selected period, grouped by team, with these columns:\n\nClaimed — leads the person picked up themselves from Available Leads.\n\nAssigned — leads pushed to them by a manager.\n\nTotal — Claimed + Assigned.\n\nWon — leads closed as won.\n\nConv. — conversion rate (Won ÷ Total).\n\nStale — open leads with no activity in more than 2 days.\n\nManagers and team leaders who handle leads directly appear as a highlighted header row at the top of their section, with a role badge (Manager / Team Leader / Super Admin). They only appear if they have at least one lead in the period.\n\nOn the Business Overview page, the breakdown is organised by top-level manager, with each team leader's sub-team shown as a separate group beneath — so the full org structure is visible in one view.\n\nAll numbers are scoped to the period you have selected at the top of the page.",
       },
       {
         q: "What does the Campaign Performance table show?",
