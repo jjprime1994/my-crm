@@ -11,7 +11,20 @@ type Lead = {
   phone?: string | null
   adName?: string | null
   campaignName?: string | null
+  branch?: string | null
+  source?: string | null
   createdAt: Date | string
+}
+
+function SourceBadge({ source }: { source?: string | null }) {
+  if (source === "TIKTOK") {
+    return (
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-pink-50 text-pink-600 ring-1 ring-pink-100 shrink-0">TikTok</span>
+    )
+  }
+  return (
+    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100 shrink-0">Meta</span>
+  )
 }
 
 interface Props {
@@ -46,12 +59,13 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
   const [claimedIds, setClaimedIds] = useState<Set<string>>(new Set())
   const [fadingIds, setFadingIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState("")
-  const secondsLeft = useCountdown(recentClaims >= claimLimit ? resetAt : null)
+  const secondsLeft = useCountdown(resetAt)
 
   const remaining = Math.max(0, claimLimit - recentClaims)
-  const atLimit = remaining === 0 && secondsLeft > 0
+  const atLimit = remaining === 0
   const blockedByNew = newLeadThreshold > 0 && newLeadsCount >= newLeadThreshold
-  const mins = Math.floor(secondsLeft / 60)
+  const hours = Math.floor(secondsLeft / 3600)
+  const mins = Math.floor((secondsLeft % 3600) / 60)
   const secs = secondsLeft % 60
 
   async function claim(leadId: string) {
@@ -90,7 +104,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
         {/* Quota card */}
         <div className={`rounded-2xl px-5 py-4 border w-full sm:w-auto sm:min-w-[180px] ${atLimit ? "bg-rose-50 border-rose-200" : "bg-white border-gray-100 shadow-sm"}`}>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-gray-500">Claims this window</p>
+            <p className="text-xs font-medium text-gray-500">Claims today</p>
             <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
               atLimit ? "bg-rose-100 text-rose-600" : remaining <= 1 ? "bg-orange-100 text-orange-600" : "bg-emerald-100 text-emerald-600"
             }`}>
@@ -98,7 +112,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
             </span>
           </div>
           <div className="flex items-end gap-1 mb-2">
-            <span className={`text-2xl font-bold ${atLimit ? "text-rose-600" : "text-gray-900"}`}>{recentClaims}</span>
+            <span key={recentClaims} className={`text-2xl font-bold [animation:countUp_0.3s_ease-out] ${atLimit ? "text-rose-600" : "text-gray-900"}`}>{recentClaims}</span>
             <span className="text-sm text-gray-400 mb-0.5">/ {claimLimit}</span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -107,8 +121,8 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
               style={{ width: `${pct}%` }}
             />
           </div>
-          {atLimit && secondsLeft > 0 && (
-            <p className="text-xs text-rose-500 mt-1.5 font-medium">Resets in {mins}m {secs}s</p>
+          {atLimit && (
+            <p className="text-xs text-rose-500 mt-1.5 font-medium">Resets at midnight MYT ({hours}h {mins}m)</p>
           )}
         </div>
       </div>
@@ -128,7 +142,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
           <span>
-            Claim limit of <strong>{claimLimit}</strong> reached. Resets in <strong>{mins}m {secs}s</strong>.
+            Claim limit of <strong>{claimLimit}</strong> reached. Resets at <strong>midnight MYT</strong> (in {hours}h {mins}m).
           </span>
         </div>
       )}
@@ -165,9 +179,15 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-500 italic">Hidden until claimed</p>
-                {(lead.campaignName ?? lead.adName) && (
-                  <p className="text-xs text-gray-400 truncate mt-0.5">{lead.campaignName ?? lead.adName}</p>
-                )}
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {(lead.campaignName ?? lead.adName) && (
+                    <p className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</p>
+                  )}
+                  <SourceBadge source={lead.source} />
+                  {lead.branch && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100 shrink-0">{lead.branch}</span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ageCls}`}>{label}</span>
@@ -241,8 +261,14 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                     Claim to reveal
                   </div>
                 </td>
-                <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
-                  {lead.campaignName ?? lead.adName ?? "—"}
+                <td className="px-5 py-3.5 max-w-[160px]">
+                  <p className="text-sm text-gray-500 truncate">{lead.campaignName ?? lead.adName ?? "—"}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <SourceBadge source={lead.source} />
+                    {lead.branch && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100">{lead.branch}</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-5 py-3.5">
                   {(() => {

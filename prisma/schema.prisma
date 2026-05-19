@@ -15,6 +15,8 @@ model User {
   role              Role                 @default(SALESPERSON)
   claimLimit        Int                  @default(5)
   newLeadThreshold  Int                  @default(0)
+  coveredStates     String[]             @default([])
+  isDefaultTeam     Boolean              @default(false)
   managerId         String?
   manager           User?                @relation("TeamMembers", fields: [managerId], references: [id])
   teamMembers       User[]               @relation("TeamMembers")
@@ -46,6 +48,9 @@ model Lead {
   lastName      String?
   email         String?
   phone         String?
+  branch        String?
+  source        String              @default("META")
+  firstContactedAt DateTime?
   status        LeadStatus          @default(NEW)
   assignedTo    User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
   assignedToId  String?
@@ -57,6 +62,15 @@ model Lead {
   rawData       Json?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+}
+
+model AdRoute {
+  id        String   @id @default(cuid())
+  adId      String?
+  adName    String   @unique
+  teamIds   String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum LeadStatus {

@@ -22,5 +22,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     include: { author: { select: { id: true, name: true } } },
   })
 
+  // Record first contact time when salesperson logs a contact attempt
+  if (content.trim().startsWith("Contacted via")) {
+    db.lead.updateMany({
+      where: { id, firstContactedAt: null },
+      data: { firstContactedAt: new Date() },
+    }).catch(() => {})
+  }
+
   return NextResponse.json(note, { status: 201 })
 }

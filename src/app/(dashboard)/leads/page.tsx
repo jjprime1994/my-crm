@@ -4,6 +4,7 @@ import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import LeadsFilters from "@/components/LeadsFilters"
 import { getViewAsRole } from "@/lib/viewas"
+import { calcResponseTime } from "@/lib/responseTime"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
@@ -42,6 +43,8 @@ type LeadRow = {
   isDuplicate: boolean
   campaignName?: string | null
   adName?: string | null
+  claimedAt?: Date | null
+  firstContactedAt?: Date | null
   createdAt: Date
   updatedAt: Date
   assignedTo?: { id: string; name: string } | null
@@ -162,6 +165,20 @@ function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]; showAssignedT
                           {days}d untouched
                         </span>
                       )
+                    })()}
+                    {(() => {
+                      const rt = calcResponseTime(lead.claimedAt, lead.firstContactedAt)
+                      if (rt) return (
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full w-fit ${rt.colorClass}`}>
+                          ⏱ {rt.label}
+                        </span>
+                      )
+                      if (lead.claimedAt && !lead.firstContactedAt) return (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded w-fit bg-gray-100 text-gray-400">
+                          Not contacted
+                        </span>
+                      )
+                      return null
                     })()}
                   </div>
                 </td>

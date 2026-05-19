@@ -41,44 +41,6 @@ export async function GET(req: NextRequest) {
     where.assignedToId = { in: ids.length > 0 ? ids : ["__none__"] }
   }
 
-  const leads = await db.lead.findMany({
-    where,
-    include: { assignedTo: { select: { name: true } } },
-    orderBy: { createdAt: "desc" },
-  })
-
-  const headers = [
-    "First Name", "Last Name", "Email", "Phone",
-    "Status", "Ad / Form", "Campaign", "State", "Platform",
-    "Assigned To", "Duplicate", "Follow-up Date", "Created Date", "Last Updated",
-  ]
-
-  const rows = leads.map((l) => [
-    l.firstName ?? "",
-    l.lastName ?? "",
-    l.email ?? "",
-    l.phone ?? "",
-    l.status,
-    l.adName ?? "",
-    l.campaignName ?? "",
-    l.branch ?? "",
-    l.source ?? "META",
-    l.assignedTo?.name ?? "Unassigned",
-    l.isDuplicate ? "Yes" : "No",
-    l.followUpAt ? new Date(l.followUpAt).toLocaleDateString("en-MY") : "",
-    new Date(l.createdAt).toLocaleDateString("en-MY"),
-    new Date(l.updatedAt).toLocaleDateString("en-MY"),
-  ])
-
-  const csv = [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    .join("\r\n")
-
-  return new NextResponse(csv, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="leads-export-${new Date().toISOString().slice(0, 10)}.csv"`,
-    },
-  })
+  const count = await db.lead.count({ where })
+  return NextResponse.json({ count })
 }

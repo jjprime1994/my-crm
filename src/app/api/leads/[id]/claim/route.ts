@@ -32,20 +32,24 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(lead)
   }
 
-  const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000)
-  const recentClaims = await db.lead.count({
-    where: { assignedToId: session.user.id, claimedAt: { gte: fifteenMinsAgo } },
+  // Daily window resetting at midnight MYT (UTC+8)
+  const MYT_OFFSET = 8 * 60 * 60 * 1000
+  const nowMs = Date.now()
+  const nowInMYT = nowMs + MYT_OFFSET
+  const startOfDayInMYT = nowInMYT - (nowInMYT % (24 * 60 * 60 * 1000))
+  const startOfDayUTC = new Date(startOfDayInMYT - MYT_OFFSET)
+
+  const todayClaims = await db.lead.count({
+    where: { assignedToId: session.user.id, claimedAt: { gte: startOfDayUTC } },
   })
 
-  if (recentClaims >= user.claimLimit) {
-    const oldest = await db.lead.findFirst({
-      where: { assignedToId: session.user.id, claimedAt: { gte: fifteenMinsAgo } },
-      orderBy: { claimedAt: "asc" },
-    })
-    const resetAt = new Date(oldest!.claimedAt!.getTime() + 15 * 60 * 1000)
-    const secondsLeft = Math.ceil((resetAt.getTime() - Date.now()) / 1000)
+  if (todayClaims >= user.claimLimit) {
+    const nextMidnightUTC = new Date(startOfDayInMYT + 24 * 60 * 60 * 1000 - MYT_OFFSET)
+    const secondsLeft = Math.ceil((nextMidnightUTC.getTime() - nowMs) / 1000)
+    const hoursLeft = Math.floor(secondsLeft / 3600)
+    const minsLeft = Math.floor((secondsLeft % 3600) / 60)
     return NextResponse.json(
-      { error: `Claim limit reached (${user.claimLimit} per 15 min). Try again in ${Math.ceil(secondsLeft / 60)}m ${secondsLeft % 60}s.` },
+      { error: `Claim limit reached (${user.claimLimit}/day). Resets at midnight MYT (in ${hoursLeft}h ${minsLeft}m).` },
       { status: 429 }
     )
   }

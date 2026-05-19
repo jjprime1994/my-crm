@@ -66,6 +66,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         changedById: session.user.id,
       },
     }).catch(() => {})
+
+    // Record first contact time if status moves to CONTACTED for the first time
+    if (status === "CONTACTED") {
+      db.lead.updateMany({
+        where: { id, firstContactedAt: null },
+        data: { firstContactedAt: new Date() },
+      }).catch(() => {})
+    }
   }
 
   // Notify salesperson when a lead is assigned to them

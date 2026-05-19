@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import crypto from "crypto"
+import { resolveStateBranch } from "@/lib/branch"
 
 // GET: Meta webhook verification
 export async function GET(req: NextRequest) {
@@ -47,7 +48,8 @@ export async function POST(req: NextRequest) {
       const { leadgen_id, form_id, ad_id, campaign_id, adgroup_id } = change.value
 
       // Fetch full lead data from Meta Graph API
-      let firstName, lastName, email, phone, adName, campaignName
+      let firstName, lastName, email, phone, adName, campaignName, branch: string | null = null
+      let fieldData: { name: string; values: string[] }[] = []
       const token = process.env.META_PAGE_ACCESS_TOKEN
       try {
         // Fetch form fields (contact info)
@@ -56,9 +58,14 @@ export async function POST(req: NextRequest) {
         )
         const leadData = await leadRes.json()
         const fields: { name: string; values: string[] }[] = leadData.field_data ?? []
+        fieldData = fields
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
         email = get("email")
         phone = get("phone_number") ?? get("phone")
+
+        // Extract branch from state/location form field
+        const rawLocation = get("state") ?? get("location") ?? get("city") ?? get("where_are_you_from") ?? get("negeri") ?? get("kawasan")
+        branch = resolveStateBranch(rawLocation)
 
         // Handle both first_name/last_name and full_name field formats
         const fullName = get("full_name")
@@ -101,6 +108,10 @@ export async function POST(req: NextRequest) {
         console.error("[meta-webhook] fetch exception:", err)
       }
 
+      // Fall back to campaign/ad name if form field gave no branch
+      if (!branch && campaignName) branch = resolveStateBranch(campaignName)
+      if (!branch && adName) branch = resolveStateBranch(adName)
+
       // Check for duplicate phone/email
       let isDuplicate = false
       if (phone || email) {
@@ -131,8 +142,10 @@ export async function POST(req: NextRequest) {
           lastName,
           email,
           phone,
+          branch,
+          source: "META",
           isDuplicate,
-          rawData: change.value,
+          rawData: { ...change.value, field_data: fieldData },
         },
       })
     }

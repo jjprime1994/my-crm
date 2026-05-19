@@ -72,9 +72,11 @@ export default async function ManagerOverviewPage({
       select: {
         id: true,
         name: true,
+        managerId: true,
+        manager: { select: { id: true, name: true } },
         leads: {
           where: dateFilter,
-          select: { status: true, updatedAt: true },
+          select: { status: true, updatedAt: true, claimedAt: true },
         },
       },
       orderBy: { name: "asc" },
@@ -110,6 +112,8 @@ export default async function ManagerOverviewPage({
   const members = teamMembers.map((m) => {
     const totalLeads = m.leads.length
     const wonCount = m.leads.filter((l) => l.status === "CLOSED_WON").length
+    const claimedCount = m.leads.filter((l) => l.claimedAt).length
+    const assignedCount = totalLeads - claimedCount
     const staleCount = m.leads.filter((l) =>
       l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST" &&
       (Date.now() - new Date(l.updatedAt).getTime()) > 2 * 86400000
@@ -117,12 +121,29 @@ export default async function ManagerOverviewPage({
     return {
       id: m.id,
       name: m.name,
+      managerId: m.managerId,
+      managerName: m.manager?.name ?? null,
       totalLeads,
+      claimed: claimedCount,
+      assigned: assignedCount,
       won: wonCount,
       stale: staleCount,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
     }
   }).sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
+
+  // Group: direct reports to current user vs reports under a team leader
+  const directMembers = members.filter((m) => m.managerId === session!.user.id)
+  const subTeamMap = new Map<string, { leaderName: string; members: typeof members }>()
+  for (const m of members) {
+    if (m.managerId !== session!.user.id && m.managerId) {
+      if (!subTeamMap.has(m.managerId)) {
+        subTeamMap.set(m.managerId, { leaderName: m.managerName ?? "Unknown", members: [] })
+      }
+      subTeamMap.get(m.managerId)!.members.push(m)
+    }
+  }
+  const subTeams = Array.from(subTeamMap.values())
 
   const periodLabel = days === 0 ? "All time" : `Last ${days} days`
 
@@ -231,96 +252,110 @@ export default async function ManagerOverviewPage({
         </div>
       </div>
 
-      {/* Team leaderboard */}
+      {/* Team Breakdown */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-50">
-          <h2 className="font-semibold text-gray-900">Team Performance</h2>
+          <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
           <p className="text-xs text-gray-400 mt-0.5">{members.length} salesperson{members.length !== 1 ? "s" : ""}</p>
         </div>
         {members.length === 0 ? (
           <div className="text-center py-12 text-sm text-gray-400">No team members yet.</div>
         ) : (
-          <>
-            {/* Mobile cards */}
-            <ul className="sm:hidden divide-y divide-gray-50">
-              {members.map((m, i) => (
-                <li key={m.id} className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
-                        {i === 0 && m.won > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">⭐ Top</span>}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
-                        <span>{m.totalLeads} leads</span>
-                        <span className="text-emerald-600 font-semibold">{m.won} won</span>
-                        <span className={`font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
-                        {m.stale > 0 && <span className="text-rose-500 font-medium">{m.stale} stale</span>}
-                      </div>
-                    </div>
-                    <div className="shrink-0 w-16">
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        {m.totalLeads > 0 && <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.rate}%` }} />}
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <div className="divide-y divide-gray-50">
+            {[
+              ...(directMembers.length > 0 ? [{ label: "Direct Reports", group: directMembers }] : []),
+              ...subTeams.map((st) => ({ label: `${st.leaderName}'s Team`, group: st.members })),
+            ].map(({ label, group }) => (
+              <div key={label}>
+                <div className="px-6 py-2 bg-gray-50/60">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {group.length} member{group.length !== 1 ? "s" : ""}</p>
+                </div>
 
-            {/* Desktop table */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-gray-50 bg-gray-50/40">
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salesperson</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Stale Leads</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Progress</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {members.map((m, i) => (
-                    <tr key={m.id} className="hover:bg-gray-50/70 transition">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                            <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
+                {/* Mobile cards */}
+                <ul className="sm:hidden divide-y divide-gray-50">
+                  {group.map((m, i) => (
+                    <li key={m.id} className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
+                            {i === 0 && m.won > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">⭐ Top</span>}
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{m.name}</p>
-                            {i === 0 && m.won > 0 && <p className="text-[10px] text-amber-600 font-semibold">Top performer</p>}
+                          <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
+                            <span>{m.claimed} claimed</span>
+                            <span>{m.assigned} assigned</span>
+                            <span className="text-emerald-600 font-semibold">{m.won} won</span>
+                            <span className={`font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
+                            {m.stale > 0 && <span className="text-rose-500 font-medium">{m.stale} stale</span>}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">{m.totalLeads}</td>
-                      <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>
-                      <td className="px-6 py-4">
-                        <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {m.stale > 0 ? (
-                          <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{m.stale} stale</span>
-                        ) : (
-                          <span className="text-xs text-emerald-600 font-medium">All active</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden w-28">
-                          {m.totalLeads > 0 && <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.rate}%` }} />}
+                        <div className="shrink-0 w-16">
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            {m.totalLeads > 0 && <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.rate}%` }} />}
+                          </div>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </li>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                </ul>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="border-b border-gray-50 bg-gray-50/20">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salesperson</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Stale</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {group.map((m, i) => (
+                        <tr key={m.id} className="hover:bg-gray-50/70 transition">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{m.name}</p>
+                                {i === 0 && m.won > 0 && <p className="text-[10px] text-amber-600 font-semibold">Top performer</p>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-semibold text-blue-600">{m.claimed}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm text-gray-500">{m.assigned}</span>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">{m.totalLeads}</td>
+                          <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>
+                          <td className="px-6 py-4">
+                            <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {m.stale > 0 ? (
+                              <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{m.stale}</span>
+                            ) : (
+                              <span className="text-xs text-emerald-600 font-medium">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

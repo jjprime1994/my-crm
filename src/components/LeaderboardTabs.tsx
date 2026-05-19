@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { formatAvgResponseTime } from "@/lib/responseTime"
 
 export type IndividualRow = {
   id: string
@@ -8,6 +9,7 @@ export type IndividualRow = {
   totalLeads: number
   won: number
   rate: number
+  avgResponseMs: number | null
 }
 
 export type TeamRow = {
@@ -63,12 +65,13 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide min-w-[160px]">Conversion</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Response</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {individuals.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-400">No salesperson data yet.</td>
+                <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-400">No salesperson data yet.</td>
               </tr>
             )}
             {individuals.map((row, i) => (
@@ -106,6 +109,19 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
                     </div>
                     <span className="text-sm font-bold text-emerald-600 w-10 text-right">{row.rate}%</span>
                   </div>
+                </td>
+                <td className="px-6 py-4">
+                  {row.avgResponseMs !== null ? (
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      row.avgResponseMs < 60 * 60 * 1000 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                      : row.avgResponseMs < 4 * 60 * 60 * 1000 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                      : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
+                    }`}>
+                      {formatAvgResponseTime(row.avgResponseMs)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
+                  )}
                 </td>
               </tr>
             ))}

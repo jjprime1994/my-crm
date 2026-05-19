@@ -16,6 +16,25 @@ export async function GET() {
   return NextResponse.json(users)
 }
 
+export async function PATCH(req: NextRequest) {
+  const session = await auth()
+  if (!session || !isAdmin(session.user.role)) {
+    return new NextResponse("Forbidden", { status: 403 })
+  }
+
+  const { claimLimit } = await req.json()
+  if (typeof claimLimit !== "number" || claimLimit < 1 || claimLimit > 500) {
+    return new NextResponse("Invalid claimLimit", { status: 400 })
+  }
+
+  await db.user.updateMany({
+    where: { role: { notIn: ["SUPER_ADMIN"] } },
+    data: { claimLimit },
+  })
+
+  return NextResponse.json({ ok: true })
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session || !isManagerLevel(session.user.role)) {

@@ -3,12 +3,26 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+type DupSibling = {
+  id: string
+  campaignName?: string | null
+  adName?: string | null
+  status: string
+  assignedTo?: { name: string } | null
+}
+
 type Lead = {
   id: string
   firstName?: string | null
   lastName?: string | null
   email?: string | null
   phone?: string | null
+  adName?: string | null
+  campaignName?: string | null
+  branch?: string | null
+  source?: string | null
+  isDuplicate: boolean
+  dupSibling?: DupSibling | null
   createdAt: Date | string
 }
 
@@ -16,11 +30,51 @@ type Salesperson = {
   id: string
   name: string
   _count: { leads: number }
+  leads: { id: string }[]
 }
 
 interface Props {
   leads: Lead[]
   salespeople: Salesperson[]
+}
+
+function ageBadge(createdAt: Date | string) {
+  const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000)
+  if (days === 0) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">Today</span>
+  if (days === 1) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">1d</span>
+  if (days <= 3) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">{days}d</span>
+  return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-500">{days}d</span>
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
+  PROPOSAL: "Proposal", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
+}
+
+function DupBadge({ sibling }: { sibling?: DupSibling | null }) {
+  const campaign = sibling?.campaignName ?? sibling?.adName ?? "another campaign"
+  const assignee = sibling?.assignedTo?.name ?? null
+  const status = sibling ? (STATUS_LABELS[sibling.status] ?? sibling.status) : null
+
+  return (
+    <span className="inline-flex flex-col gap-0.5">
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 ring-1 ring-amber-200">DUP</span>
+      {sibling && (
+        <span className="text-[10px] text-gray-400 leading-tight max-w-[160px]">
+          {assignee
+            ? <><span className="text-rose-500 font-medium">{assignee}</span> · {campaign} · {status}</>
+            : <>Unassigned · {campaign} · {status}</>
+          }
+        </span>
+      )}
+    </span>
+  )
+}
+
+function SourceBadge({ source }: { source?: string | null }) {
+  if (!source || source === "META") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">Meta</span>
+  if (source === "TIKTOK") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-50 text-pink-600">TikTok</span>
+  return null
 }
 
 export default function BulkAssignClient({ leads: initial, salespeople }: Props) {
@@ -57,7 +111,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
   }
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5 max-w-6xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Assign Leads</h1>
@@ -75,11 +129,13 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
           <select
             value={assignTo}
             onChange={(e) => setAssignTo(e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 w-full sm:w-auto sm:min-w-[200px]"
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 w-full sm:w-auto sm:min-w-[220px]"
           >
             <option value="">Select salesperson…</option>
             {salespeople.map((s) => (
-              <option key={s.id} value={s.id}>{s.name} ({s._count.leads} leads)</option>
+              <option key={s.id} value={s.id}>
+                {s.name} · {s.leads.length} new · {s._count.leads} total
+              </option>
             ))}
           </select>
           <button
@@ -110,25 +166,43 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
               <div
                 key={lead.id}
                 onClick={() => toggle(lead.id)}
-                className={`flex items-center gap-3 rounded-xl border shadow-sm px-4 py-3.5 cursor-pointer transition ${selected.has(lead.id) ? "bg-blue-50 border-blue-200" : "bg-white border-gray-100"}`}
+                className={`flex items-start gap-3 rounded-xl border shadow-sm px-4 py-3.5 cursor-pointer transition ${selected.has(lead.id) ? "bg-blue-50 border-blue-200" : "bg-white border-gray-100"}`}
               >
                 <input
                   type="checkbox"
                   checked={selected.has(lead.id)}
                   onChange={() => toggle(lead.id)}
                   onClick={(e) => e.stopPropagation()}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 shrink-0"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 shrink-0 mt-1"
                 />
                 <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
                   <span className="text-xs font-bold text-gray-500">{(lead.firstName?.[0] ?? "?").toUpperCase()}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</p>
-                  <p className="text-xs text-gray-400 truncate">{lead.email ?? lead.phone ?? "—"}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm truncate">{lead.firstName} {lead.lastName}</p>
+                      <SourceBadge source={lead.source} />
+                      {lead.isDuplicate && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 ring-1 ring-amber-200 shrink-0">DUP</span>}
+                    </div>
+                    {ageBadge(lead.createdAt)}
+                  </div>
+                  <p className="text-xs text-gray-400 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
+                  {lead.isDuplicate && lead.dupSibling && (
+                    <p className="text-[10px] text-gray-400 leading-tight mt-0.5">
+                      {lead.dupSibling.assignedTo
+                        ? <><span className="text-rose-500 font-medium">{lead.dupSibling.assignedTo.name}</span> · {lead.dupSibling.campaignName ?? lead.dupSibling.adName ?? "another campaign"} · {STATUS_LABELS[lead.dupSibling.status] ?? lead.dupSibling.status}</>
+                        : <>Unassigned · {lead.dupSibling.campaignName ?? lead.dupSibling.adName ?? "another campaign"} · {STATUS_LABELS[lead.dupSibling.status] ?? lead.dupSibling.status}</>
+                      }
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-1">
+                    {lead.branch && <span className="text-xs text-gray-500">{lead.branch}</span>}
+                    {(lead.campaignName ?? lead.adName) && (
+                      <span className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</span>
+                    )}
+                  </div>
                 </div>
-                <span className="text-xs text-gray-400 shrink-0">
-                  {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </span>
               </div>
             ))}
           </>
@@ -149,15 +223,17 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                 />
               </th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Email</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Phone</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Received</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Platform</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Ad / Campaign</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Age</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-16">
+                <td colSpan={7} className="text-center py-16">
                   <div className="flex flex-col items-center gap-2 text-sm text-gray-400">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300"><polyline points="20 6 9 17 4 12"/></svg>
                     All leads are assigned.
@@ -175,13 +251,27 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
                       <span className="text-xs font-bold text-gray-500">{(lead.firstName?.[0] ?? "?").toUpperCase()}</span>
                     </div>
-                    <span className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</span>
+                    <div className="flex items-start gap-1.5">
+                      <span className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</span>
+                      {lead.isDuplicate && <DupBadge sibling={lead.dupSibling} />}
+                    </div>
                   </div>
                 </td>
-                <td className="px-5 py-3.5 text-sm text-gray-600">{lead.email ?? "—"}</td>
-                <td className="px-5 py-3.5 text-sm text-gray-600">{lead.phone ?? "—"}</td>
-                <td className="px-5 py-3.5 text-xs text-gray-400">
-                  {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                <td className="px-5 py-3.5 text-sm">
+                  <div className="text-gray-700">{lead.email ?? "—"}</div>
+                  {lead.phone && <div className="text-xs text-gray-400 mt-0.5">{lead.phone}</div>}
+                </td>
+                <td className="px-5 py-3.5 text-sm text-gray-600">
+                  {lead.branch ?? <span className="text-gray-300">—</span>}
+                </td>
+                <td className="px-5 py-3.5">
+                  <SourceBadge source={lead.source} />
+                </td>
+                <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[180px] truncate">
+                  {lead.campaignName ?? lead.adName ?? <span className="text-gray-300">—</span>}
+                </td>
+                <td className="px-5 py-3.5">
+                  {ageBadge(lead.createdAt)}
                 </td>
               </tr>
             ))}

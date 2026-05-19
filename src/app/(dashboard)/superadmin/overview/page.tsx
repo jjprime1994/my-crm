@@ -5,6 +5,7 @@ import { isSuperAdmin } from "@/lib/roles"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import LeaderboardTabs from "@/components/LeaderboardTabs"
+import AnimatedBar from "@/components/AnimatedBar"
 import { getViewAsRole } from "@/lib/viewas"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -50,16 +51,24 @@ export default async function SuperAdminOverviewPage({
     db.user.findMany({
       where: { role: "SALESPERSON" },
       select: {
-        id: true, name: true,
+        id: true, name: true, managerId: true,
+        manager: {
+          select: {
+            id: true, name: true, role: true, managerId: true,
+            manager: { select: { id: true, name: true } },
+          },
+        },
         _count: { select: { leads: true } },
-        leads: { where: dateFilter, select: { status: true } },
+        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true } },
       },
       orderBy: { name: "asc" },
     }),
+    // All top-level managers (ADMIN + SUPER_ADMIN with no parent manager)
     db.user.findMany({
-      where: { role: "ADMIN" },
+      where: { managerId: null, role: { in: ["ADMIN", "SUPER_ADMIN"] } },
       select: {
         id: true, name: true,
+        leads: { where: dateFilter, select: { status: true } },
         teamMembers: {
           select: {
             id: true,
@@ -67,6 +76,7 @@ export default async function SuperAdminOverviewPage({
             leads: { where: dateFilter, select: { status: true } },
             teamMembers: {
               select: {
+                id: true,
                 leads: { where: dateFilter, select: { status: true } },
               },
             },
@@ -200,24 +210,78 @@ export default async function SuperAdminOverviewPage({
     .map((s) => {
       const wonCount = s.leads.filter((l) => l.status === "CLOSED_WON").length
       const totalLeads = s.leads.length
-      return { id: s.id, name: s.name, totalLeads, won: wonCount, rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0 }
+      const claimedCount = s.leads.filter((l) => l.claimedAt).length
+      const staleCount = s.leads.filter((l) =>
+        l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST" &&
+        (Date.now() - new Date(l.updatedAt).getTime()) > 2 * 86400000
+      ).length
+      const responseTimes = s.leads
+        .filter((l) => l.claimedAt && l.firstContactedAt)
+        .map((l) => new Date(l.firstContactedAt!).getTime() - new Date(l.claimedAt!).getTime())
+        .filter((ms) => ms >= 0)
+      const avgResponseMs = responseTimes.length > 0
+        ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+        : null
+      return {
+        id: s.id, name: s.name,
+        managerId: s.managerId, managerName: s.manager?.name ?? null,
+        managerRole: s.manager?.role ?? null,
+        topManagerId: s.manager?.managerId ?? null,
+        topManagerName: s.manager?.manager?.name ?? null,
+        totalLeads, won: wonCount, claimed: claimedCount, assigned: totalLeads - claimedCount,
+        stale: staleCount, rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0, avgResponseMs,
+      }
     })
     .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
+  // Build hierarchical team breakdown: top-level manager → direct reports + sub-teams by team leader
+  const topTeamMap = new Map<string, {
+    managerName: string
+    directMembers: (typeof individuals)[number][]
+    subTeams: Map<string, { leaderName: string; members: (typeof individuals)[number][] }>
+  }>()
+  for (const m of individuals) {
+    const isUnderLeader = m.managerRole === "TEAM_LEADER"
+    const topId = isUnderLeader ? (m.topManagerId ?? "__none__") : (m.managerId ?? "__none__")
+    const topName = isUnderLeader ? (m.topManagerName ?? "No Manager") : (m.managerName ?? "No Manager")
+    if (!topTeamMap.has(topId)) topTeamMap.set(topId, { managerName: topName, directMembers: [], subTeams: new Map() })
+    const topGroup = topTeamMap.get(topId)!
+    if (isUnderLeader && m.managerId) {
+      if (!topGroup.subTeams.has(m.managerId)) topGroup.subTeams.set(m.managerId, { leaderName: m.managerName ?? "Unknown", members: [] })
+      topGroup.subTeams.get(m.managerId)!.members.push(m)
+    } else {
+      topGroup.directMembers.push(m)
+    }
+  }
+  const teamBreakdownGroups = Array.from(topTeamMap.entries())
+    .map(([id, g]) => ({
+      managerId: id,
+      managerName: g.managerName,
+      directMembers: [...g.directMembers].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads),
+      subTeams: Array.from(g.subTeams.values())
+        .map((st) => ({ ...st, members: [...st.members].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads) }))
+        .sort((a, b) => a.leaderName.localeCompare(b.leaderName)),
+    }))
+    .sort((a, b) => a.managerName.localeCompare(b.managerName))
+
+  function initials(name: string) {
+    const p = name.trim().split(" ")
+    return (p[0][0] + (p[1]?.[0] ?? "")).toUpperCase()
+  }
+
   const teams = managerStats
     .map((m) => {
-      // direct members + their sub-teams (team leaders' salespeople)
-      const memberCount = m.teamMembers.length +
+      // All direct reports (team leaders + salespeople) + their sub-reports + manager themselves
+      const memberCount = 1 + m.teamMembers.length +
         m.teamMembers.reduce((sum, tm) => sum + tm.teamMembers.length, 0)
-
-      // leads from direct members + leads from sub-team members
+      // Leads from everyone under this manager's umbrella, including the manager's own leads
       const allLeads = [
+        ...m.leads,
         ...m.teamMembers.flatMap((tm) => tm.leads),
         ...m.teamMembers.flatMap((tm) => tm.teamMembers.flatMap((sub) => sub.leads)),
       ]
       const totalLeads = allLeads.length
       const wonCount = allLeads.filter((l) => l.status === "CLOSED_WON").length
-
       return {
         managerId: m.id,
         managerName: m.name,
@@ -314,7 +378,7 @@ export default async function SuperAdminOverviewPage({
                     </div>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${STATUS_BAR[status]} transition-all`} style={{ width: `${pct}%` }} />
+                    <AnimatedBar pct={pct} className={STATUS_BAR[status]} />
                   </div>
                 </div>
               )
@@ -479,6 +543,133 @@ export default async function SuperAdminOverviewPage({
 
       {/* Leaderboard */}
       <LeaderboardTabs individuals={individuals} teams={teams} />
+
+      {/* Team Breakdown */}
+      {teamBreakdownGroups.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50">
+            <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{individuals.length} salesperson{individuals.length !== 1 ? "s" : ""} across {teamBreakdownGroups.length} team{teamBreakdownGroups.length !== 1 ? "s" : ""}</p>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {teamBreakdownGroups.map(({ managerId, managerName, directMembers, subTeams }) => {
+              const totalInTeam = directMembers.length + subTeams.reduce((s, t) => s + t.members.length, 0)
+              const subGroups = [
+                ...(directMembers.length > 0 ? [{ label: subTeams.length > 0 ? "Direct Reports" : "", group: directMembers }] : []),
+                ...subTeams.map((st) => ({ label: `${st.leaderName}'s Team`, group: st.members })),
+              ]
+              return (
+                <div key={managerId}>
+                  {/* Top-level manager header */}
+                  <div className="px-6 py-3 bg-violet-50/50 border-b border-violet-100/60 flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-violet-200 flex items-center justify-center shrink-0">
+                      <span className="text-[10px] font-bold text-violet-700">{initials(managerName)}</span>
+                    </div>
+                    <span className="text-sm font-bold text-violet-800">{managerName}'s Team</span>
+                    <span className="text-xs text-violet-400">· {totalInTeam} member{totalInTeam !== 1 ? "s" : ""}</span>
+                  </div>
+
+                  {/* Sub-groups */}
+                  <div className="divide-y divide-gray-50">
+                    {subGroups.map(({ label, group }) => (
+                      <div key={label || "direct"}>
+                        {label && (
+                          <div className="px-6 py-2 bg-gray-50/60">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {group.length} member{group.length !== 1 ? "s" : ""}</p>
+                          </div>
+                        )}
+
+                        {/* Mobile cards */}
+                        <ul className="sm:hidden divide-y divide-gray-50">
+                          {group.map((m, i) => (
+                            <li key={m.id} className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+                                  <span className="text-xs font-bold text-violet-600">{initials(m.name)}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
+                                    {i === 0 && m.won > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">Top</span>}
+                                  </div>
+                                  <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
+                                    <span>{m.claimed} claimed</span>
+                                    <span>{m.assigned} assigned</span>
+                                    <span className="text-emerald-600 font-semibold">{m.won} won</span>
+                                    <span className={`font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
+                                    {m.stale > 0 && <span className="text-rose-500 font-medium">{m.stale} stale</span>}
+                                  </div>
+                                </div>
+                                <div className="shrink-0 w-16">
+                                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    {m.totalLeads > 0 && <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.rate}%` }} />}
+                                  </div>
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+
+                        {/* Desktop table */}
+                        <div className="hidden sm:block overflow-x-auto">
+                          <table className="min-w-full">
+                            <thead>
+                              <tr className="border-b border-gray-50 bg-gray-50/20">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salesperson</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Stale</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                              {group.map((m, i) => (
+                                <tr key={m.id} className="hover:bg-gray-50/70 transition">
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+                                        <span className="text-xs font-bold text-violet-600">{initials(m.name)}</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-900">{m.name}</p>
+                                        {i === 0 && m.won > 0 && <p className="text-[10px] text-amber-600 font-semibold">Top performer</p>}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <span className="text-sm font-semibold text-blue-600">{m.claimed}</span>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <span className="text-sm text-gray-500">{m.assigned}</span>
+                                  </td>
+                                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">{m.totalLeads}</td>
+                                  <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>
+                                  <td className="px-6 py-4">
+                                    <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {m.stale > 0 ? (
+                                      <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{m.stale}</span>
+                                    ) : (
+                                      <span className="text-xs text-emerald-600 font-medium">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Recent leads */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">

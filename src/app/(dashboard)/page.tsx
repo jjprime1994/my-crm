@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import { getViewAsRole } from "@/lib/viewas"
+import AnimatedBar from "@/components/AnimatedBar"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
@@ -93,6 +94,17 @@ export default async function DashboardPage() {
     isAdmin ? db.lead.count({ where: { assignedToId: null } }) : Promise.resolve(0),
     isAdmin
       ? db.user.findMany({
+          where: isSuperAdmin
+            ? { role: "SALESPERSON" }
+            : isManager
+            ? {
+                role: "SALESPERSON",
+                OR: [
+                  { managerId: session!.user.id },
+                  { manager: { managerId: session!.user.id } },
+                ],
+              }
+            : { role: "SALESPERSON", managerId: session!.user.id },
           select: { id: true, name: true, _count: { select: { leads: true } }, leads: { select: { status: true } } },
           orderBy: { name: "asc" },
         })
@@ -173,7 +185,7 @@ export default async function DashboardPage() {
                 </div>
                 <p className="text-2xl font-bold text-gray-900">{count}</p>
                 <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${STATUS_BAR[status]}`} style={{ width: `${pct}%` }} />
+                  <AnimatedBar pct={pct} className={STATUS_BAR[status]} />
                 </div>
               </div>
             )
@@ -243,7 +255,7 @@ export default async function DashboardPage() {
                       <p className="font-medium text-gray-900 text-sm truncate">{member.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${rate}%` }} />
+                          <AnimatedBar pct={rate} className="bg-emerald-500" />
                         </div>
                         <span className="text-xs text-gray-400 shrink-0">{member._count.leads} leads</span>
                       </div>

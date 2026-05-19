@@ -85,6 +85,11 @@ const Icons = {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
     </svg>
   ),
+  routing: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v3a6 6 0 0 0 6 6h3"/><path d="M13 6h3a3 3 0 0 1 3 3v3"/>
+    </svg>
+  ),
 }
 
 export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs }: Props) {
@@ -109,6 +114,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
         { href: "/admin/assign", label: "Assign Leads", icon: Icons.assign },
         { href: "/superadmin/overview", label: "Overview", icon: Icons.overview },
         { href: "/superadmin/export", label: "Export Leads", icon: Icons.export },
+        { href: "/superadmin/routing", label: "Ad Routing", icon: Icons.routing },
       ]
     : []
 

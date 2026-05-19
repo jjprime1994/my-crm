@@ -58,6 +58,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return new NextResponse("Invalid role", { status: 400 })
     data.role = body.role as Role
   }
+  if ("coveredStates" in body) {
+    if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+    data.coveredStates = Array.isArray(body.coveredStates) ? body.coveredStates : []
+  }
 
   const user = await db.user.update({
     where: { id },

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { calcResponseTime } from "@/lib/responseTime"
 
 type Note = {
   id: string
@@ -18,6 +19,8 @@ type StatusHistoryEntry = {
   changedBy: { name: string } | null
 }
 
+type FormField = { name: string; values: string[] }
+
 type Lead = {
   id: string
   firstName?: string | null
@@ -27,11 +30,15 @@ type Lead = {
   status: string
   adName?: string | null
   campaignName?: string | null
+  source?: string | null
   formId?: string | null
   adId?: string | null
   followUpAt?: string | Date | null
+  claimedAt?: string | Date | null
+  firstContactedAt?: string | Date | null
   isDuplicate?: boolean
   createdAt: string | Date
+  rawData?: unknown
   assignedTo?: { id: string; name: string; email: string } | null
   notes: Note[]
   statusHistory: StatusHistoryEntry[]
@@ -171,6 +178,22 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
                   <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[status]}`} />
                   {STATUS_OPTIONS.find((s) => s.value === status)?.label}
                 </span>
+                {(() => {
+                  const rt = calcResponseTime(lead.claimedAt, lead.firstContactedAt)
+                  if (rt) return (
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${rt.colorClass}`}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      {rt.label} response
+                    </span>
+                  )
+                  if (lead.claimedAt && !lead.firstContactedAt) return (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      Not yet contacted
+                    </span>
+                  )
+                  return null
+                })()}
                 <span className="text-xs text-gray-400">
                   Added {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </span>
@@ -238,8 +261,38 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
                   </p>
                 </div>
               ))}
+              <div>
+                <p className="text-xs text-gray-400 font-medium mb-0.5">Platform</p>
+                {lead.source === "TIKTOK" ? (
+                  <span className="inline-flex text-xs font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 ring-1 ring-pink-100">TikTok</span>
+                ) : (
+                  <span className="inline-flex text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100">Meta</span>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Form Responses */}
+          {(() => {
+            const raw = lead.rawData as { field_data?: FormField[] } | null | undefined
+            const fields = raw?.field_data ?? []
+            if (fields.length === 0) return null
+            const fmt = (name: string) =>
+              name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+            return (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Form Responses</h2>
+                <div className="space-y-3">
+                  {fields.map((f, i) => (
+                    <div key={i} className="bg-gray-50 rounded-xl px-4 py-3 border-l-4 border-blue-200">
+                      <p className="text-[10px] font-semibold text-blue-500 uppercase tracking-widest mb-0.5">{fmt(f.name)}</p>
+                      <p className="text-sm text-gray-900">{f.values?.join(", ") || <span className="text-gray-300">—</span>}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Notes */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">

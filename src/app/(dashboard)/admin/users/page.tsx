@@ -48,7 +48,7 @@ export default async function UsersPage() {
       orderBy: { createdAt: "desc" },
     }),
     superAdmin
-      ? db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } })
+      ? db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN", "TEAM_LEADER"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
   ])
 
