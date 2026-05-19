@@ -66,7 +66,7 @@ export default async function ManagerOverviewPage({
     : { assignedTo: { managerId: session!.user.id } }
 
 
-  const [teamMembers, byStatus, overdueCount] = await Promise.all([
+  const [teamMembers, byStatus, overdueCount, leaderStats] = await Promise.all([
     db.user.findMany({
       where: salespersonWhere,
       select: {
@@ -100,6 +100,21 @@ export default async function ManagerOverviewPage({
         ],
       },
     }),
+    // Admin's own leads + team leaders' own leads in this period
+    isFullManager
+      ? db.user.findMany({
+          where: {
+            OR: [
+              { id: session!.user.id },
+              { role: "TEAM_LEADER" as const, managerId: session!.user.id },
+            ],
+          },
+          select: {
+            id: true, name: true, role: true, managerId: true,
+            leads: { where: dateFilter, select: { status: true, claimedAt: true, updatedAt: true } },
+          },
+        })
+      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: string; claimedAt: Date | null; updatedAt: Date }[] }[]),
   ])
 
   const statusMap = Object.fromEntries(byStatus.map((s) => [s.status, s._count]))
@@ -132,6 +147,27 @@ export default async function ManagerOverviewPage({
     }
   }).sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
+  // Map of management users' own lead stats
+  const leaderRowMap = new Map(leaderStats.map((u) => {
+    const wonCount = u.leads.filter((l) => l.status === "CLOSED_WON").length
+    const totalLeads = u.leads.length
+    const claimedCount = u.leads.filter((l) => l.claimedAt).length
+    const staleCount = u.leads.filter((l) =>
+      l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST" &&
+      (Date.now() - new Date(l.updatedAt).getTime()) > 2 * 86400000
+    ).length
+    return [u.id, {
+      id: u.id, name: u.name, role: u.role,
+      totalLeads, claimed: claimedCount, assigned: totalLeads - claimedCount,
+      won: wonCount, stale: staleCount,
+      rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
+    }]
+  }))
+  const adminRow = leaderRowMap.get(session!.user.id) ?? null
+
+  const roleBadge = (role: string) =>
+    role === "SUPER_ADMIN" ? "Super Admin" : role === "ADMIN" ? "Manager" : "Team Leader"
+
   // Group: direct reports to current user vs reports under a team leader
   const directMembers = members.filter((m) => m.managerId === session!.user.id)
   const subTeamMap = new Map<string, { leaderName: string; members: typeof members }>()
@@ -143,7 +179,12 @@ export default async function ManagerOverviewPage({
       subTeamMap.get(m.managerId)!.members.push(m)
     }
   }
-  const subTeams = Array.from(subTeamMap.values())
+  const subTeams = Array.from(subTeamMap.entries()).map(([leaderId, st]) => ({
+    leaderId,
+    leaderName: st.leaderName,
+    leaderRow: leaderRowMap.get(leaderId) ?? null,
+    members: st.members,
+  }))
 
   const periodLabel = days === 0 ? "All time" : `Last ${days} days`
 
@@ -258,21 +299,53 @@ export default async function ManagerOverviewPage({
           <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
           <p className="text-xs text-gray-400 mt-0.5">{members.length} salesperson{members.length !== 1 ? "s" : ""}</p>
         </div>
-        {members.length === 0 ? (
+        {members.length === 0 && !adminRow ? (
           <div className="text-center py-12 text-sm text-gray-400">No team members yet.</div>
         ) : (
           <div className="divide-y divide-gray-50">
             {[
-              ...(directMembers.length > 0 ? [{ label: "Direct Reports", group: directMembers }] : []),
-              ...subTeams.map((st) => ({ label: `${st.leaderName}'s Team`, group: st.members })),
-            ].map(({ label, group }) => (
-              <div key={label}>
-                <div className="px-6 py-2 bg-gray-50/60">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {group.length} member{group.length !== 1 ? "s" : ""}</p>
-                </div>
+              ...(adminRow && adminRow.totalLeads > 0 || directMembers.length > 0
+                ? [{ label: subTeams.length > 0 ? "Direct Reports" : "", headerRow: adminRow?.totalLeads ? adminRow : null, group: directMembers }]
+                : []),
+              ...subTeams.map((st) => ({
+                label: `${st.leaderName}'s Team`,
+                headerRow: st.leaderRow && st.leaderRow.totalLeads > 0 ? st.leaderRow : null,
+                group: st.members,
+              })),
+            ].map(({ label, headerRow, group }) => {
+              const count = group.length + (headerRow ? 1 : 0)
+              return (
+              <div key={label || "direct"}>
+                {label && (
+                  <div className="px-6 py-2 bg-gray-50/60">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {count} member{count !== 1 ? "s" : ""}</p>
+                  </div>
+                )}
 
                 {/* Mobile cards */}
                 <ul className="sm:hidden divide-y divide-gray-50">
+                  {headerRow && (
+                    <li className="px-5 py-4 bg-blue-50/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-blue-800">{initials(headerRow.name)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-gray-900 truncate">{headerRow.name}</p>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{roleBadge(headerRow.role)}</span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
+                            <span>{headerRow.claimed} claimed</span>
+                            <span>{headerRow.assigned} assigned</span>
+                            <span className="text-emerald-600 font-semibold">{headerRow.won} won</span>
+                            <span className={`font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
+                            {headerRow.stale > 0 && <span className="text-rose-500 font-medium">{headerRow.stale} stale</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  )}
                   {group.map((m, i) => (
                     <li key={m.id} className="px-5 py-4">
                       <div className="flex items-center gap-3">
@@ -307,7 +380,7 @@ export default async function ManagerOverviewPage({
                   <table className="min-w-full">
                     <thead>
                       <tr className="border-b border-gray-50 bg-gray-50/20">
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salesperson</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
@@ -317,6 +390,33 @@ export default async function ManagerOverviewPage({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
+                      {headerRow && (
+                        <tr className="bg-blue-50/20 hover:bg-blue-50/40 transition">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center shrink-0">
+                                <span className="text-xs font-bold text-blue-800">{initials(headerRow.name)}</span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{headerRow.name}</p>
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{roleBadge(headerRow.role)}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4"><span className="text-sm font-semibold text-blue-600">{headerRow.claimed}</span></td>
+                          <td className="px-6 py-4"><span className="text-sm text-gray-500">{headerRow.assigned}</span></td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">{headerRow.totalLeads}</td>
+                          <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{headerRow.won}</td>
+                          <td className="px-6 py-4">
+                            <span className={`text-sm font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {headerRow.stale > 0
+                              ? <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{headerRow.stale}</span>
+                              : <span className="text-xs text-emerald-600 font-medium">—</span>}
+                          </td>
+                        </tr>
+                      )}
                       {group.map((m, i) => (
                         <tr key={m.id} className="hover:bg-gray-50/70 transition">
                           <td className="px-6 py-4">
@@ -354,7 +454,8 @@ export default async function ManagerOverviewPage({
                   </table>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

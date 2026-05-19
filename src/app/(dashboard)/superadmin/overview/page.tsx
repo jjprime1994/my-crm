@@ -45,7 +45,7 @@ export default async function SuperAdminOverviewPage({
   const since = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
   const dateFilter = since ? { createdAt: { gte: since } } : {}
 
-  const [total, byStatus, salespersonStats, managerStats, sourceStats, recentLeads, campaignLeads] = await Promise.all([
+  const [total, byStatus, salespersonStats, managerStats, sourceStats, recentLeads, campaignLeads, mgmtStats] = await Promise.all([
     db.lead.count({ where: dateFilter }),
     db.lead.groupBy({ by: ["status"], _count: true, where: dateFilter }),
     db.user.findMany({
@@ -100,6 +100,14 @@ export default async function SuperAdminOverviewPage({
     db.lead.findMany({
       where: { ...dateFilter, campaignName: { not: null } },
       select: { campaignName: true, status: true, assignedToId: true },
+    }),
+    db.user.findMany({
+      where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
+      select: {
+        id: true, name: true, role: true, managerId: true,
+        leads: { where: dateFilter, select: { status: true, claimedAt: true, updatedAt: true } },
+      },
+      orderBy: { name: "asc" },
     }),
   ])
 
@@ -234,6 +242,23 @@ export default async function SuperAdminOverviewPage({
     })
     .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
+  // Management users' own leads (super admin, admins, team leaders)
+  const mgmtRows = new Map(mgmtStats.map((u) => {
+    const wonCount = u.leads.filter((l) => l.status === "CLOSED_WON").length
+    const totalLeads = u.leads.length
+    const claimedCount = u.leads.filter((l) => l.claimedAt).length
+    const staleCount = u.leads.filter((l) =>
+      l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST" &&
+      (Date.now() - new Date(l.updatedAt).getTime()) > 2 * 86400000
+    ).length
+    return [u.id, {
+      id: u.id, name: u.name, role: u.role,
+      totalLeads, claimed: claimedCount, assigned: totalLeads - claimedCount,
+      won: wonCount, stale: staleCount,
+      rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
+    }]
+  }))
+
   // Build hierarchical team breakdown: top-level manager → direct reports + sub-teams by team leader
   const topTeamMap = new Map<string, {
     managerName: string
@@ -257,12 +282,21 @@ export default async function SuperAdminOverviewPage({
     .map(([id, g]) => ({
       managerId: id,
       managerName: g.managerName,
+      managerRow: mgmtRows.get(id) ?? null,
       directMembers: [...g.directMembers].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads),
-      subTeams: Array.from(g.subTeams.values())
-        .map((st) => ({ ...st, members: [...st.members].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads) }))
+      subTeams: Array.from(g.subTeams.entries())
+        .map(([leaderId, st]) => ({
+          leaderId,
+          leaderName: st.leaderName,
+          leaderRow: mgmtRows.get(leaderId) ?? null,
+          members: [...st.members].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads),
+        }))
         .sort((a, b) => a.leaderName.localeCompare(b.leaderName)),
     }))
     .sort((a, b) => a.managerName.localeCompare(b.managerName))
+
+  const roleBadge = (role: string) =>
+    role === "SUPER_ADMIN" ? "Super Admin" : role === "ADMIN" ? "Manager" : "Team Leader"
 
   function initials(name: string) {
     const p = name.trim().split(" ")
@@ -552,11 +586,20 @@ export default async function SuperAdminOverviewPage({
             <p className="text-xs text-gray-400 mt-0.5">{individuals.length} salesperson{individuals.length !== 1 ? "s" : ""} across {teamBreakdownGroups.length} team{teamBreakdownGroups.length !== 1 ? "s" : ""}</p>
           </div>
           <div className="divide-y divide-gray-100">
-            {teamBreakdownGroups.map(({ managerId, managerName, directMembers, subTeams }) => {
+            {teamBreakdownGroups.map(({ managerId, managerName, managerRow, directMembers, subTeams }) => {
+              const hasManagerLeads = managerRow && managerRow.totalLeads > 0
               const totalInTeam = directMembers.length + subTeams.reduce((s, t) => s + t.members.length, 0)
               const subGroups = [
-                ...(directMembers.length > 0 ? [{ label: subTeams.length > 0 ? "Direct Reports" : "", group: directMembers }] : []),
-                ...subTeams.map((st) => ({ label: `${st.leaderName}'s Team`, group: st.members })),
+                ...(hasManagerLeads || directMembers.length > 0 ? [{
+                  label: subTeams.length > 0 ? "Direct Reports" : "",
+                  headerRow: hasManagerLeads ? managerRow! : null,
+                  group: directMembers,
+                }] : []),
+                ...subTeams.map((st) => ({
+                  label: `${st.leaderName}'s Team`,
+                  headerRow: st.leaderRow && st.leaderRow.totalLeads > 0 ? st.leaderRow : null,
+                  group: st.members,
+                })),
               ]
               return (
                 <div key={managerId}>
@@ -571,16 +614,40 @@ export default async function SuperAdminOverviewPage({
 
                   {/* Sub-groups */}
                   <div className="divide-y divide-gray-50">
-                    {subGroups.map(({ label, group }) => (
+                    {subGroups.map(({ label, headerRow, group }) => {
+                      const count = group.length + (headerRow ? 1 : 0)
+                      return (
                       <div key={label || "direct"}>
                         {label && (
                           <div className="px-6 py-2 bg-gray-50/60">
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {group.length} member{group.length !== 1 ? "s" : ""}</p>
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {count} member{count !== 1 ? "s" : ""}</p>
                           </div>
                         )}
 
                         {/* Mobile cards */}
                         <ul className="sm:hidden divide-y divide-gray-50">
+                          {headerRow && (
+                            <li className="px-5 py-4 bg-violet-50/30">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-violet-200 flex items-center justify-center shrink-0">
+                                  <span className="text-xs font-bold text-violet-800">{initials(headerRow.name)}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{headerRow.name}</p>
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">{roleBadge(headerRow.role)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
+                                    <span>{headerRow.claimed} claimed</span>
+                                    <span>{headerRow.assigned} assigned</span>
+                                    <span className="text-emerald-600 font-semibold">{headerRow.won} won</span>
+                                    <span className={`font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
+                                    {headerRow.stale > 0 && <span className="text-rose-500 font-medium">{headerRow.stale} stale</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            </li>
+                          )}
                           {group.map((m, i) => (
                             <li key={m.id} className="px-5 py-4">
                               <div className="flex items-center gap-3">
@@ -615,7 +682,7 @@ export default async function SuperAdminOverviewPage({
                           <table className="min-w-full">
                             <thead>
                               <tr className="border-b border-gray-50 bg-gray-50/20">
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salesperson</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
@@ -625,6 +692,33 @@ export default async function SuperAdminOverviewPage({
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
+                              {headerRow && (
+                                <tr className="bg-violet-50/20 hover:bg-violet-50/40 transition">
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-violet-200 flex items-center justify-center shrink-0">
+                                        <span className="text-xs font-bold text-violet-800">{initials(headerRow.name)}</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-900">{headerRow.name}</p>
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">{roleBadge(headerRow.role)}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4"><span className="text-sm font-semibold text-blue-600">{headerRow.claimed}</span></td>
+                                  <td className="px-6 py-4"><span className="text-sm text-gray-500">{headerRow.assigned}</span></td>
+                                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">{headerRow.totalLeads}</td>
+                                  <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{headerRow.won}</td>
+                                  <td className="px-6 py-4">
+                                    <span className={`text-sm font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {headerRow.stale > 0
+                                      ? <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{headerRow.stale}</span>
+                                      : <span className="text-xs text-emerald-600 font-medium">—</span>}
+                                  </td>
+                                </tr>
+                              )}
                               {group.map((m, i) => (
                                 <tr key={m.id} className="hover:bg-gray-50/70 transition">
                                   <td className="px-6 py-4">
@@ -662,7 +756,8 @@ export default async function SuperAdminOverviewPage({
                           </table>
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )
