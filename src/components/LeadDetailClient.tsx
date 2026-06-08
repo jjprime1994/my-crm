@@ -158,8 +158,25 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
   const changed = statusChanged || followUpAt !== originalFollowUp || (isAdmin && assignedToId !== (lead.assignedTo?.id ?? ""))
   const canSave = changed && (!statusChanged || statusNote.trim().length > 0)
 
+  function addDays(n: number) {
+    const d = new Date()
+    d.setDate(d.getDate() + n)
+    return d.toISOString().slice(0, 10)
+  }
+
   return (
     <div className="space-y-6 max-w-5xl">
+      {/* Back */}
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition -mt-1"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back
+      </button>
+
       {/* Header */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -380,11 +397,27 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
                 onChange={(e) => setFollowUpAt(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
               />
-              {followUpAt && (
-                <button onClick={() => setFollowUpAt("")} className="text-xs text-gray-400 hover:text-gray-600">
-                  Clear reminder
-                </button>
-              )}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: "Tomorrow", days: 1 },
+                  { label: "+3 days", days: 3 },
+                  { label: "+1 week", days: 7 },
+                  { label: "+2 weeks", days: 14 },
+                ].map(({ label, days }) => (
+                  <button
+                    key={days}
+                    onClick={() => setFollowUpAt(addDays(days))}
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition"
+                  >
+                    {label}
+                  </button>
+                ))}
+                {followUpAt && (
+                  <button onClick={() => setFollowUpAt("")} className="text-xs text-gray-400 hover:text-gray-600 px-2.5 py-1">
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
 
             {statusChanged && (

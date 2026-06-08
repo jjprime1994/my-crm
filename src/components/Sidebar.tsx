@@ -10,7 +10,17 @@ interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
   isSuperAdmin: boolean
   viewingAs: string | null
+  counts: { followUps: number; availableLeads: number }
   onClose?: () => void
+}
+
+function Badge({ n }: { n: number }) {
+  if (n === 0) return null
+  return (
+    <span className="ml-auto text-[10px] font-bold bg-blue-500 text-white px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+      {n > 99 ? "99+" : n}
+    </span>
+  )
 }
 
 function initials(name?: string | null) {
@@ -92,20 +102,20 @@ const Icons = {
   ),
 }
 
-export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs }: Props) {
+export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs, counts }: Props) {
   const pathname = usePathname()
   const admin = isAdmin(user.role)
   const superAdmin = isSuperAdmin(user.role)
   const managerLevel = isManagerLevel(user.role)
 
   const nav = [
-    { href: "/", label: "Dashboard", icon: Icons.dashboard },
-    { href: "/leads", label: "Leads", icon: Icons.leads },
-    { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell },
-    { href: "/available-leads", label: "Available Leads", icon: Icons.inbox },
-    ...(managerLevel ? [{ href: "/admin/users", label: "Manage Team", icon: Icons.team }] : []),
+    { href: "/", label: "Dashboard", icon: Icons.dashboard, count: 0 },
+    { href: "/leads", label: "Leads", icon: Icons.leads, count: 0 },
+    { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell, count: counts.followUps },
+    { href: "/available-leads", label: "Available Leads", icon: Icons.inbox, count: counts.availableLeads },
+    ...(managerLevel ? [{ href: "/admin/users", label: "Manage Team", icon: Icons.team, count: 0 }] : []),
     ...(managerLevel && !superAdmin ? [
-      { href: "/admin/overview", label: "Team Overview", icon: Icons.overview },
+      { href: "/admin/overview", label: "Team Overview", icon: Icons.overview, count: 0 },
     ] : []),
   ]
 
@@ -141,7 +151,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {nav.map(({ href, label, icon }) => {
+        {nav.map(({ href, label, icon, count }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href)
           return (
             <Link
@@ -156,6 +166,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
             >
               <span className={active ? "text-white" : "text-slate-500"}>{icon}</span>
               {label}
+              <Badge n={count} />
             </Link>
           )
         })}
