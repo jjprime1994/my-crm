@@ -10,8 +10,25 @@ type PatchEntry = {
 
 const patchNotes: PatchEntry[] = [
   {
-    date: "19 May 2026",
+    date: "8 Jun 2026",
     label: "Latest",
+    changes: [
+      "State routing — super admins can now assign one or more salespeople to each Malaysian state; incoming leads are automatically distributed to them in round-robin order",
+      "Round-robin with capacity check — if all salespeople for a state have hit their lead capacity, the lead falls into the unassigned pool instead of being force-assigned",
+      "Assign to managers and team leaders — the Assign Leads page now allows leads to be assigned to managers and team leaders, not just salespeople",
+      "Lead reassignment — managers and team leaders can reassign any lead in their team to a different team member directly from the lead detail page",
+      "Role labels in assignment dropdowns — manager and team leader roles are now shown in brackets next to the person's name in all assignment dropdowns so you know who you're assigning to",
+      "Toast notifications — success messages appear in the bottom-right corner after saving a lead, adding a note, or assigning leads, so you always know an action completed",
+      "Clickable lead rows — on desktop, clicking anywhere on a lead row in the Leads table now opens the lead detail page (not just the name link)",
+      "WhatsApp and Call buttons on leads list — WA and Call icon buttons now appear inline on the Leads page, both on desktop (next to the phone number) and on mobile (bottom-right of each card), so you can contact a lead without opening it first",
+      "Tappable follow-up cards — the entire mobile card on the Follow-ups page is now tappable to open the lead; the WA and Call buttons still work independently",
+      "Back button on lead detail — a Back button above the lead header lets you return to the previous page without using the browser back button",
+      "Quick follow-up date buttons — on the lead detail page, buttons for Tomorrow, +3 days, +1 week, and +2 weeks let you set a follow-up reminder in one tap instead of opening the date picker",
+      "Sidebar live badges — the Follow-ups and Available Leads sidebar links now show a live count badge so you can see at a glance how many need attention without navigating to the page",
+    ],
+  },
+  {
+    date: "19 May 2026",
     changes: [
       "TikTok lead integration — leads from TikTok Instant Form ads are automatically captured and routed the same way as Meta leads",
       "Platform badge — every lead now shows a Meta or TikTok badge so your team always knows which platform it came from",
@@ -126,7 +143,7 @@ const faqs: FAQSection[] = [
       },
       {
         q: "How do I set a follow-up reminder?",
-        a: "Open the lead detail page and look for the Follow-up Date field in the Pipeline section. Pick a date and time, then save. The lead will appear in your Follow-ups page when the reminder is due.",
+        a: "Open the lead detail page and look for the Follow-up Date field in the Pipeline section. You can type a date directly, or use the quick buttons — Tomorrow, +3 days, +1 week, or +2 weeks — to set it in one tap. Save changes and the lead will appear in your Follow-ups page when the reminder is due.",
       },
       {
         q: "What does the response time badge mean on a lead?",
@@ -190,8 +207,12 @@ const faqs: FAQSection[] = [
     roles: ["ADMIN", "SUPER_ADMIN"],
     items: [
       {
-        q: "How do I assign a lead to a salesperson?",
-        a: "Go to Assign Leads in the sidebar. You'll see all unassigned leads. Tap or click any lead to select it — you can select multiple at once. Then choose a salesperson from the dropdown and click Assign.\n\nEach lead shows:\n\nState — which Malaysian state the lead is from, so you can match it to the right salesperson.\n\nPlatform — Meta or TikTok badge showing where the lead came from.\n\nAd / Campaign — the specific ad that generated the lead.\n\nAge — how many days the lead has been waiting (green = fresh, amber = 2–3 days, red = 4+ days old).\n\nDUP — the lead shares a phone or email with another lead in the system.\n\nThe salesperson dropdown shows each person's new lead count (uncontacted) and total leads so you can distribute workload evenly.",
+        q: "How do I assign a lead to someone?",
+        a: "Go to Assign Leads in the sidebar. You'll see all unassigned leads. Tap or click any lead to select it — you can select multiple at once. Then choose a person from the dropdown and click Assign.\n\nYou can assign to salespeople, team leaders, or managers (role shown in brackets next to their name).\n\nEach lead shows:\n\nState — which Malaysian state the lead is from, so you can match it to the right person.\n\nPlatform — Meta or TikTok badge showing where the lead came from.\n\nAd / Campaign — the specific ad that generated the lead.\n\nAge — how many days the lead has been waiting (green = fresh, amber = 2–3 days, red = 4+ days old).\n\nDUP — the lead shares a phone or email with another lead in the system.\n\nThe dropdown shows each person's new lead count (uncontacted) and total leads so you can distribute workload evenly.",
+      },
+      {
+        q: "How do I reassign a lead to a different team member?",
+        a: "Open the lead detail page and find the Assigned To dropdown in the Pipeline section on the right. Select a different team member and click Save changes. You can only reassign leads to people within your own team — managers see their direct reports and team leaders' salespeople; team leaders see only their direct reports.",
       },
       {
         q: "How do I set a claim limit for a salesperson?",
@@ -242,6 +263,10 @@ const faqs: FAQSection[] = [
       {
         q: "How do I add a new team member as a Super Admin?",
         a: "Go to Manage Team and click Add Member. You can create Salesperson or Manager accounts. Salespersons can then be assigned to a manager using the Manager dropdown in their row.",
+      },
+      {
+        q: "What is State Routing and how does it work?",
+        a: "State Routing automatically assigns incoming leads to specific salespeople based on the lead's Malaysian state, without needing a manager to intervene.\n\nTo set it up, go to Ad Routing under the Super Admin menu and scroll to the State Routing section. Expand any state row and toggle on the salespeople who should receive leads from that state.\n\nWhen a lead arrives from that state, the CRM distributes it in round-robin order across all enabled salespeople — each person gets a turn before the cycle repeats.\n\nCapacity check — if a salesperson has reached their lead capacity (their claim limit), they are skipped for that round. If every assigned salesperson is at capacity, the lead falls into the unassigned pool instead.\n\nState Routing is designed for standalone salespeople who don't belong to a manager's team. Leads going to a managed team follow the existing ad routing and team coverage rules instead.",
       },
       {
         q: "What is Ad Routing and how do I set it up?",
