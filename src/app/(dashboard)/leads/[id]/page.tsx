@@ -22,10 +22,18 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     }),
     adminAccess
       ? db.user.findMany({
-          where: role === "ADMIN"
-            ? { role: "SALESPERSON", managerId: session!.user.id }
-            : { role: "SALESPERSON" },
-          select: { id: true, name: true },
+          where: role === "SUPER_ADMIN"
+            ? { role: { in: ["ADMIN", "TEAM_LEADER", "SALESPERSON"] } }
+            : role === "ADMIN"
+              ? {
+                  OR: [
+                    { role: "SALESPERSON", managerId: session!.user.id },
+                    { role: "SALESPERSON", manager: { managerId: session!.user.id } },
+                    { role: "TEAM_LEADER", managerId: session!.user.id },
+                  ],
+                }
+              : { role: "SALESPERSON", managerId: session!.user.id },
+          select: { id: true, name: true, role: true },
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),

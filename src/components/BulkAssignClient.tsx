@@ -29,8 +29,15 @@ type Lead = {
 type Salesperson = {
   id: string
   name: string
+  role: string
   _count: { leads: number }
   leads: { id: string }[]
+}
+
+function roleLabel(role: string) {
+  if (role === "ADMIN") return "Manager"
+  if (role === "TEAM_LEADER") return "Team Leader"
+  return null
 }
 
 interface Props {
@@ -131,12 +138,15 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
             onChange={(e) => setAssignTo(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 w-full sm:w-auto sm:min-w-[220px]"
           >
-            <option value="">Select salesperson…</option>
-            {salespeople.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} · {s.leads.length} new · {s._count.leads} total
-              </option>
-            ))}
+            <option value="">Select person…</option>
+            {salespeople.map((s) => {
+              const rl = roleLabel(s.role)
+              return (
+                <option key={s.id} value={s.id}>
+                  {s.name}{rl ? ` (${rl})` : ""} · {s.leads.length} new · {s._count.leads} total
+                </option>
+              )
+            })}
           </select>
           <button
             onClick={assign}

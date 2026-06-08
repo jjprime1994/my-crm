@@ -44,9 +44,15 @@ type Lead = {
   statusHistory: StatusHistoryEntry[]
 }
 
+function roleLabel(role: string) {
+  if (role === "ADMIN") return "Manager"
+  if (role === "TEAM_LEADER") return "Team Leader"
+  return null
+}
+
 interface Props {
   lead: Lead
-  salespeople: { id: string; name: string }[]
+  salespeople: { id: string; name: string; role: string }[]
   currentUser: { id: string; role?: string }
 }
 
@@ -382,9 +388,14 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
                 >
                   <option value="">Unassigned</option>
-                  {salespeople.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
+                  {salespeople.map((s) => {
+                    const rl = roleLabel(s.role)
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {s.name}{rl ? ` (${rl})` : ""}
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
             )}

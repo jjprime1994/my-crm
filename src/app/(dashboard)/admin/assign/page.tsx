@@ -21,9 +21,9 @@ export default async function AssignPage() {
       orderBy: { createdAt: "desc" },
     }),
     db.user.findMany({
-      where: { role: "SALESPERSON" },
+      where: { role: { in: ["ADMIN", "TEAM_LEADER", "SALESPERSON"] } },
       select: {
-        id: true, name: true,
+        id: true, name: true, role: true,
         _count: { select: { leads: true } },
         leads: { where: { status: "NEW" }, select: { id: true } },
       },
