@@ -28,6 +28,7 @@ const patchNotes: PatchEntry[] = [
       "Leaderboard team totals fix — the Teams tab on the Business Overview leaderboard now correctly includes a manager's own leads in their team's total, not just their team members' leads",
       "Management leads in Team Breakdown — managers and team leaders who handle leads directly now appear as highlighted header rows (with a role badge) at the top of their section in the Team Breakdown; only shown when they have leads in the selected period",
       "Full org hierarchy in Business Overview — the Team Breakdown on the Business Overview page now groups salespeople by their top-level manager, with sub-sections per team leader, so the entire org structure is visible at a glance",
+      "Tabbed overview pages — the Business Overview (Super Admin) and Team Overview (Manager) pages now use a tab layout to reduce clutter; Super Admin has Overview, Campaigns, Teams, and Leaderboard tabs; Manager has Overview and Teams tabs; the period selector and active tab are preserved when switching between them",
     ],
   },
   {

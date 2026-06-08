@@ -112,6 +112,16 @@ export async function POST(req: NextRequest) {
       if (!branch && campaignName) branch = resolveStateBranch(campaignName)
       if (!branch && adName) branch = resolveStateBranch(adName)
 
+      // Resolve state route assignment
+      let assignedToId: string | undefined
+      if (branch) {
+        const stateRoute = await db.stateRoute.findUnique({
+          where: { state: branch },
+          select: { userId: true },
+        })
+        if (stateRoute) assignedToId = stateRoute.userId
+      }
+
       // Check for duplicate phone/email
       let isDuplicate = false
       if (phone || email) {
@@ -145,6 +155,7 @@ export async function POST(req: NextRequest) {
           branch,
           source: "META",
           isDuplicate,
+          assignedToId: assignedToId ?? null,
           rawData: { ...change.value, field_data: fieldData },
         },
       })

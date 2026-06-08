@@ -114,6 +114,7 @@ export default async function AvailableLeadsPage() {
 
   const resetAt = nextMidnightUTC.toISOString()
   const threshold = user?.newLeadThreshold ?? 0
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN"
 
   return (
     <AvailableLeadsClient
@@ -123,6 +124,7 @@ export default async function AvailableLeadsPage() {
       resetAt={resetAt}
       newLeadsCount={newLeadsCount}
       newLeadThreshold={threshold}
+      isUnlimited={isSuperAdmin}
     />
   )
 }

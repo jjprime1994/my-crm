@@ -5,14 +5,17 @@ import { MALAYSIA_STATES } from "@/lib/branch"
 
 type AdEntry = { adId: string | null; adName: string; teamIds: string[] }
 type Manager = { id: string; name: string; coveredStates: string[]; isDefaultTeam: boolean }
+type UserEntry = { id: string; name: string; role: string }
 
 interface Props {
   ads: AdEntry[]
   managers: Manager[]
   defaultTeamId: string | null
+  stateRouteMap: Record<string, string>
+  allUsers: UserEntry[]
 }
 
-export default function AdRoutingClient({ ads: initial, managers: initialManagers, defaultTeamId: initialDefault }: Props) {
+export default function AdRoutingClient({ ads: initial, managers: initialManagers, defaultTeamId: initialDefault, stateRouteMap: initialStateRouteMap, allUsers }: Props) {
   const [ads, setAds] = useState(initial)
   const [managers, setManagers] = useState(initialManagers)
   const [defaultTeamId, setDefaultTeamId] = useState(initialDefault)
@@ -20,6 +23,8 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
   const [savingDefault, setSavingDefault] = useState(false)
   const [savingStates, setSavingStates] = useState<string | null>(null)
   const [expandedStates, setExpandedStates] = useState<string | null>(null)
+  const [stateRouteMap, setStateRouteMap] = useState<Record<string, string>>(initialStateRouteMap)
+  const [savingStateRoute, setSavingStateRoute] = useState<string | null>(null)
 
   async function toggleTeam(adName: string, adId: string | null, managerId: string) {
     const ad = ads.find((a) => a.adName === adName)!
@@ -48,6 +53,22 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
       body: JSON.stringify({ defaultTeamId: newDefault }),
     })
     setSavingDefault(false)
+  }
+
+  async function setStateRoute(state: string, userId: string | null) {
+    setStateRouteMap((prev) => {
+      const next = { ...prev }
+      if (userId) next[state] = userId
+      else delete next[state]
+      return next
+    })
+    setSavingStateRoute(state)
+    await fetch("/api/state-routes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state, userId }),
+    })
+    setSavingStateRoute(null)
   }
 
   async function toggleState(managerId: string, state: string) {
@@ -103,6 +124,45 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
               Clear
             </button>
           )}
+        </div>
+      </div>
+
+      {/* State Routing */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 pt-4 pb-3 border-b border-gray-50">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">State Routing</p>
+          <p className="text-sm text-gray-500 mt-0.5">Leads from each state are auto-assigned to this person when they arrive.</p>
+        </div>
+        <div className="divide-y divide-gray-50">
+          {MALAYSIA_STATES.map((state) => {
+            const assignedId = stateRouteMap[state] ?? ""
+            const isSaving = savingStateRoute === state
+            return (
+              <div key={state} className="px-5 py-3 flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-900 w-40 shrink-0">{state}</span>
+                <select
+                  value={assignedId}
+                  onChange={(e) => setStateRoute(state, e.target.value || null)}
+                  disabled={isSaving}
+                  className="flex-1 text-sm rounded-xl border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:opacity-50"
+                >
+                  <option value="">— Unassigned —</option>
+                  {allUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+                {isSaving && <span className="text-xs text-gray-400 shrink-0">Saving…</span>}
+                {!isSaving && assignedId && (
+                  <button
+                    onClick={() => setStateRoute(state, null)}
+                    className="text-xs text-gray-400 hover:text-red-500 transition shrink-0"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 

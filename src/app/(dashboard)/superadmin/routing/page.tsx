@@ -10,7 +10,7 @@ export default async function RoutingPage() {
   const role = await getViewAsRole(session?.user.role)
   if (!isSuperAdmin(role)) redirect("/")
 
-  const [ads, routes, managers, defaultTeam] = await Promise.all([
+  const [ads, routes, managers, defaultTeam, stateRoutes, allUsers] = await Promise.all([
     db.lead.findMany({
       where: { adName: { not: null } },
       select: { adId: true, adName: true },
@@ -24,6 +24,11 @@ export default async function RoutingPage() {
       orderBy: { name: "asc" },
     }).catch(() => []),
     db.user.findFirst({ where: { isDefaultTeam: true }, select: { id: true } }).catch(() => null),
+    db.stateRoute.findMany({ select: { state: true, userId: true } }).catch(() => []),
+    db.user.findMany({
+      select: { id: true, name: true, role: true },
+      orderBy: { name: "asc" },
+    }).catch(() => []),
   ])
 
   const routeMap = Object.fromEntries(routes.map((r) => [r.adName, r]))
@@ -33,11 +38,15 @@ export default async function RoutingPage() {
     teamIds: routeMap[ad.adName!]?.teamIds ?? [],
   }))
 
+  const stateRouteMap = Object.fromEntries(stateRoutes.map((r) => [r.state, r.userId]))
+
   return (
     <AdRoutingClient
       ads={adList}
       managers={managers}
       defaultTeamId={defaultTeam?.id ?? null}
+      stateRouteMap={stateRouteMap}
+      allUsers={allUsers}
     />
   )
 }

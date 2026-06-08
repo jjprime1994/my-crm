@@ -90,6 +90,22 @@ if (!globalForPrisma.dbInitialized) {
   .then(() =>
     db.$executeRaw`ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "firstContactedAt" TIMESTAMP(3)`
   )
+  .then(() =>
+    db.$executeRaw`
+      CREATE TABLE IF NOT EXISTS "StateRoute" (
+        "id"        TEXT         NOT NULL,
+        "state"     TEXT         NOT NULL,
+        "userId"    TEXT         NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "StateRoute_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "StateRoute_state_key" UNIQUE ("state"),
+        CONSTRAINT "StateRoute_userId_fkey"
+          FOREIGN KEY ("userId") REFERENCES "User"("id")
+          ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `
+  )
   .catch(() => {})
 
 // Backfill firstContactedAt for existing CONTACTED leads — independent so it survives chain failures.

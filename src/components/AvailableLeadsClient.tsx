@@ -34,6 +34,7 @@ interface Props {
   resetAt: string | null
   newLeadsCount: number
   newLeadThreshold: number
+  isUnlimited?: boolean
 }
 
 function useCountdown(resetAt: string | null) {
@@ -51,7 +52,7 @@ function useCountdown(resetAt: string | null) {
   return secondsLeft
 }
 
-export default function AvailableLeadsClient({ leads: initial, claimLimit, recentClaims: initialClaims, resetAt, newLeadsCount, newLeadThreshold }: Props) {
+export default function AvailableLeadsClient({ leads: initial, claimLimit, recentClaims: initialClaims, resetAt, newLeadsCount, newLeadThreshold, isUnlimited = false }: Props) {
   const router = useRouter()
   const [leads, setLeads] = useState(initial)
   const [recentClaims, setRecentClaims] = useState(initialClaims)
@@ -62,8 +63,8 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
   const secondsLeft = useCountdown(resetAt)
 
   const remaining = Math.max(0, claimLimit - recentClaims)
-  const atLimit = remaining === 0
-  const blockedByNew = newLeadThreshold > 0 && newLeadsCount >= newLeadThreshold
+  const atLimit = !isUnlimited && remaining === 0
+  const blockedByNew = !isUnlimited && newLeadThreshold > 0 && newLeadsCount >= newLeadThreshold
   const hours = Math.floor(secondsLeft / 3600)
   const mins = Math.floor((secondsLeft % 3600) / 60)
   const secs = secondsLeft % 60
@@ -102,29 +103,31 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
         </div>
 
         {/* Quota card */}
-        <div className={`rounded-2xl px-5 py-4 border w-full sm:w-auto sm:min-w-[180px] ${atLimit ? "bg-rose-50 border-rose-200" : "bg-white border-gray-100 shadow-sm"}`}>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-gray-500">Claims today</p>
-            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-              atLimit ? "bg-rose-100 text-rose-600" : remaining <= 1 ? "bg-orange-100 text-orange-600" : "bg-emerald-100 text-emerald-600"
-            }`}>
-              {atLimit ? "Limit reached" : `${remaining} left`}
-            </span>
+        {!isUnlimited && (
+          <div className={`rounded-2xl px-5 py-4 border w-full sm:w-auto sm:min-w-[180px] ${atLimit ? "bg-rose-50 border-rose-200" : "bg-white border-gray-100 shadow-sm"}`}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500">Claims today</p>
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
+                atLimit ? "bg-rose-100 text-rose-600" : remaining <= 1 ? "bg-orange-100 text-orange-600" : "bg-emerald-100 text-emerald-600"
+              }`}>
+                {atLimit ? "Limit reached" : `${remaining} left`}
+              </span>
+            </div>
+            <div className="flex items-end gap-1 mb-2">
+              <span key={recentClaims} className={`text-2xl font-bold [animation:countUp_0.3s_ease-out] ${atLimit ? "text-rose-600" : "text-gray-900"}`}>{recentClaims}</span>
+              <span className="text-sm text-gray-400 mb-0.5">/ {claimLimit}</span>
+            </div>
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${atLimit ? "bg-rose-500" : remaining <= 1 ? "bg-orange-400" : "bg-blue-500"}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            {atLimit && (
+              <p className="text-xs text-rose-500 mt-1.5 font-medium">Resets at midnight MYT ({hours}h {mins}m)</p>
+            )}
           </div>
-          <div className="flex items-end gap-1 mb-2">
-            <span key={recentClaims} className={`text-2xl font-bold [animation:countUp_0.3s_ease-out] ${atLimit ? "text-rose-600" : "text-gray-900"}`}>{recentClaims}</span>
-            <span className="text-sm text-gray-400 mb-0.5">/ {claimLimit}</span>
-          </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${atLimit ? "bg-rose-500" : remaining <= 1 ? "bg-orange-400" : "bg-blue-500"}`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          {atLimit && (
-            <p className="text-xs text-rose-500 mt-1.5 font-medium">Resets at midnight MYT ({hours}h {mins}m)</p>
-          )}
-        </div>
+        )}
       </div>
 
       {error && (

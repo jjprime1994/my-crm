@@ -73,7 +73,21 @@ export default async function DashboardPage() {
 
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 
-  const [total, byStatus, recent, followUpCount, unassignedCount, teamStats] = await Promise.all([
+  const teamMembersWhere = isAdmin
+    ? isSuperAdmin
+      ? { role: "SALESPERSON" as const }
+      : isManager
+      ? {
+          role: "SALESPERSON" as const,
+          OR: [
+            { managerId: session!.user.id },
+            { manager: { managerId: session!.user.id } },
+          ],
+        }
+      : { role: "SALESPERSON" as const, managerId: session!.user.id }
+    : null
+
+  const [total, byStatus, recent, followUpCount, unassignedCount, teamMembers, wonCounts] = await Promise.all([
     db.lead.count({ where }),
     db.lead.groupBy({ by: ["status"], _count: true, where }),
     isSuperAdmin
@@ -92,24 +106,24 @@ export default async function DashboardPage() {
       },
     }),
     isAdmin ? db.lead.count({ where: { assignedToId: null } }) : Promise.resolve(0),
-    isAdmin
+    teamMembersWhere
       ? db.user.findMany({
-          where: isSuperAdmin
-            ? { role: "SALESPERSON" }
-            : isManager
-            ? {
-                role: "SALESPERSON",
-                OR: [
-                  { managerId: session!.user.id },
-                  { manager: { managerId: session!.user.id } },
-                ],
-              }
-            : { role: "SALESPERSON", managerId: session!.user.id },
-          select: { id: true, name: true, _count: { select: { leads: true } }, leads: { select: { status: true } } },
+          where: teamMembersWhere,
+          select: { id: true, name: true, _count: { select: { leads: true } } },
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
+    teamMembersWhere
+      ? db.lead.groupBy({
+          by: ["assignedToId"],
+          where: { status: "CLOSED_WON" },
+          _count: { id: true },
+        })
+      : Promise.resolve([]),
   ])
+
+  const wonByUserId = Object.fromEntries(wonCounts.map((r) => [r.assignedToId, r._count.id]))
+  const teamStats = teamMembers.map((m) => ({ ...m, won: wonByUserId[m.id] ?? 0 }))
 
   const statusMap = Object.fromEntries(byStatus.map((s) => [s.status, s._count]))
   const wonCount = statusMap["CLOSED_WON"] ?? 0
@@ -242,7 +256,7 @@ export default async function DashboardPage() {
             </div>
             <ul className="divide-y divide-gray-50">
               {teamStats.map((member) => {
-                const won = member.leads.filter((l) => l.status === "CLOSED_WON").length
+                const won = member.won
                 const rate = member._count.leads > 0 ? Math.round((won / member._count.leads) * 100) : 0
                 return (
                   <li key={member.id} className="flex items-center gap-4 px-6 py-3.5">
