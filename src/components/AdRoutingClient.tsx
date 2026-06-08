@@ -11,7 +11,7 @@ interface Props {
   ads: AdEntry[]
   managers: Manager[]
   defaultTeamId: string | null
-  stateRouteMap: Record<string, string>
+  stateRouteMap: Record<string, string[]>
   allUsers: UserEntry[]
 }
 
@@ -23,7 +23,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
   const [savingDefault, setSavingDefault] = useState(false)
   const [savingStates, setSavingStates] = useState<string | null>(null)
   const [expandedStates, setExpandedStates] = useState<string | null>(null)
-  const [stateRouteMap, setStateRouteMap] = useState<Record<string, string>>(initialStateRouteMap)
+  const [stateRouteMap, setStateRouteMap] = useState<Record<string, string[]>>(initialStateRouteMap)
   const [savingStateRoute, setSavingStateRoute] = useState<string | null>(null)
 
   async function toggleTeam(adName: string, adId: string | null, managerId: string) {
@@ -55,18 +55,19 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
     setSavingDefault(false)
   }
 
-  async function setStateRoute(state: string, userId: string | null) {
-    setStateRouteMap((prev) => {
-      const next = { ...prev }
-      if (userId) next[state] = userId
-      else delete next[state]
-      return next
-    })
+  async function toggleStateUser(state: string, userId: string) {
+    const current = stateRouteMap[state] ?? []
+    const newUserIds = current.includes(userId)
+      ? current.filter((id) => id !== userId)
+      : [...current, userId]
+
+    setStateRouteMap((prev) => ({ ...prev, [state]: newUserIds }))
     setSavingStateRoute(state)
+
     await fetch("/api/state-routes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state, userId }),
+      body: JSON.stringify({ state, userIds: newUserIds }),
     })
     setSavingStateRoute(null)
   }
@@ -131,35 +132,39 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 pt-4 pb-3 border-b border-gray-50">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">State Routing</p>
-          <p className="text-sm text-gray-500 mt-0.5">Leads from each state are auto-assigned to this person when they arrive.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Leads from each state are auto-assigned via round-robin across the selected people.</p>
         </div>
         <div className="divide-y divide-gray-50">
           {MALAYSIA_STATES.map((state) => {
-            const assignedId = stateRouteMap[state] ?? ""
+            const assignedIds = stateRouteMap[state] ?? []
             const isSaving = savingStateRoute === state
             return (
-              <div key={state} className="px-5 py-3 flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-900 w-40 shrink-0">{state}</span>
-                <select
-                  value={assignedId}
-                  onChange={(e) => setStateRoute(state, e.target.value || null)}
-                  disabled={isSaving}
-                  className="flex-1 text-sm rounded-xl border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:opacity-50"
-                >
-                  <option value="">— Unassigned —</option>
-                  {allUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-                {isSaving && <span className="text-xs text-gray-400 shrink-0">Saving…</span>}
-                {!isSaving && assignedId && (
-                  <button
-                    onClick={() => setStateRoute(state, null)}
-                    className="text-xs text-gray-400 hover:text-red-500 transition shrink-0"
-                  >
-                    Clear
-                  </button>
-                )}
+              <div key={state} className="px-5 py-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-900 w-36 shrink-0">{state}</p>
+                  {isSaving && <span className="text-xs text-gray-400">Saving…</span>}
+                  {!isSaving && assignedIds.length === 0 && (
+                    <span className="text-xs text-amber-600 font-medium">→ Default team</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {allUsers.map((u) => {
+                    const active = assignedIds.includes(u.id)
+                    return (
+                      <button
+                        key={u.id}
+                        onClick={() => toggleStateUser(state, u.id)}
+                        className={`text-xs font-semibold px-2.5 py-1.5 rounded-xl transition ${
+                          active
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {u.name}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )
           })}

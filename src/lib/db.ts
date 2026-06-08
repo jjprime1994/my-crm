@@ -93,18 +93,25 @@ if (!globalForPrisma.dbInitialized) {
   .then(() =>
     db.$executeRaw`
       CREATE TABLE IF NOT EXISTS "StateRoute" (
-        "id"        TEXT         NOT NULL,
-        "state"     TEXT         NOT NULL,
-        "userId"    TEXT         NOT NULL,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "id"                TEXT         NOT NULL,
+        "state"             TEXT         NOT NULL,
+        "userIds"           TEXT[]       NOT NULL DEFAULT '{}',
+        "lastAssignedIndex" INT          NOT NULL DEFAULT 0,
+        "createdAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "StateRoute_pkey" PRIMARY KEY ("id"),
-        CONSTRAINT "StateRoute_state_key" UNIQUE ("state"),
-        CONSTRAINT "StateRoute_userId_fkey"
-          FOREIGN KEY ("userId") REFERENCES "User"("id")
-          ON DELETE CASCADE ON UPDATE CASCADE
+        CONSTRAINT "StateRoute_state_key" UNIQUE ("state")
       )
     `
+  )
+  .then(() =>
+    db.$executeRaw`ALTER TABLE "StateRoute" ADD COLUMN IF NOT EXISTS "userIds" TEXT[] NOT NULL DEFAULT '{}'`
+  )
+  .then(() =>
+    db.$executeRaw`ALTER TABLE "StateRoute" ADD COLUMN IF NOT EXISTS "lastAssignedIndex" INT NOT NULL DEFAULT 0`
+  )
+  .then(() =>
+    db.$executeRaw`ALTER TABLE "StateRoute" DROP COLUMN IF EXISTS "userId"`
   )
   .catch(() => {})
 

@@ -112,14 +112,21 @@ export async function POST(req: NextRequest) {
       if (!branch && campaignName) branch = resolveStateBranch(campaignName)
       if (!branch && adName) branch = resolveStateBranch(adName)
 
-      // Resolve state route assignment
+      // Resolve state route assignment (round-robin across assigned users)
       let assignedToId: string | undefined
       if (branch) {
         const stateRoute = await db.stateRoute.findUnique({
           where: { state: branch },
-          select: { userId: true },
+          select: { id: true, userIds: true, lastAssignedIndex: true },
         })
-        if (stateRoute) assignedToId = stateRoute.userId
+        if (stateRoute && stateRoute.userIds.length > 0) {
+          const idx = stateRoute.lastAssignedIndex % stateRoute.userIds.length
+          assignedToId = stateRoute.userIds[idx]
+          await db.stateRoute.update({
+            where: { id: stateRoute.id },
+            data: { lastAssignedIndex: idx + 1 },
+          })
+        }
       }
 
       // Check for duplicate phone/email

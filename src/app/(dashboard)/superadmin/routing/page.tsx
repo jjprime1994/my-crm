@@ -24,7 +24,7 @@ export default async function RoutingPage() {
       orderBy: { name: "asc" },
     }).catch(() => []),
     db.user.findFirst({ where: { isDefaultTeam: true }, select: { id: true } }).catch(() => null),
-    db.stateRoute.findMany({ select: { state: true, userId: true } }).catch(() => []),
+    db.stateRoute.findMany({ select: { state: true, userIds: true } }).catch(() => []),
     db.user.findMany({
       select: { id: true, name: true, role: true },
       orderBy: { name: "asc" },
@@ -38,7 +38,7 @@ export default async function RoutingPage() {
     teamIds: routeMap[ad.adName!]?.teamIds ?? [],
   }))
 
-  const stateRouteMap = Object.fromEntries(stateRoutes.map((r) => [r.state, r.userId]))
+  const stateRouteMap = Object.fromEntries(stateRoutes.map((r) => [r.state, r.userIds]))
 
   return (
     <AdRoutingClient

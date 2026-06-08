@@ -25,7 +25,6 @@ model User {
   statusChanges     LeadStatusHistory[]
   suggestions       Suggestion[]
   pushSubscriptions PushSubscription[]
-  stateRoutes       StateRoute[]
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
 }
@@ -123,12 +122,12 @@ model Suggestion {
 }
 
 model StateRoute {
-  id        String   @id @default(cuid())
-  state     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  state              String   @unique
+  userIds            String[]
+  lastAssignedIndex  Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model LeadStatusHistory {
