@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       if (!branch && campaignName) branch = resolveStateBranch(campaignName)
       if (!branch && adName) branch = resolveStateBranch(adName)
 
-      // Resolve state route assignment (round-robin across assigned users)
+      // Resolve state route assignment (round-robin with capacity check)
       let assignedToId: string | undefined
       if (branch) {
         const stateRoute = await db.stateRoute.findUnique({
@@ -120,12 +120,46 @@ export async function POST(req: NextRequest) {
           select: { id: true, userIds: true, lastAssignedIndex: true },
         })
         if (stateRoute && stateRoute.userIds.length > 0) {
-          const idx = stateRoute.lastAssignedIndex % stateRoute.userIds.length
-          assignedToId = stateRoute.userIds[idx]
-          await db.stateRoute.update({
-            where: { id: stateRoute.id },
-            data: { lastAssignedIndex: idx + 1 },
-          })
+          const userIds = stateRoute.userIds
+
+          const [users, activeCounts] = await Promise.all([
+            db.user.findMany({
+              where: { id: { in: userIds } },
+              select: { id: true, claimLimit: true },
+            }),
+            db.lead.groupBy({
+              by: ["assignedToId"],
+              where: {
+                assignedToId: { in: userIds },
+                status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] },
+              },
+              _count: { id: true },
+            }),
+          ])
+
+          const limitMap = Object.fromEntries(users.map((u) => [u.id, u.claimLimit]))
+          const countMap = Object.fromEntries(activeCounts.map((r) => [r.assignedToId!, r._count.id]))
+
+          // Walk the rotation starting at lastAssignedIndex, pick first user with capacity
+          const startIdx = stateRoute.lastAssignedIndex % userIds.length
+          let chosenIdx = -1
+          for (let i = 0; i < userIds.length; i++) {
+            const idx = (startIdx + i) % userIds.length
+            const uid = userIds[idx]
+            if ((countMap[uid] ?? 0) < (limitMap[uid] ?? 5)) {
+              assignedToId = uid
+              chosenIdx = idx
+              break
+            }
+          }
+
+          if (chosenIdx !== -1) {
+            await db.stateRoute.update({
+              where: { id: stateRoute.id },
+              data: { lastAssignedIndex: chosenIdx + 1 },
+            })
+          }
+          // If everyone is full, assignedToId stays undefined → lead lands in the available pool
         }
       }
 
