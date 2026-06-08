@@ -4,6 +4,7 @@ import { useState } from "react"
 import Sidebar from "@/components/Sidebar"
 import ViewAsBanner from "@/components/ViewAsBanner"
 import NotificationBell from "@/components/NotificationBell"
+import { ToastProvider } from "@/components/Toast"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
@@ -17,6 +18,7 @@ export default function DashboardShell({ user, viewingAs, isSuperAdmin, counts, 
   const [open, setOpen] = useState(false)
 
   return (
+    <ToastProvider>
     <div className="flex h-screen overflow-hidden">
       {/* Mobile overlay backdrop */}
       {open && (
@@ -65,5 +67,6 @@ export default function DashboardShell({ user, viewingAs, isSuperAdmin, counts, 
         </main>
       </div>
     </div>
+    </ToastProvider>
   )
 }

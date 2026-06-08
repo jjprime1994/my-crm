@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/components/Toast"
 
 type DupSibling = {
   id: string
@@ -86,6 +87,7 @@ function SourceBadge({ source }: { source?: string | null }) {
 
 export default function BulkAssignClient({ leads: initial, salespeople }: Props) {
   const router = useRouter()
+  const toast = useToast()
   const [leads, setLeads] = useState(initial)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [assignTo, setAssignTo] = useState("")
@@ -105,15 +107,18 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
   async function assign() {
     if (!assignTo || selected.size === 0) return
     setSaving(true)
+    const count = selected.size
     await fetch("/api/leads/assign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ leadIds: Array.from(selected), assignedToId: assignTo }),
     })
+    const person = salespeople.find(s => s.id === assignTo)
     setSaving(false)
     setLeads(leads.filter((l) => !selected.has(l.id)))
     setSelected(new Set())
     setAssignTo("")
+    toast(`${count} lead${count !== 1 ? "s" : ""} assigned to ${person?.name ?? "salesperson"}`)
     router.refresh()
   }
 

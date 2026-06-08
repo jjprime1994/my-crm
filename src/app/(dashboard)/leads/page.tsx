@@ -1,225 +1,9 @@
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
-import Link from "next/link"
 import LeadsFilters from "@/components/LeadsFilters"
 import { getViewAsRole } from "@/lib/viewas"
-import { calcResponseTime } from "@/lib/responseTime"
-
-const STATUS_LABELS: Record<LeadStatus, string> = {
-  NEW: "New",
-  CONTACTED: "Contacted",
-  QUALIFIED: "Qualified",
-  PROPOSAL: "Proposal",
-  CLOSED_WON: "Won",
-  CLOSED_LOST: "Lost",
-}
-
-const STATUS_COLORS: Record<LeadStatus, string> = {
-  NEW: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-  CONTACTED: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  QUALIFIED: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
-  PROPOSAL: "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
-  CLOSED_WON: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  CLOSED_LOST: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
-}
-
-const STATUS_DOT: Record<LeadStatus, string> = {
-  NEW: "bg-blue-500",
-  CONTACTED: "bg-amber-500",
-  QUALIFIED: "bg-violet-500",
-  PROPOSAL: "bg-orange-500",
-  CLOSED_WON: "bg-emerald-500",
-  CLOSED_LOST: "bg-rose-500",
-}
-
-type LeadRow = {
-  id: string
-  firstName?: string | null
-  lastName?: string | null
-  email?: string | null
-  phone?: string | null
-  status: LeadStatus
-  isDuplicate: boolean
-  campaignName?: string | null
-  adName?: string | null
-  claimedAt?: Date | null
-  firstContactedAt?: Date | null
-  createdAt: Date
-  updatedAt: Date
-  assignedTo?: { id: string; name: string } | null
-  _count: { notes: number }
-}
-
-function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]; showAssignedTo: boolean }) {
-  const empty = (
-    <div className="flex flex-col items-center gap-2 text-sm text-gray-400 py-12">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-      </svg>
-      No leads found.
-    </div>
-  )
-
-  return (
-    <>
-      {/* Mobile cards */}
-      <div className="sm:hidden space-y-2">
-        {leads.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">{empty}</div>
-        ) : leads.map((lead) => {
-          const days = Math.floor((Date.now() - new Date(lead.updatedAt).getTime()) / 86400000)
-          const stale = lead.status !== "CLOSED_WON" && lead.status !== "CLOSED_LOST" && days >= 2
-          return (
-            <Link key={lead.id} href={`/leads/${lead.id}`} className="flex items-start gap-3 bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3.5 hover:bg-gray-50 transition">
-              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-xs font-bold text-blue-600">{(lead.firstName?.[0] ?? "?").toUpperCase()}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</span>
-                      {lead.isDuplicate && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">DUP</span>}
-                    </div>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[lead.status]}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[lead.status]}`} />
-                      {STATUS_LABELS[lead.status]}
-                    </span>
-                    {stale && <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${days >= 7 ? "bg-rose-50 text-rose-500" : "bg-amber-50 text-amber-600"}`}>{days}d ago</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                  {showAssignedTo && (
-                    <span className="text-xs text-gray-500">
-                      {lead.assignedTo ? lead.assignedTo.name : <span className="text-gray-300">Unassigned</span>}
-                    </span>
-                  )}
-                  {(lead.campaignName ?? lead.adName) && (
-                    <span className="text-xs text-gray-400 truncate max-w-[140px]">{lead.campaignName ?? lead.adName}</span>
-                  )}
-                  <span className="text-xs text-gray-400 ml-auto">{new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                </div>
-              </div>
-            </Link>
-          )
-        })}
-      </div>
-
-      {/* Desktop table */}
-      <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
-        <table className="min-w-full">
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
-              {showAssignedTo && (
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>
-              )}
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Notes</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Added</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {leads.length === 0 && (
-              <tr><td colSpan={showAssignedTo ? 7 : 6}>{empty}</td></tr>
-            )}
-            {leads.map((lead) => (
-              <tr key={lead.id} className="hover:bg-gray-50/70 transition">
-                <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-blue-600">{(lead.firstName?.[0] ?? "?").toUpperCase()}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Link href={`/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-blue-600 transition text-sm">
-                        {lead.firstName} {lead.lastName}
-                      </Link>
-                      {lead.isDuplicate && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 ring-1 ring-amber-200">DUP</span>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-5 py-3.5 text-sm">
-                  <div className="text-gray-700">{lead.email ?? "—"}</div>
-                  {lead.phone && <div className="text-gray-400 text-xs mt-0.5">{lead.phone}</div>}
-                </td>
-                <td className="px-5 py-3.5">
-                  <div className="flex flex-col gap-1">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[lead.status]}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[lead.status]}`} />
-                      {STATUS_LABELS[lead.status]}
-                    </span>
-                    {lead.status !== "CLOSED_WON" && lead.status !== "CLOSED_LOST" && (() => {
-                      const days = Math.floor((Date.now() - new Date(lead.updatedAt).getTime()) / 86400000)
-                      if (days < 2) return null
-                      return (
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded w-fit ${days >= 7 ? "bg-rose-50 text-rose-500" : "bg-amber-50 text-amber-600"}`}>
-                          {days}d untouched
-                        </span>
-                      )
-                    })()}
-                    {(() => {
-                      const rt = calcResponseTime(lead.claimedAt, lead.firstContactedAt)
-                      if (rt) return (
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full w-fit ${rt.colorClass}`}>
-                          ⏱ {rt.label}
-                        </span>
-                      )
-                      if (lead.claimedAt && !lead.firstContactedAt) return (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded w-fit bg-gray-100 text-gray-400">
-                          Not contacted
-                        </span>
-                      )
-                      return null
-                    })()}
-                  </div>
-                </td>
-                {showAssignedTo && (
-                  <td className="px-5 py-3.5 text-sm text-gray-600">
-                    {lead.assignedTo ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-violet-600">{lead.assignedTo.name[0].toUpperCase()}</span>
-                        </div>
-                        <span>{lead.assignedTo.name}</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-300 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">Unassigned</span>
-                    )}
-                  </td>
-                )}
-                <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
-                  {lead.campaignName ?? lead.adName ?? "—"}
-                </td>
-                <td className="px-5 py-3.5">
-                  {lead._count.notes > 0 ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      {lead._count.notes}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-300">—</span>
-                  )}
-                </td>
-                <td className="px-5 py-3.5 text-xs text-gray-400">
-                  {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  )
-}
+import LeadsTable, { type LeadRow } from "@/components/LeadsTable"
 
 const includeOpts = {
   assignedTo: { select: { id: true, name: true } },
@@ -239,7 +23,6 @@ export default async function LeadsPage({
   const isAdmin = isSuperAdmin || isManager || isTeamLeaderRole
   const { status, assignedToId, search, source } = await searchParams
 
-  // Common filters that apply regardless of role
   const commonClauses: Record<string, unknown>[] = []
   if (status) commonClauses.push({ status: status as LeadStatus })
   if (source) commonClauses.push({ campaignName: source })
@@ -253,8 +36,6 @@ export default async function LeadsPage({
   }
 
   const orderBy = { createdAt: "desc" } as const
-
-  // Admin (manager or super admin) with no assignedToId filter → split into two sections
   const splitView = isAdmin && !assignedToId
 
   let myLeads: LeadRow[] = []
@@ -287,7 +68,6 @@ export default async function LeadsPage({
   ])
 
   if (splitView) {
-    // ADMIN sees team leads from both direct reports and team leaders' reports
     const teamLeadsWhere = isManager
       ? {
           AND: [
@@ -337,7 +117,6 @@ export default async function LeadsPage({
     const andClauses = [...commonClauses]
 
     if (isAdmin) {
-      // assignedToId filter active — filter to that person (super admin: also supports "unassigned")
       if (isSuperAdmin && assignedToId === "unassigned") andClauses.push({ assignedToId: null })
       else if (assignedToId) andClauses.push({ assignedToId })
       else andClauses.push({ OR: [{ assignedToId: session!.user.id }, { assignedTo: { managerId: session!.user.id } }] })

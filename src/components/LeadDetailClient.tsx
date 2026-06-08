@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { calcResponseTime } from "@/lib/responseTime"
+import { useToast } from "@/components/Toast"
 
 type Note = {
   id: string
@@ -89,6 +90,7 @@ function initials(first?: string | null, last?: string | null) {
 
 export default function LeadDetailClient({ lead, salespeople, currentUser }: Props) {
   const router = useRouter()
+  const toast = useToast()
   const isAdmin = currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN" || currentUser.role === "TEAM_LEADER"
 
   const [status, setStatus] = useState(lead.status)
@@ -130,6 +132,7 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
     await patchRes
     setStatusNote("")
     setSaving(false)
+    toast("Changes saved")
     router.refresh()
   }
 
@@ -158,6 +161,7 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
     setNotes([note, ...notes])
     setNoteContent("")
     setPostingNote(false)
+    toast("Note added")
   }
 
   const originalFollowUp = lead.followUpAt ? new Date(lead.followUpAt).toISOString().slice(0, 10) : ""
