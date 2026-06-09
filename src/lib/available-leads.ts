@@ -91,8 +91,10 @@ export async function getAvailableLeads(userId: string, role: string) {
 }
 
 export async function getAvailableLeadsCount(userId: string, role: string): Promise<number> {
-  // Admins/super-admins don't claim leads — skip expensive routing logic
-  if (role === "ADMIN" || role === "SUPER_ADMIN") return 0
+  if (role === "SUPER_ADMIN") {
+    return db.lead.count({ where: { assignedToId: null, isDuplicate: false } }).catch(() => 0)
+  }
+  if (role === "ADMIN") return 0
 
   try {
     const leads = await getAvailableLeads(userId, role)
