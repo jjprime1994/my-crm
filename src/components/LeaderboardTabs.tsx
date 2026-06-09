@@ -61,7 +61,7 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
           <thead>
             <tr className="border-b border-gray-50 bg-gray-50/40">
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Rank</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salesperson</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide min-w-[160px]">Conversion</th>
@@ -71,7 +71,7 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
           <tbody className="divide-y divide-gray-50">
             {individuals.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-400">No salesperson data yet.</td>
+                <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-400">No data yet.</td>
               </tr>
             )}
             {individuals.map((row, i) => (
