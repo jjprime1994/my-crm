@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { getViewAsRole, getCurrentViewAs } from "@/lib/viewas"
 import DashboardShell from "@/components/DashboardShell"
 import { db } from "@/lib/db"
+import { getAvailableLeadsCount } from "@/lib/available-leads"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -24,9 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] },
       },
     }).catch(() => 0),
-    db.lead.count({
-      where: { assignedToId: null, isDuplicate: false },
-    }).catch(() => 0),
+    getAvailableLeadsCount(session.user.id, actualRole),
   ])
 
   const effectiveUser = { ...session.user, role: effectiveRole }

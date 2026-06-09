@@ -13,39 +13,21 @@ const patchNotes: PatchEntry[] = [
     date: "8 Jun 2026",
     label: "Latest",
     changes: [
-      "State routing — super admins can now assign one or more salespeople to each Malaysian state; incoming leads are automatically distributed to them in round-robin order",
-      "Round-robin with capacity check — if all salespeople for a state have hit their lead capacity, the lead falls into the unassigned pool instead of being force-assigned",
-      "Assign to managers and team leaders — the Assign Leads page now allows leads to be assigned to managers and team leaders, not just salespeople",
-      "Lead reassignment — managers and team leaders can reassign any lead in their team to a different team member directly from the lead detail page",
-      "Role labels in assignment dropdowns — manager and team leader roles are now shown in brackets next to the person's name in all assignment dropdowns so you know who you're assigning to",
-      "Toast notifications — success messages appear in the bottom-right corner after saving a lead, adding a note, or assigning leads, so you always know an action completed",
-      "Clickable lead rows — on desktop, clicking anywhere on a lead row in the Leads table now opens the lead detail page (not just the name link)",
-      "WhatsApp and Call buttons on leads list — WA and Call icon buttons now appear inline on the Leads page, both on desktop (next to the phone number) and on mobile (bottom-right of each card), so you can contact a lead without opening it first",
-      "Tappable follow-up cards — the entire mobile card on the Follow-ups page is now tappable to open the lead; the WA and Call buttons still work independently",
-      "Back button on lead detail — a Back button above the lead header lets you return to the previous page without using the browser back button",
-      "Quick follow-up date buttons — on the lead detail page, buttons for Tomorrow, +3 days, +1 week, and +2 weeks let you set a follow-up reminder in one tap instead of opening the date picker",
-      "Sidebar live badges — the Follow-ups and Available Leads sidebar links now show a live count badge so you can see at a glance how many need attention without navigating to the page",
+      "State routing — leads are now automatically assigned to salespeople by state in round-robin order, no manual routing needed",
+      "Assign to managers and team leaders — the Assign Leads page now lets you assign to managers and team leaders, not just salespeople",
+      "Lead reassignment — reassign any lead to a different team member directly from the lead detail page",
+      "WA and Call buttons on leads list — contact a lead without opening it; buttons appear next to each lead on desktop and on mobile cards",
+      "Success toasts — a confirmation message appears in the bottom-right after saving, adding a note, or assigning leads",
     ],
   },
   {
     date: "19 May 2026",
     changes: [
-      "TikTok lead integration — leads from TikTok Instant Form ads are automatically captured and routed the same way as Meta leads",
-      "Platform badge — every lead now shows a Meta or TikTok badge so your team always knows which platform it came from",
-      "Export improvements — new filters for platform, state, assignment status, team, and duplicate exclusion; live accurate lead count updates as you adjust filters",
-      "Richer export CSV — now includes State, Platform, Duplicate flag, Follow-up Date, and Last Updated columns",
-      "Role avatars — management roles (Super Admin, Manager) now use a square avatar and individual roles (Team Leader, Salesperson) use a circle, so roles are distinguishable by shape as well as colour",
-      "Response time tracking — the CRM now records how long a salesperson takes to first contact a lead after claiming it; shown on the lead detail page, the team leads table, and the business overview leaderboard",
-      "Response time backfill — leads that were already in Contacted (or later) status before tracking was introduced now correctly show their response time badge instead of 'Not yet contacted'",
-      "Team Performance fix — the Team Performance section on the home dashboard now correctly shows only the salespersons in the current manager's or team leader's own team, not all users across the system",
-      "Assign Leads improvements — the assign page now shows State, Platform, Ad/Campaign, age badge (colour-coded by days old), and duplicate flag for each lead; the salesperson dropdown shows new lead count alongside total so you can see workload before assigning",
-      "Smarter DUP badge — duplicate leads in Assign Leads now show exactly which campaign the other lead came from, who is handling it (or 'Unassigned'), and what status it is in, so managers can make an informed decision instead of guessing",
-      "Mobile layout fixes — Assign Leads mobile cards now show the age badge pinned to the top-right corner and duplicate sibling info on its own line so nothing overlaps or wraps awkwardly on small screens",
-      "Team Breakdown — the Manager overview and Business Overview pages now include a Team Breakdown section showing each salesperson's claimed leads, assigned leads, total leads, won count, conversion rate, and stale count, grouped by team",
-      "Leaderboard team totals fix — the Teams tab on the Business Overview leaderboard now correctly includes a manager's own leads in their team's total, not just their team members' leads",
-      "Management leads in Team Breakdown — managers and team leaders who handle leads directly now appear as highlighted header rows (with a role badge) at the top of their section in the Team Breakdown; only shown when they have leads in the selected period",
-      "Full org hierarchy in Business Overview — the Team Breakdown on the Business Overview page now groups salespeople by their top-level manager, with sub-sections per team leader, so the entire org structure is visible at a glance",
-      "Tabbed overview pages — the Business Overview (Super Admin) and Team Overview (Manager) pages now use a tab layout to reduce clutter; Super Admin has Overview, Campaigns, Teams, and Leaderboard tabs; Manager has Overview and Teams tabs; the period selector and active tab are preserved when switching between them",
+      "TikTok leads — leads from TikTok Instant Form ads are now captured alongside Meta leads, with a platform badge on every lead",
+      "Response time tracking — tracks how long each salesperson takes to first contact a lead; shown on lead cards and the leaderboard",
+      "Export improvements — new filters for platform, state, team, assignment status, and duplicate exclusion; live lead count as you adjust filters",
+      "Team Breakdown — manager and business overview pages now show per-person stats (claimed, assigned, won, conversion, stale) grouped by team",
+      "Tabbed overview pages — Business Overview and Team Overview reorganised into tabs to reduce clutter",
     ],
   },
   {
@@ -155,7 +137,7 @@ const faqs: FAQSection[] = [
       },
       {
         q: "What does the DUP badge on a lead mean?",
-        a: "DUP means the system detected a potential duplicate — another lead in the system shares the same phone number. Review the lead carefully and coordinate with your team to avoid contacting the same person twice.\n\nOn the Assign Leads page, the DUP badge shows extra context beneath it:\n\nIf the other lead is claimed — you'll see the salesperson's name (in red), which campaign it came from, and its current status. This means someone is already working this person.\n\nIf the other lead is unassigned — you'll see 'Unassigned', the campaign, and the status. You may want to assign both to the same salesperson.\n\nUse this to decide whether to skip the duplicate, assign it to the same person already handling it, or flag it for review.",
+        a: "DUP means another lead in the system has the same phone number. Check whether someone is already working this person before contacting them. On the Assign Leads page the badge shows who the other lead is assigned to, which campaign it came from, and its current status — use this to decide whether to assign both to the same person.",
       },
     ],
   },
@@ -208,7 +190,7 @@ const faqs: FAQSection[] = [
     items: [
       {
         q: "How do I assign a lead to someone?",
-        a: "Go to Assign Leads in the sidebar. You'll see all unassigned leads. Tap or click any lead to select it — you can select multiple at once. Then choose a person from the dropdown and click Assign.\n\nYou can assign to salespeople, team leaders, or managers (role shown in brackets next to their name).\n\nEach lead shows:\n\nState — which Malaysian state the lead is from, so you can match it to the right person.\n\nPlatform — Meta or TikTok badge showing where the lead came from.\n\nAd / Campaign — the specific ad that generated the lead.\n\nAge — how many days the lead has been waiting (green = fresh, amber = 2–3 days, red = 4+ days old).\n\nDUP — the lead shares a phone or email with another lead in the system.\n\nThe dropdown shows each person's new lead count (uncontacted) and total leads so you can distribute workload evenly.",
+        a: "Go to Assign Leads in the sidebar. Tap or click any lead to select it — you can select multiple at once. Choose a person from the dropdown and click Assign. You can assign to salespeople, team leaders, or managers (role shown in brackets next to their name). The dropdown shows each person's uncontacted and total lead count so you can distribute workload evenly.",
       },
       {
         q: "How do I reassign a lead to a different team member?",
@@ -224,7 +206,7 @@ const faqs: FAQSection[] = [
       },
       {
         q: "How do I tell roles apart in Manage Team?",
-        a: "Each role has a distinct avatar shape and colour so you can identify them at a glance without relying on colour alone:\n\nSuper Admin — amber square avatar\n\nManager — blue square avatar\n\nTeam Leader — teal circle with a teal ring\n\nSalesperson — plain gray circle\n\nThe role badge next to the name also spells out the role in text.",
+        a: "Each role has a distinct avatar shape and colour: Super Admin = amber square, Manager = blue square, Team Leader = teal circle with a ring, Salesperson = plain gray circle. The role badge next to the name also spells it out in text.",
       },
       {
         q: "How do I view my team's performance?",
@@ -232,11 +214,11 @@ const faqs: FAQSection[] = [
       },
       {
         q: "Why does the Team Performance section only show some salespersons?",
-        a: "Team Performance on the home dashboard is scoped to your own team only:\n\nManager (Admin) — you see all salespersons who report directly to you, plus salespersons who report to team leaders under you.\n\nTeam Leader — you see only the salespersons who report directly to you.\n\nThis means managers from other teams will not appear in your Team Performance section, and you will not appear in theirs.",
+        a: "Team Performance is scoped to your own team only. Managers see their direct reports and team leaders' salespeople. Team Leaders see only their own direct reports. Salespeople from other teams are not shown.",
       },
       {
         q: "Where can I see who claimed vs was assigned a lead?",
-        a: "The Team Breakdown section on the Manager Overview page shows each person's Claimed count (leads they picked up from Available Leads) and Assigned count (leads pushed to them by a manager) side by side. This includes salespersons, team leaders, and the manager themselves if they have leads in the period.\n\nThis lets you quickly see who is proactively claiming leads vs who is waiting to be assigned.\n\nFor an individual lead, you can also check the status history timeline on the lead detail page — a 'Claimed' event means the person took it themselves.",
+        a: "The Team Breakdown on the Manager Overview page shows each person's Claimed (self-picked) and Assigned (manager-pushed) counts side by side. For an individual lead, check the status history timeline on the lead detail page — a 'Claimed' event means the person took it themselves.",
       },
     ],
   },
@@ -246,7 +228,7 @@ const faqs: FAQSection[] = [
     items: [
       {
         q: "How do I export leads and what filters are available?",
-        a: "Go to Export Leads under the Super Admin menu. You can narrow the export using any combination of filters:\n\nStatus — tick one or more pipeline stages (New, Contacted, Qualified, Proposal, Won, Lost).\n\nDate Range — leads created between two dates.\n\nPlatform — Meta only, TikTok only, or all platforms.\n\nAd / Source — a specific ad that generated the leads.\n\nState — a specific Malaysian state (only appears if your leads have state data).\n\nAssignment — all leads, assigned-only, or unassigned-only.\n\nTeam — export only leads handled by a specific manager's team.\n\nExclude duplicates — removes leads flagged as duplicate from the file.\n\nThe Matching leads counter updates live as you change filters so you know exactly how many rows will be in the file before downloading.\n\nThe CSV includes 14 columns: First Name, Last Name, Email, Phone, Status, Ad / Form, Campaign, State, Platform, Assigned To, Duplicate, Follow-up Date, Created Date, and Last Updated.",
+        a: "Go to Export Leads under the Super Admin menu. Filter by status, date range, platform, ad, state, assignment status, team, and whether to exclude duplicates. The Matching leads count updates live as you adjust filters. Click Download to get a CSV with all key lead and assignment data.",
       },
       {
         q: "What is the Business Overview page?",
@@ -254,11 +236,11 @@ const faqs: FAQSection[] = [
       },
       {
         q: "What does the Team Breakdown section show?",
-        a: "The Team Breakdown section appears on both the Manager Overview and Business Overview pages. It lists every member with leads in the selected period, grouped by team, with these columns:\n\nClaimed — leads the person picked up themselves from Available Leads.\n\nAssigned — leads pushed to them by a manager.\n\nTotal — Claimed + Assigned.\n\nWon — leads closed as won.\n\nConv. — conversion rate (Won ÷ Total).\n\nStale — open leads with no activity in more than 2 days.\n\nManagers and team leaders who handle leads directly appear as a highlighted header row at the top of their section, with a role badge (Manager / Team Leader / Super Admin). They only appear if they have at least one lead in the period.\n\nOn the Business Overview page, the breakdown is organised by top-level manager, with each team leader's sub-team shown as a separate group beneath — so the full org structure is visible in one view.\n\nAll numbers are scoped to the period you have selected at the top of the page.",
+        a: "Team Breakdown lists every team member with leads in the selected period, showing their Claimed, Assigned, Total, Won, Conversion rate, and Stale counts, grouped by team. Managers and team leaders who handle leads directly appear as a highlighted header row at the top of their section with a role badge. All numbers are scoped to the period selected at the top of the page.",
       },
       {
         q: "What does the Campaign Performance table show?",
-        a: "The Campaign Performance table shows each Meta ad campaign's results side by side:\n\nStatus — whether the campaign is currently Active or Paused on Meta.\n\nDaily Budget — the daily spend limit set on Meta.\n\nToday Spend — how much has been spent today, with a progress bar showing how much of the daily budget is used.\n\nPeriod Spend — total spend for the selected period.\n\nCPL (Cost Per Lead) — period spend divided by the number of leads from that campaign in the CRM.\n\nLeads / Unclaimed / Won / Conversion — CRM data for that campaign.",
+        a: "Campaign Performance shows each Meta ad campaign side by side with its status (Active/Paused), daily budget, today's spend, period spend, cost per lead, and CRM stats (leads, unclaimed, won, conversion rate).",
       },
       {
         q: "How do I add a new team member as a Super Admin?",
@@ -266,19 +248,15 @@ const faqs: FAQSection[] = [
       },
       {
         q: "What is State Routing and how does it work?",
-        a: "State Routing automatically assigns incoming leads to specific salespeople based on the lead's Malaysian state, without needing a manager to intervene.\n\nTo set it up, go to Ad Routing under the Super Admin menu and scroll to the State Routing section. Expand any state row and toggle on the salespeople who should receive leads from that state.\n\nWhen a lead arrives from that state, the CRM distributes it in round-robin order across all enabled salespeople — each person gets a turn before the cycle repeats.\n\nCapacity check — if a salesperson has reached their lead capacity (their claim limit), they are skipped for that round. If every assigned salesperson is at capacity, the lead falls into the unassigned pool instead.\n\nState Routing is designed for standalone salespeople who don't belong to a manager's team. Leads going to a managed team follow the existing ad routing and team coverage rules instead.",
+        a: "State Routing automatically assigns incoming leads to specific salespeople by state, in round-robin order, without manager intervention. Set it up in Ad Routing → State Routing: expand a state and toggle on the salespeople who should receive leads from it. If a salesperson is at capacity they are skipped; if all are at capacity the lead falls into the unassigned pool.",
       },
       {
         q: "What is Ad Routing and how do I set it up?",
-        a: "Ad Routing controls which team handles leads from each ad. Go to Ad Routing under the Super Admin menu.\n\nDefault Team — choose which team receives leads that can't be routed (unrecognised state, no ad rule set). Set this first.\n\nTeam Coverage (States) — for each manager, expand their row and select which Malaysian states their team covers. Leads from those states will only be visible to that team.\n\nAd → Team Assignment — for each ad that has generated leads, tick which teams can claim from it. Ads with no team assigned go to the Default Team.\n\nFor nationwide ads, assign all relevant teams and set their covered states — each team will only see leads from their own states.",
+        a: "Go to Ad Routing under the Super Admin menu. Set a Default Team first (for leads that can't be routed). Then set each manager's covered states and assign specific ads to teams — ads with no assignment fall back to the Default Team. For nationwide ads, assign all relevant teams and rely on state coverage to split leads.",
       },
       {
         q: "How are leads automatically tagged with a state?",
-        a: "When a lead comes in from Meta or TikTok, the system reads the state or location field from the form the customer filled in. If the answer is a city name (e.g. Petaling Jaya), it is automatically mapped to its state (e.g. Selangor).\n\nIf no state can be determined from the form, the system also tries to detect the state from the ad or campaign name as a fallback.\n\nLeads with no recognisable state go to the Default Team.",
-      },
-      {
-        q: "How do I connect TikTok lead ads?",
-        a: "The CRM has a TikTok webhook endpoint ready at /api/webhooks/tiktok. To connect it:\n\n1. Go to TikTok Business Center → your ad account → Lead Generation settings or Webhooks.\n2. Register your CRM webhook URL as the callback.\n3. Copy the webhook secret TikTok provides and add it as TIKTOK_WEBHOOK_SECRET in your Vercel environment variables.\n\nOnce connected, leads from TikTok Instant Form ads are captured automatically — with the same duplicate detection, state tagging, and ad routing as Meta leads. Each lead will show a TikTok badge so your team can see where it came from.",
+        a: "The system reads the state or location field from the lead form. City names (e.g. Petaling Jaya) are automatically mapped to their state (e.g. Selangor). If no state can be determined, the lead goes to the Default Team.",
       },
     ],
   },
