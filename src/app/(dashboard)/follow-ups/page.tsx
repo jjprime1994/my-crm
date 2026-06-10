@@ -271,8 +271,8 @@ export default async function FollowUpsPage() {
   const teamFilter = { AND: [statusFilter, staleness, teamScopeFilter] }
 
   const [myLeads, teamLeads] = await Promise.all([
-    db.lead.findMany({ where: myFilter, include, orderBy }),
-    db.lead.findMany({ where: teamFilter, include, orderBy }),
+    db.lead.findMany({ where: myFilter, include, orderBy, take: 100 }),
+    db.lead.findMany({ where: teamFilter, include, orderBy, take: 200 }),
   ])
 
   const total = myLeads.length + teamLeads.length

@@ -97,8 +97,20 @@ export async function getAvailableLeadsCount(userId: string, role: string): Prom
   if (role === "ADMIN") return 0
 
   try {
-    const leads = await getAvailableLeads(userId, role)
-    return leads.length
+    // Fetch only the two fields filterLeads needs — avoids transferring full lead rows just for a count
+    const [leanLeads, allRoutes, allManagers, effectiveAdmin] = await Promise.all([
+      db.lead.findMany({
+        where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false },
+        select: { adName: true, branch: true },
+      }),
+      db.adRoute.findMany({ select: { adName: true, teamIds: true } }).catch(() => []),
+      db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true } }).catch(() => []),
+      getEffectiveAdmin(userId, role).catch(() => null),
+    ])
+    const routeIndex = Object.fromEntries(allRoutes.map((r) => [r.adName, r.teamIds]))
+    const routedAdNames = new Set(allRoutes.map((r) => r.adName))
+    const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
+    return filterLeads(leanLeads, effectiveAdmin, routeIndex, routedAdNames, managerStates).length
   } catch {
     return 0
   }

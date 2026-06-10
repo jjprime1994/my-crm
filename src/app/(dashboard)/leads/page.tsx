@@ -87,11 +87,13 @@ export default async function LeadsPage({
         where: { AND: [{ assignedToId: session!.user.id }, ...commonClauses] },
         include: includeOpts,
         orderBy,
+        take: 200,
       }),
       db.lead.findMany({
         where: teamLeadsWhere,
         include: includeOpts,
         orderBy,
+        take: 200,
       }),
     ]
     if (isSuperAdmin) {
@@ -106,6 +108,7 @@ export default async function LeadsPage({
           },
           include: includeOpts,
           orderBy,
+          take: 200,
         })
       )
     }
@@ -125,7 +128,7 @@ export default async function LeadsPage({
     }
 
     const where = andClauses.length > 0 ? { AND: andClauses } : {}
-    leads = await db.lead.findMany({ where, include: includeOpts, orderBy })
+    leads = await db.lead.findMany({ where, include: includeOpts, orderBy, take: 200 })
   }
 
   const totalCount = splitView ? myLeads.length + teamLeads.length + otherLeads.length : leads.length

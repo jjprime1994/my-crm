@@ -168,9 +168,9 @@ export default async function SuperAdminOverviewPage({
       const fields = `campaign_name,spend`
 
       const [campsRes, todayRes, periodRes] = await Promise.all([
-        fetch(`${base}/${metaAccountId}/campaigns?fields=name,daily_budget,lifetime_budget,status&access_token=${metaToken}`),
-        fetch(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&date_preset=today&access_token=${metaToken}`),
-        fetch(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&${periodParam}&access_token=${metaToken}`),
+        fetch(`${base}/${metaAccountId}/campaigns?fields=name,daily_budget,lifetime_budget,status&access_token=${metaToken}`, { next: { revalidate: 300 } }),
+        fetch(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&date_preset=today&access_token=${metaToken}`, { next: { revalidate: 300 } }),
+        fetch(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&${periodParam}&access_token=${metaToken}`, { next: { revalidate: 300 } }),
       ])
       const [campsJson, todayJson, periodJson] = await Promise.all([campsRes.json(), todayRes.json(), periodRes.json()])
 
