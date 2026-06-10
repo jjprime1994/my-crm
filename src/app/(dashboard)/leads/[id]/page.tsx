@@ -9,7 +9,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const adminAccess = role === "ADMIN" || role === "SUPER_ADMIN" || role === "TEAM_LEADER"
   const { id } = await params
 
-  const [leadBase, salespeople] = await Promise.all([
+  const [leadBase, salespeople, statusHistory] = await Promise.all([
     db.lead.findUnique({
       where: { id },
       include: {
@@ -37,17 +37,16 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
+    db.leadStatusHistory
+      .findMany({
+        where: { leadId: id },
+        include: { changedBy: { select: { name: true } } },
+        orderBy: { createdAt: "asc" },
+      })
+      .catch(() => []),
   ])
 
   if (!leadBase) notFound()
-
-  const statusHistory = await db.leadStatusHistory
-    .findMany({
-      where: { leadId: id },
-      include: { changedBy: { select: { name: true } } },
-      orderBy: { createdAt: "asc" },
-    })
-    .catch(() => [])
 
   const lead = { ...leadBase, statusHistory }
 
