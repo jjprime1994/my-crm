@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         phone = get("phone_number") ?? get("phone")
 
         // Extract branch from state/location form field
-        const rawLocation = get("state") ?? get("location") ?? get("city") ?? get("where_are_you_from") ?? get("negeri") ?? get("kawasan") ?? get("which_state_are_you_located_in")
+        const rawLocation = get("state") ?? get("location") ?? get("city") ?? get("where_are_you_from") ?? get("negeri") ?? get("kawasan") ?? get("which_state_are_you_located_in?") ?? get("which_state_are_you_located_in")
         branch = resolveStateBranch(rawLocation)
 
         // Handle both first_name/last_name and full_name field formats

@@ -223,6 +223,13 @@ const LOOKUP: Record<string, string> = {
 
 export function resolveStateBranch(raw: string | null | undefined): string | null {
   if (!raw) return null
-  const key = raw.trim().toLowerCase().replace(/\s+/g, " ")
-  return LOOKUP[key] ?? null
+  // Meta encodes multiple-choice answers with underscores — normalise to spaces
+  const normalised = raw.trim().replace(/_/g, " ").replace(/\s+/g, " ").toLowerCase()
+  // Handle combined options like "selangor / kuala lumpur" — try each part
+  const parts = normalised.split(/\s*\/\s*/)
+  for (const part of parts) {
+    const result = LOOKUP[part.trim()]
+    if (result) return result
+  }
+  return null
 }
