@@ -30,15 +30,24 @@ export default function LeadsFilters({ isAdmin, salespeople, sources }: Props) {
       const params = new URLSearchParams(searchParams.toString())
       if (search) params.set("search", search)
       else params.delete("search")
+      clearPages(params)
       router.push(`/leads?${params.toString()}`)
     }, 350)
     return () => clearTimeout(timer)
   }, [search])
 
+  function clearPages(params: URLSearchParams) {
+    params.delete("page")
+    params.delete("myPage")
+    params.delete("teamPage")
+    params.delete("otherPage")
+  }
+
   function update(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
     if (value) params.set(key, value)
     else params.delete(key)
+    clearPages(params)
     router.push(`/leads?${params.toString()}`)
   }
 
@@ -113,7 +122,7 @@ export default function LeadsFilters({ isAdmin, salespeople, sources }: Props) {
         {/* Clear filters */}
         {(activeStatus || searchParams.get("source") || searchParams.get("assignedToId") || search) && (
           <button
-            onClick={() => { setSearch(""); router.push("/leads") }}
+            onClick={() => { setSearch(""); router.push("/leads?") }}
             className="text-xs text-gray-400 hover:text-gray-600 font-medium px-3 py-2 rounded-xl hover:bg-gray-100 transition"
           >
             Clear filters

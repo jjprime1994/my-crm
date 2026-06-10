@@ -4,6 +4,9 @@ import { LeadStatus } from "@/generated/prisma/client"
 import LeadsFilters from "@/components/LeadsFilters"
 import { getViewAsRole } from "@/lib/viewas"
 import LeadsTable, { type LeadRow } from "@/components/LeadsTable"
+import Pagination from "@/components/Pagination"
+
+const PAGE_SIZE = 50
 
 const includeOpts = {
   assignedTo: { select: { id: true, name: true } },
@@ -13,7 +16,7 @@ const includeOpts = {
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; assignedToId?: string; search?: string; source?: string }>
+  searchParams: Promise<{ status?: string; assignedToId?: string; search?: string; source?: string; page?: string; myPage?: string; teamPage?: string; otherPage?: string }>
 }) {
   const session = await auth()
   const role = await getViewAsRole(session?.user.role)
@@ -21,7 +24,12 @@ export default async function LeadsPage({
   const isManager = role === "ADMIN"
   const isTeamLeaderRole = role === "TEAM_LEADER"
   const isAdmin = isSuperAdmin || isManager || isTeamLeaderRole
-  const { status, assignedToId, search, source } = await searchParams
+  const { status, assignedToId, search, source, page: pageParam, myPage: myPageParam, teamPage: teamPageParam, otherPage: otherPageParam } = await searchParams
+
+  const page     = Math.max(1, Number(pageParam     ?? "1"))
+  const myPage   = Math.max(1, Number(myPageParam   ?? "1"))
+  const teamPage = Math.max(1, Number(teamPageParam ?? "1"))
+  const otherPage = Math.max(1, Number(otherPageParam ?? "1"))
 
   const commonClauses: Record<string, unknown>[] = []
   if (status) commonClauses.push({ status: status as LeadStatus })
@@ -42,6 +50,7 @@ export default async function LeadsPage({
   let teamLeads: LeadRow[] = []
   let otherLeads: LeadRow[] = []
   let leads: LeadRow[] = []
+  let myTotal = 0, teamTotal = 0, otherTotal = 0, singleTotal = 0
 
   const [salespeople, sources] = await Promise.all([
     isAdmin
@@ -68,57 +77,40 @@ export default async function LeadsPage({
   ])
 
   if (splitView) {
-    const teamLeadsWhere = isManager
-      ? {
-          AND: [
-            {
-              OR: [
-                { assignedTo: { managerId: session!.user.id } },
-                { assignedTo: { manager: { managerId: session!.user.id } } },
-              ],
-            },
-            ...commonClauses,
-          ],
-        }
+    const myWhere = { AND: [{ assignedToId: session!.user.id }, ...commonClauses] }
+    const teamWhere = isManager
+      ? { AND: [{ OR: [{ assignedTo: { managerId: session!.user.id } }, { assignedTo: { manager: { managerId: session!.user.id } } }] }, ...commonClauses] }
       : { AND: [{ assignedTo: { managerId: session!.user.id } }, ...commonClauses] }
-
-    const queries: Promise<LeadRow[]>[] = [
-      db.lead.findMany({
-        where: { AND: [{ assignedToId: session!.user.id }, ...commonClauses] },
-        include: includeOpts,
-        orderBy,
-        take: 200,
-      }),
-      db.lead.findMany({
-        where: teamLeadsWhere,
-        include: includeOpts,
-        orderBy,
-        take: 200,
-      }),
-    ]
-    if (isSuperAdmin) {
-      queries.push(
-        db.lead.findMany({
-          where: {
-            AND: [
-              { NOT: { assignedToId: session!.user.id } },
-              { NOT: { assignedTo: { managerId: session!.user.id } } },
-              ...commonClauses,
-            ],
-          },
-          include: includeOpts,
-          orderBy,
-          take: 200,
-        })
-      )
+    const otherWhere = {
+      AND: [
+        { NOT: { assignedToId: session!.user.id } },
+        { NOT: { assignedTo: { managerId: session!.user.id } } },
+        ...commonClauses,
+      ],
     }
+
+    const queries = [
+      db.lead.count({ where: myWhere }),
+      db.lead.findMany({ where: myWhere, include: includeOpts, orderBy, skip: (myPage - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+      db.lead.count({ where: teamWhere }),
+      db.lead.findMany({ where: teamWhere, include: includeOpts, orderBy, skip: (teamPage - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+      ...(isSuperAdmin ? [
+        db.lead.count({ where: otherWhere }),
+        db.lead.findMany({ where: otherWhere, include: includeOpts, orderBy, skip: (otherPage - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+      ] : []),
+    ]
+
     const results = await Promise.all(queries)
-    myLeads = results[0]
-    teamLeads = results[1]
-    if (isSuperAdmin) otherLeads = results[2] ?? []
+    myTotal   = results[0] as number
+    myLeads   = results[1] as LeadRow[]
+    teamTotal = results[2] as number
+    teamLeads = results[3] as LeadRow[]
+    if (isSuperAdmin) {
+      otherTotal = results[4] as number
+      otherLeads = results[5] as LeadRow[]
+    }
   } else {
     const andClauses = [...commonClauses]
-
     if (isAdmin) {
       if (isSuperAdmin && assignedToId === "unassigned") andClauses.push({ assignedToId: null })
       else if (assignedToId) andClauses.push({ assignedToId })
@@ -126,19 +118,21 @@ export default async function LeadsPage({
     } else {
       andClauses.push({ assignedToId: session?.user.id })
     }
-
     const where = andClauses.length > 0 ? { AND: andClauses } : {}
-    leads = await db.lead.findMany({ where, include: includeOpts, orderBy, take: 200 })
+    ;[singleTotal, leads] = await Promise.all([
+      db.lead.count({ where }),
+      db.lead.findMany({ where, include: includeOpts, orderBy, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+    ])
   }
 
-  const totalCount = splitView ? myLeads.length + teamLeads.length + otherLeads.length : leads.length
+  const displayTotal = splitView ? myTotal + teamTotal + otherTotal : singleTotal
 
   return (
     <div className="space-y-5 max-w-6xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{totalCount} leads total</p>
+          <p className="text-sm text-gray-500 mt-0.5">{displayTotal} leads total</p>
         </div>
       </div>
 
@@ -149,31 +143,37 @@ export default async function LeadsPage({
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
               My Leads
-              <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{myLeads.length} leads</span>
+              <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{myTotal} leads</span>
             </h2>
             <LeadsTable leads={myLeads} showAssignedTo={false} />
+            <Pagination page={myPage} totalPages={Math.ceil(myTotal / PAGE_SIZE)} pageParam="myPage" />
           </div>
 
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
               Team Leads
-              <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{teamLeads.length} leads</span>
+              <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{teamTotal} leads</span>
             </h2>
             <LeadsTable leads={teamLeads} showAssignedTo={true} />
+            <Pagination page={teamPage} totalPages={Math.ceil(teamTotal / PAGE_SIZE)} pageParam="teamPage" />
           </div>
 
           {isSuperAdmin && (
             <div>
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                 All Other Leads
-                <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{otherLeads.length} leads</span>
+                <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{otherTotal} leads</span>
               </h2>
               <LeadsTable leads={otherLeads} showAssignedTo={true} />
+              <Pagination page={otherPage} totalPages={Math.ceil(otherTotal / PAGE_SIZE)} pageParam="otherPage" />
             </div>
           )}
         </div>
       ) : (
-        <LeadsTable leads={leads} showAssignedTo={isAdmin} />
+        <>
+          <LeadsTable leads={leads} showAssignedTo={isAdmin} />
+          <Pagination page={page} totalPages={Math.ceil(singleTotal / PAGE_SIZE)} pageParam="page" />
+        </>
       )}
     </div>
   )
