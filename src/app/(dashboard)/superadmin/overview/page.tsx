@@ -499,6 +499,52 @@ export default async function SuperAdminOverviewPage({
         </div>
       </div>
 
+      {/* Top performers */}
+      {(() => {
+        const allIndividuals = [
+          ...individuals.map((m) => ({ id: m.id, name: m.name, won: m.won, totalLeads: m.totalLeads, rate: m.rate })),
+          ...Array.from(mgmtRows.values())
+            .filter((m) => m.totalLeads > 0)
+            .map((m) => ({ id: m.id, name: m.name, won: m.won, totalLeads: m.totalLeads, rate: m.rate })),
+        ].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads).slice(0, 8)
+        const maxWon = allIndividuals[0]?.won ?? 0
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-semibold text-gray-900 mb-5">Top Performers — Won</h2>
+            {allIndividuals.length === 0 || maxWon === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">No won leads in this period.</p>
+            ) : (
+              <div className="space-y-3">
+                {allIndividuals.map((m, i) => {
+                  const barPct = maxWon > 0 ? Math.round((m.won / maxWon) * 100) : 0
+                  const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null
+                  return (
+                    <div key={m.id} className="flex items-center gap-3">
+                      <span className="w-5 text-center text-sm shrink-0">{medal ?? <span className="text-xs text-gray-400">{i + 1}</span>}</span>
+                      <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+                        <span className="text-[11px] font-bold text-violet-600">{initials(m.name)}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <span className="text-sm font-bold text-emerald-600">{m.won} won</span>
+                            <span className="text-xs text-gray-400">({m.rate}%)</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <AnimatedBar pct={barPct} className="bg-emerald-500" />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Recent leads */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
