@@ -3,6 +3,27 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { resolveStateBranch } from "@/lib/branch"
 
+// GET: inspect rawData of a sample lead missing a state
+export async function GET() {
+  const session = await auth()
+  if (session?.user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
+  const samples = await db.lead.findMany({
+    where: { branch: null, adName: { not: null } },
+    select: { id: true, adName: true, rawData: true },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  })
+
+  return NextResponse.json(samples.map((l) => ({
+    id: l.id,
+    adName: l.adName,
+    field_data: (l.rawData as any)?.field_data ?? null,
+  })))
+}
+
 export async function POST() {
   const session = await auth()
   if (session?.user.role !== "SUPER_ADMIN") {
