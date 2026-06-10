@@ -181,15 +181,17 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-500 italic">Hidden until claimed</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-sm text-gray-500 italic">Hidden until claimed</p>
+                  {lead.branch && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200 shrink-0">{lead.branch}</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   {(lead.campaignName ?? lead.adName) && (
                     <p className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</p>
                   )}
                   <SourceBadge source={lead.source} />
-                  {lead.branch && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100 shrink-0">{lead.branch}</span>
-                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -226,6 +228,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Received</th>
               <th className="px-5 py-3.5" />
             </tr>
@@ -233,7 +236,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-16">
+                <td colSpan={6} className="text-center py-16">
                   <div className="flex flex-col items-center gap-2 text-sm text-gray-400">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300">
                       <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
@@ -266,12 +269,15 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                 </td>
                 <td className="px-5 py-3.5 max-w-[160px]">
                   <p className="text-sm text-gray-500 truncate">{lead.campaignName ?? lead.adName ?? "—"}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 mt-0.5">
                     <SourceBadge source={lead.source} />
-                    {lead.branch && (
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100">{lead.branch}</span>
-                    )}
                   </div>
+                </td>
+                <td className="px-5 py-3.5">
+                  {lead.branch
+                    ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200">{lead.branch}</span>
+                    : <span className="text-xs text-gray-300">—</span>
+                  }
                 </td>
                 <td className="px-5 py-3.5">
                   {(() => {
