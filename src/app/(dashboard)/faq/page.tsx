@@ -10,8 +10,18 @@ type PatchEntry = {
 
 const patchNotes: PatchEntry[] = [
   {
-    date: "8 Jun 2026",
+    date: "10 Jun 2026",
     label: "Latest",
+    changes: [
+      "Ad routing now actually assigns leads — incoming leads are automatically routed to the correct salesperson based on the ad name, as a fallback after state routing",
+      "Pre-configure ad routes — you can now add an ad by name before any leads arrive, so routing is ready the moment the campaign goes live",
+      "Archive stopped ads — ads that are no longer running can be archived to keep the routing list clean; archived routes are skipped by the webhook",
+      "Follow-ups split — managers, team leaders, and super admins now see two separate sections: My Leads (personally assigned to you) and Team Leads (your team's stale leads)",
+      "Routing priority — leads now follow a clear chain: state routing → ad routing → default team → unassigned pool",
+    ],
+  },
+  {
+    date: "8 Jun 2026",
     changes: [
       "State routing — leads are now automatically assigned to salespeople by state in round-robin order, no manual routing needed",
       "Assign to managers and team leaders — the Assign Leads page now lets you assign to managers and team leaders, not just salespeople",
@@ -133,7 +143,7 @@ const faqs: FAQSection[] = [
       },
       {
         q: "What is the Follow-ups page?",
-        a: "The Follow-ups page shows leads that need your attention — either because a follow-up date you set has passed, or because a lead hasn't been updated in more than 2 days. Check this page daily to make sure no leads go cold.",
+        a: "The Follow-ups page shows leads that need your attention — either because a follow-up date you set has passed, or because a lead hasn't been updated in more than 2 days. Check this page daily to make sure no leads go cold.\n\nFor managers, team leaders, and super admins the page is split into two sections:\n\nMy Leads — leads personally claimed or assigned to you, so you can track your own pipeline without getting lost in your team's list.\n\nMy Team's Leads (or All Team Leads for super admins) — stale or overdue leads belonging to your team members, so you can spot who needs a nudge.",
       },
       {
         q: "What does the DUP badge on a lead mean?",
@@ -252,11 +262,23 @@ const faqs: FAQSection[] = [
       },
       {
         q: "What is Ad Routing and how do I set it up?",
-        a: "Go to Ad Routing under the Super Admin menu. Set a Default Team first (for leads that can't be routed). Then set each manager's covered states and assign specific ads to teams — ads with no assignment fall back to the Default Team. For nationwide ads, assign all relevant teams and rely on state coverage to split leads.",
+        a: "Go to Ad Routing under the Super Admin menu.\n\n1. Set a Default Team — catches any lead that can't be routed by state or ad.\n2. State Routing — assign salespeople to each state for automatic round-robin assignment by location.\n3. Ad → Team Assignment — assign each ad to a manager's team. Leads from that ad go to the salesperson on that team with the fewest active leads.\n\nRouting runs in this order for every incoming lead:\nState routing → Ad routing → Default team → Unassigned pool\n\nFor bilingual campaigns (e.g. Chinese and English versions of the same ad), give each ad a distinct name in Meta Ads Manager and route them to different teams here.",
+      },
+      {
+        q: "Can I set up ad routing before any leads have arrived?",
+        a: "Yes. In the Ad → Team Assignment section, type the exact ad name from your Meta Ads Manager into the input field and click Add. The route is saved immediately — when the first lead arrives from that ad it will be routed correctly. The ad name must match exactly what appears in Meta, including capitalisation.",
+      },
+      {
+        q: "How do I archive a stopped campaign's ad route?",
+        a: "In the Ad → Team Assignment list, click the archive icon (box) next to the ad. It moves to an Archived section at the bottom and is dimmed out. The webhook will skip archived routes, so any stray leads from a stopped ad fall through to the default team instead. Click the same icon to unarchive if the campaign restarts.",
       },
       {
         q: "How are leads automatically tagged with a state?",
-        a: "The system reads the state or location field from the lead form. City names (e.g. Petaling Jaya) are automatically mapped to their state (e.g. Selangor). If no state can be determined, the lead goes to the Default Team.",
+        a: "The system reads the state or location field from the lead form. City names (e.g. Petaling Jaya) are automatically mapped to their state (e.g. Selangor). If no state can be determined from the form, the system tries to detect a state from the campaign or ad name. If still nothing is found, state routing is skipped and ad routing takes over.",
+      },
+      {
+        q: "What is the routing priority order?",
+        a: "Every incoming lead goes through this chain until it finds a match:\n\n1. State routing — if the lead's form has a location field and that state has salespeople assigned, the lead is auto-assigned via round-robin to the first person with capacity.\n\n2. Ad routing — if state routing didn't assign anyone, the system checks if the lead's ad name matches a configured ad route. The salesperson on that team with the fewest active leads gets the lead.\n\n3. Default team — if neither matched, the lead goes to the manager marked as Default Team.\n\n4. Unassigned pool — if no default is set, the lead sits in Available Leads for anyone to claim.",
       },
     ],
   },
