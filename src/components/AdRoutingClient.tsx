@@ -43,7 +43,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ adName: name, adId: null, teamIds: [] }),
     })
-    setAds((prev) => [...prev, { adId: null, adName: name, teamIds: [] }])
+    setAds((prev) => [...prev, { adId: null, adName: name, teamIds: [], archived: false }])
     setNewAdName("")
     setAddingAd(false)
   }
