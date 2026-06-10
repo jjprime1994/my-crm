@@ -24,6 +24,36 @@ export async function GET() {
   })))
 }
 
+function resolveBranchFromLead(lead: { adName: string | null; campaignName: string | null; rawData: unknown }): string | null {
+  const fieldData = (lead.rawData as any)?.field_data as { name: string; values: string[] }[] | undefined
+  const get = (key: string) => fieldData?.find((f) => f.name === key)?.values?.[0]
+
+  const knownKeys = ["state", "location", "city", "where_are_you_from", "negeri", "kawasan", "which_state_are_you_located_in?", "which_state_are_you_located_in"]
+  for (const key of knownKeys) {
+    const branch = resolveStateBranch(get(key))
+    if (branch) return branch
+  }
+
+  // Scan all field values
+  if (fieldData) {
+    for (const field of fieldData) {
+      const branch = resolveStateBranch(field.values?.[0])
+      if (branch) return branch
+    }
+  }
+
+  if (lead.campaignName) {
+    const branch = resolveStateBranch(lead.campaignName)
+    if (branch) return branch
+  }
+  if (lead.adName) {
+    const branch = resolveStateBranch(lead.adName)
+    if (branch) return branch
+  }
+
+  return null
+}
+
 export async function POST() {
   const session = await auth()
   if (session?.user.role !== "SUPER_ADMIN") {
@@ -35,36 +65,12 @@ export async function POST() {
     select: { id: true, adName: true, campaignName: true, rawData: true },
   })
 
-  let updated = 0
-  for (const lead of leads) {
-    const fieldData = (lead.rawData as any)?.field_data as { name: string; values: string[] }[] | undefined
+  // Resolve all states in memory first, then fire all updates in parallel
+  const toUpdate = leads
+    .map((lead) => ({ id: lead.id, branch: resolveBranchFromLead(lead) }))
+    .filter((l): l is { id: string; branch: string } => l.branch !== null)
 
-    // Try known field names first, then scan every field value for a recognisable state
-    const knownKeys = ["state", "location", "city", "where_are_you_from", "negeri", "kawasan", "which_state_are_you_located_in"]
-    const get = (key: string) => fieldData?.find((f) => f.name === key)?.values?.[0]
+  await Promise.all(toUpdate.map((l) => db.lead.update({ where: { id: l.id }, data: { branch: l.branch } })))
 
-    let branch: string | null = null
-    for (const key of knownKeys) {
-      branch = resolveStateBranch(get(key))
-      if (branch) break
-    }
-
-    // Fallback: scan all field values
-    if (!branch && fieldData) {
-      for (const field of fieldData) {
-        branch = resolveStateBranch(field.values?.[0])
-        if (branch) break
-      }
-    }
-
-    if (!branch && lead.campaignName) branch = resolveStateBranch(lead.campaignName)
-    if (!branch && lead.adName) branch = resolveStateBranch(lead.adName)
-
-    if (branch) {
-      await db.lead.update({ where: { id: lead.id }, data: { branch } })
-      updated++
-    }
-  }
-
-  return NextResponse.json({ total: leads.length, updated })
+  return NextResponse.json({ total: leads.length, updated: toUpdate.length })
 }
