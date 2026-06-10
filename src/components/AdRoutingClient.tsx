@@ -28,6 +28,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
   const [expandedStateRoute, setExpandedStateRoute] = useState<string | null>(null)
   const [newAdName, setNewAdName] = useState("")
   const [addingAd, setAddingAd] = useState(false)
+  const [removingAd, setRemovingAd] = useState<string | null>(null)
 
   async function addAdManually() {
     const name = newAdName.trim()
@@ -45,6 +46,17 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
     setAds((prev) => [...prev, { adId: null, adName: name, teamIds: [] }])
     setNewAdName("")
     setAddingAd(false)
+  }
+
+  async function removeAd(adName: string) {
+    setRemovingAd(adName)
+    await fetch("/api/ad-routes", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adName }),
+    })
+    setAds((prev) => prev.filter((a) => a.adName !== adName))
+    setRemovingAd(null)
   }
 
   async function toggleTeam(adName: string, adId: string | null, managerId: string) {
@@ -304,9 +316,23 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate" title={ad.adName}>{ad.adName}</p>
                   {saving === ad.adName && <span className="text-xs text-gray-400 shrink-0">Saving…</span>}
-                  {ad.teamIds.length === 0 && (
+                  {ad.teamIds.length === 0 && saving !== ad.adName && (
                     <span className="text-xs text-amber-600 font-medium shrink-0">→ Default team</span>
                   )}
+                  <button
+                    onClick={() => removeAd(ad.adName)}
+                    disabled={removingAd === ad.adName}
+                    title="Remove this ad route"
+                    className="shrink-0 text-gray-300 hover:text-rose-500 transition disabled:opacity-40"
+                  >
+                    {removingAd === ad.adName ? (
+                      <span className="text-xs text-gray-400">Removing…</span>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                      </svg>
+                    )}
+                  </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {managers.map((m) => {

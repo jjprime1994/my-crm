@@ -53,6 +53,19 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(route)
 }
 
+// DELETE: remove an ad route by adName
+export async function DELETE(req: NextRequest) {
+  const session = await auth()
+  if (!session || !isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+
+  const { adName } = await req.json()
+  if (!adName) return new NextResponse("adName required", { status: 400 })
+
+  await db.adRoute.deleteMany({ where: { adName } })
+
+  return new NextResponse(null, { status: 204 })
+}
+
 // PATCH: set default team (clears previous default)
 export async function PATCH(req: NextRequest) {
   const session = await auth()
