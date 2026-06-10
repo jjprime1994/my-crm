@@ -29,61 +29,26 @@ function daysAgo(date: Date) {
   return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
 }
 
-export default async function FollowUpsPage() {
-  const session = await auth()
-  const role = await getViewAsRole(session?.user.role)
-  const isSuperAdmin = role === "SUPER_ADMIN"
-  const isManager = role === "ADMIN"
-  const isAdmin = isSuperAdmin || isManager
-  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+type LeadRow = {
+  id: string
+  firstName: string | null
+  lastName: string | null
+  email: string | null
+  phone: string | null
+  status: LeadStatus
+  updatedAt: Date
+  followUpAt: Date | null
+  assignedTo: { name: string } | null
+}
 
-  const statusFilter = { status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] as LeadStatus[] } }
-  const staleness = {
-    OR: [
-      { followUpAt: { lte: new Date() } },
-      { followUpAt: null, updatedAt: { lt: twoDaysAgo } },
-    ],
-  }
-
-  let scopeFilter: Record<string, unknown> = {}
-  if (isManager) {
-    scopeFilter = {
-      OR: [
-        { assignedToId: session!.user.id },
-        { assignedTo: { managerId: session!.user.id } },
-      ],
-    }
-  } else if (!isSuperAdmin) {
-    scopeFilter = { assignedToId: session?.user.id }
-  }
-
-  const where = { AND: [statusFilter, staleness, ...(Object.keys(scopeFilter).length ? [scopeFilter] : [])] }
-
-  const leads = await db.lead.findMany({
-    where,
-    include: { assignedTo: { select: { name: true } } },
-    orderBy: { updatedAt: "asc" },
-  })
-
+function LeadList({ leads, showAssignee, emptyLabel }: { leads: LeadRow[]; showAssignee: boolean; emptyLabel: string }) {
   return (
-    <div className="space-y-5 max-w-6xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Follow-ups</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Leads not updated in 2+ days</p>
-        </div>
-        <span className={`text-sm font-semibold px-3.5 py-1.5 rounded-full ${
-          leads.length > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"
-        }`}>
-          {leads.length} need attention
-        </span>
-      </div>
-
+    <>
       {/* Mobile cards */}
       <div className="sm:hidden space-y-2">
         {leads.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-sm text-gray-400">
-            All caught up — no follow-ups needed.
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-10 text-sm text-gray-400">
+            {emptyLabel}
           </div>
         ) : leads.map((lead) => {
           const days = daysAgo(lead.updatedAt)
@@ -99,9 +64,7 @@ export default async function FollowUpsPage() {
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <span className="font-medium text-gray-900 text-sm">
-                      {lead.firstName} {lead.lastName}
-                    </span>
+                    <span className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</span>
                     <p className="text-xs text-gray-500 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
                   </div>
                 </div>
@@ -118,7 +81,7 @@ export default async function FollowUpsPage() {
                   <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[lead.status] ?? "bg-gray-400"}`} />
                   {STATUS_LABELS[lead.status] ?? lead.status}
                 </span>
-                {isAdmin && lead.assignedTo && (
+                {showAssignee && lead.assignedTo && (
                   <span className="text-xs text-gray-500">{lead.assignedTo.name}</span>
                 )}
                 {lead.phone && (
@@ -150,17 +113,17 @@ export default async function FollowUpsPage() {
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Waiting</th>
-              {isAdmin && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>}
+              {showAssignee && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>}
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-16">
+                <td colSpan={showAssignee ? 6 : 5} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2 text-sm text-gray-400">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300"><polyline points="20 6 9 17 4 12"/></svg>
-                    All caught up — no follow-ups needed.
+                    {emptyLabel}
                   </div>
                 </td>
               </tr>
@@ -205,7 +168,7 @@ export default async function FollowUpsPage() {
                       </span>
                     )}
                   </td>
-                  {isAdmin && (
+                  {showAssignee && (
                     <td className="px-5 py-3.5 text-sm text-gray-600">
                       {lead.assignedTo ? (
                         <div className="flex items-center gap-2">
@@ -242,6 +205,112 @@ export default async function FollowUpsPage() {
             })}
           </tbody>
         </table>
+      </div>
+    </>
+  )
+}
+
+export default async function FollowUpsPage() {
+  const session = await auth()
+  const role = await getViewAsRole(session?.user.role)
+  const isSuperAdmin = role === "SUPER_ADMIN"
+  const isManager = role === "ADMIN"
+  const isTeamLeader = role === "TEAM_LEADER"
+  const isAdminRole = isSuperAdmin || isManager || isTeamLeader
+
+  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+  const statusFilter = { status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] as LeadStatus[] } }
+  const staleness = {
+    OR: [
+      { followUpAt: { lte: new Date() } },
+      { followUpAt: null, updatedAt: { lt: twoDaysAgo } },
+    ],
+  }
+  const include = { assignedTo: { select: { name: true } } }
+  const orderBy = { updatedAt: "asc" as const }
+
+  if (!isAdminRole) {
+    // Salesperson: their own leads only
+    const leads = await db.lead.findMany({
+      where: { AND: [statusFilter, staleness, { assignedToId: session?.user.id }] },
+      include,
+      orderBy,
+    })
+    return (
+      <div className="space-y-5 max-w-6xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Follow-ups</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Leads not updated in 2+ days</p>
+          </div>
+          <span className={`text-sm font-semibold px-3.5 py-1.5 rounded-full ${leads.length > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}>
+            {leads.length} need attention
+          </span>
+        </div>
+        <LeadList leads={leads} showAssignee={false} emptyLabel="All caught up — no follow-ups needed." />
+      </div>
+    )
+  }
+
+  // Admin / Manager / Team Leader: split own vs team
+  const myFilter = { AND: [statusFilter, staleness, { assignedToId: session!.user.id }] }
+
+  const teamScopeFilter = isSuperAdmin
+    ? { NOT: { assignedToId: session!.user.id } }
+    : isManager
+    ? {
+        OR: [
+          { assignedTo: { managerId: session!.user.id } },
+          { assignedTo: { manager: { managerId: session!.user.id } } },
+        ],
+        NOT: { assignedToId: session!.user.id },
+      }
+    : // TEAM_LEADER
+      { assignedTo: { managerId: session!.user.id }, NOT: { assignedToId: session!.user.id } }
+
+  const teamFilter = { AND: [statusFilter, staleness, teamScopeFilter] }
+
+  const [myLeads, teamLeads] = await Promise.all([
+    db.lead.findMany({ where: myFilter, include, orderBy }),
+    db.lead.findMany({ where: teamFilter, include, orderBy }),
+  ])
+
+  const total = myLeads.length + teamLeads.length
+
+  return (
+    <div className="space-y-7 max-w-6xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Follow-ups</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Leads not updated in 2+ days</p>
+        </div>
+        <span className={`text-sm font-semibold px-3.5 py-1.5 rounded-full ${total > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}>
+          {total} need attention
+        </span>
+      </div>
+
+      {/* My own leads */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">My Leads</h2>
+          {myLeads.length > 0 && (
+            <span className="text-xs font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{myLeads.length}</span>
+          )}
+        </div>
+        <LeadList leads={myLeads} showAssignee={false} emptyLabel="No personal follow-ups — you're all caught up." />
+      </div>
+
+      {/* Team leads */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+            {isSuperAdmin ? "All Team Leads" : "My Team's Leads"}
+          </h2>
+          {teamLeads.length > 0 && (
+            <span className="text-xs font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{teamLeads.length}</span>
+          )}
+        </div>
+        <LeadList leads={teamLeads} showAssignee emptyLabel="No team follow-ups needed." />
       </div>
     </div>
   )
