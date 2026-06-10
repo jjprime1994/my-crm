@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/Toast"
+
+const PAGE_SIZE = 50
 
 type DupSibling = {
   id: string
@@ -92,10 +94,20 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [assignTo, setAssignTo] = useState("")
   const [saving, setSaving] = useState(false)
+  const [page, setPage] = useState(1)
+
+  const totalPages = Math.ceil(leads.length / PAGE_SIZE)
+  const pageLeads = useMemo(
+    () => leads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [leads, page]
+  )
+  const allPageSelected = pageLeads.length > 0 && pageLeads.every((l) => selected.has(l.id))
 
   function toggleAll() {
-    if (selected.size === leads.length) setSelected(new Set())
-    else setSelected(new Set(leads.map((l) => l.id)))
+    const next = new Set(selected)
+    if (allPageSelected) pageLeads.forEach((l) => next.delete(l.id))
+    else pageLeads.forEach((l) => next.add(l.id))
+    setSelected(next)
   }
 
   function toggle(id: string) {
@@ -115,11 +127,18 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
     })
     const person = salespeople.find(s => s.id === assignTo)
     setSaving(false)
-    setLeads(leads.filter((l) => !selected.has(l.id)))
+    const remaining = leads.filter((l) => !selected.has(l.id))
+    setLeads(remaining)
     setSelected(new Set())
     setAssignTo("")
+    // Stay on current page unless it no longer exists
+    setPage((p) => Math.min(p, Math.max(1, Math.ceil(remaining.length / PAGE_SIZE))))
     toast(`${count} lead${count !== 1 ? "s" : ""} assigned to ${person?.name ?? "salesperson"}`)
     router.refresh()
+  }
+
+  function goPage(p: number) {
+    setPage(Math.max(1, Math.min(p, totalPages)))
   }
 
   return (
@@ -175,9 +194,9 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
         ) : (
           <>
             <button onClick={toggleAll} className="w-full text-xs font-medium text-blue-600 py-2 text-left px-1">
-              {selected.size === leads.length ? "Deselect all" : "Select all"}
+              {allPageSelected ? "Deselect page" : "Select page"}
             </button>
-            {leads.map((lead) => (
+            {pageLeads.map((lead) => (
               <div
                 key={lead.id}
                 onClick={() => toggle(lead.id)}
@@ -232,7 +251,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
               <th className="px-5 py-3.5 w-10">
                 <input
                   type="checkbox"
-                  checked={selected.size === leads.length && leads.length > 0}
+                  checked={allPageSelected}
                   onChange={toggleAll}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
@@ -256,7 +275,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                 </td>
               </tr>
             )}
-            {leads.map((lead) => (
+            {pageLeads.map((lead) => (
               <tr key={lead.id} className={`cursor-pointer transition ${selected.has(lead.id) ? "bg-blue-50" : "hover:bg-gray-50/70"}`} onClick={() => toggle(lead.id)}>
                 <td className="px-5 py-3.5">
                   <input type="checkbox" checked={selected.has(lead.id)} onChange={() => toggle(lead.id)} onClick={(e) => e.stopPropagation()} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
@@ -293,6 +312,51 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-gray-400">
+            Page {page} of {totalPages} · {leads.length} leads{selected.size > 0 ? ` · ${selected.size} selected` : ""}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => goPage(page - 1)}
+              disabled={page <= 1}
+              className="px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition rounded-lg hover:bg-gray-100"
+            >
+              ← Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .reduce<(number | "...")[]>((acc, p, i, arr) => {
+                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("...")
+                acc.push(p)
+                return acc
+              }, [])
+              .map((p, i) =>
+                p === "..." ? (
+                  <span key={`e${i}`} className="px-2 text-gray-400 text-sm select-none">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => goPage(p as number)}
+                    className={`w-8 h-8 rounded-lg text-sm font-medium transition ${p === page ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            <button
+              onClick={() => goPage(page + 1)}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition rounded-lg hover:bg-gray-100"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

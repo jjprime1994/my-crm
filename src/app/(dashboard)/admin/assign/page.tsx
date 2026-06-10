@@ -19,6 +19,7 @@ export default async function AssignPage() {
         isDuplicate: true, createdAt: true,
       },
       orderBy: { createdAt: "desc" },
+      take: 500,
     }),
     db.user.findMany({
       where: { role: { in: ["ADMIN", "TEAM_LEADER", "SALESPERSON"] } },
