@@ -26,6 +26,26 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
   const [stateRouteMap, setStateRouteMap] = useState<Record<string, string[]>>(initialStateRouteMap)
   const [savingStateRoute, setSavingStateRoute] = useState<string | null>(null)
   const [expandedStateRoute, setExpandedStateRoute] = useState<string | null>(null)
+  const [newAdName, setNewAdName] = useState("")
+  const [addingAd, setAddingAd] = useState(false)
+
+  async function addAdManually() {
+    const name = newAdName.trim()
+    if (!name) return
+    if (ads.some((a) => a.adName === name)) {
+      setNewAdName("")
+      return
+    }
+    setAddingAd(true)
+    await fetch("/api/ad-routes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adName: name, adId: null, teamIds: [] }),
+    })
+    setAds((prev) => [...prev, { adId: null, adName: name, teamIds: [] }])
+    setNewAdName("")
+    setAddingAd(false)
+  }
 
   async function toggleTeam(adName: string, adId: string | null, managerId: string) {
     const ad = ads.find((a) => a.adName === adName)!
@@ -249,12 +269,34 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
 
       {/* Ad → Team routing */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 pt-4 pb-3 border-b border-gray-50">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Ad → Team Assignment</p>
+        <div className="px-5 pt-4 pb-3 border-b border-gray-50 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Ad → Team Assignment</p>
+            <p className="text-sm text-gray-500 mt-0.5">Pre-configure routing before a campaign goes live.</p>
+          </div>
+        </div>
+
+        {/* Manual add */}
+        <div className="px-5 py-3 border-b border-gray-50 flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Ad or campaign name…"
+            value={newAdName}
+            onChange={(e) => setNewAdName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addAdManually()}
+            className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <button
+            onClick={addAdManually}
+            disabled={!newAdName.trim() || addingAd}
+            className="text-sm font-semibold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            {addingAd ? "Adding…" : "Add"}
+          </button>
         </div>
 
         {ads.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">No ads found — leads will populate this list as they come in.</div>
+          <div className="px-5 py-8 text-center text-sm text-gray-400">No ads yet — add one above or wait for leads to come in.</div>
         ) : (
           <div className="divide-y divide-gray-50">
             {ads.map((ad) => (
