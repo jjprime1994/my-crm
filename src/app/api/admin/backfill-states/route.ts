@@ -38,18 +38,25 @@ export async function POST() {
   let updated = 0
   for (const lead of leads) {
     const fieldData = (lead.rawData as any)?.field_data as { name: string; values: string[] }[] | undefined
+
+    // Try known field names first, then scan every field value for a recognisable state
+    const knownKeys = ["state", "location", "city", "where_are_you_from", "negeri", "kawasan", "which_state_are_you_located_in"]
     const get = (key: string) => fieldData?.find((f) => f.name === key)?.values?.[0]
 
-    const rawLocation =
-      get("state") ??
-      get("location") ??
-      get("city") ??
-      get("where_are_you_from") ??
-      get("negeri") ??
-      get("kawasan") ??
-      get("which_state_are_you_located_in")
+    let branch: string | null = null
+    for (const key of knownKeys) {
+      branch = resolveStateBranch(get(key))
+      if (branch) break
+    }
 
-    let branch = resolveStateBranch(rawLocation)
+    // Fallback: scan all field values
+    if (!branch && fieldData) {
+      for (const field of fieldData) {
+        branch = resolveStateBranch(field.values?.[0])
+        if (branch) break
+      }
+    }
+
     if (!branch && lead.campaignName) branch = resolveStateBranch(lead.campaignName)
     if (!branch && lead.adName) branch = resolveStateBranch(lead.adName)
 
