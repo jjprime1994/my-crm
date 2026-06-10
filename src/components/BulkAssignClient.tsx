@@ -315,8 +315,8 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-gray-400">
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between px-1">
+          <span className="text-xs text-gray-400 text-center sm:text-left">
             Page {page} of {totalPages} · {leads.length} leads{selected.size > 0 ? ` · ${selected.size} selected` : ""}
           </span>
           <div className="flex items-center gap-1">
