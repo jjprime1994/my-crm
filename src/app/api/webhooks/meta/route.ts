@@ -163,6 +163,46 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // If state routing didn't assign anyone, try ad routing by adName
+      if (!assignedToId && adName) {
+        const adRoute = await db.adRoute.findUnique({
+          where: { adName },
+          select: { teamIds: true },
+        })
+
+        if (adRoute && adRoute.teamIds.length > 0) {
+          const salespeople = await db.user.findMany({
+            where: { role: "SALESPERSON", managerId: { in: adRoute.teamIds } },
+            select: { id: true, claimLimit: true },
+            orderBy: { name: "asc" },
+          })
+
+          if (salespeople.length > 0) {
+            const spIds = salespeople.map((s) => s.id)
+            const activeCounts = await db.lead.groupBy({
+              by: ["assignedToId"],
+              where: { assignedToId: { in: spIds }, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
+              _count: { id: true },
+            })
+
+            const countMap = Object.fromEntries(activeCounts.map((r) => [r.assignedToId!, r._count.id]))
+
+            // Pick the salesperson with fewest active leads who still has capacity
+            let bestId: string | undefined
+            let bestCount = Infinity
+            for (const sp of salespeople) {
+              const count = countMap[sp.id] ?? 0
+              const limit = sp.claimLimit ?? 5
+              if (count < limit && count < bestCount) {
+                bestId = sp.id
+                bestCount = count
+              }
+            }
+            if (bestId) assignedToId = bestId
+          }
+        }
+      }
+
       // Check for duplicate phone/email
       let isDuplicate = false
       if (phone || email) {
