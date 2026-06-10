@@ -76,6 +76,7 @@ model AdRoute {
   adId      String?
   adName    String   @unique
   teamIds   String[]
+  archived  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

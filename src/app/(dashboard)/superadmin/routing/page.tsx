@@ -32,11 +32,22 @@ export default async function RoutingPage() {
   ])
 
   const routeMap = Object.fromEntries(routes.map((r) => [r.adName, r]))
-  const adList = ads.map((ad) => ({
-    adId: ad.adId ?? null,
-    adName: ad.adName!,
-    teamIds: routeMap[ad.adName!]?.teamIds ?? [],
-  }))
+
+  // Merge leads-based ads with manually added routes; include archived flag
+  const allAdNames = new Set([
+    ...ads.map((a) => a.adName!),
+    ...routes.map((r) => r.adName),
+  ])
+  const adList = Array.from(allAdNames).sort().map((adName) => {
+    const lead = ads.find((a) => a.adName === adName)
+    const route = routeMap[adName]
+    return {
+      adId: route?.adId ?? lead?.adId ?? null,
+      adName,
+      teamIds: route?.teamIds ?? [],
+      archived: route?.archived ?? false,
+    }
+  })
 
   const stateRouteMap = Object.fromEntries(stateRoutes.map((r) => [r.state, r.userIds]))
 

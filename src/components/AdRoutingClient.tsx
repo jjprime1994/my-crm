@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { MALAYSIA_STATES } from "@/lib/branch"
 
-type AdEntry = { adId: string | null; adName: string; teamIds: string[] }
+type AdEntry = { adId: string | null; adName: string; teamIds: string[]; archived: boolean }
 type Manager = { id: string; name: string; coveredStates: string[]; isDefaultTeam: boolean }
 type UserEntry = { id: string; name: string; role: string }
 
@@ -46,6 +46,15 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
     setAds((prev) => [...prev, { adId: null, adName: name, teamIds: [] }])
     setNewAdName("")
     setAddingAd(false)
+  }
+
+  async function toggleArchive(adName: string, adId: string | null, currentArchived: boolean) {
+    setAds((prev) => prev.map((a) => a.adName === adName ? { ...a, archived: !currentArchived } : a))
+    await fetch("/api/ad-routes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adName, adId, archived: !currentArchived }),
+    })
   }
 
   async function removeAd(adName: string) {
@@ -307,55 +316,95 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
           </button>
         </div>
 
-        {ads.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">No ads yet — add one above or wait for leads to come in.</div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {ads.map((ad) => (
-              <div key={ad.adName} className="px-5 py-4 space-y-2">
+        {(() => {
+          const activeAds = ads.filter((a) => !a.archived)
+          const archivedAds = ads.filter((a) => a.archived)
+
+          function AdRow({ ad }: { ad: AdEntry }) {
+            return (
+              <div key={ad.adName} className={`px-5 py-4 space-y-2 ${ad.archived ? "opacity-60" : ""}`}>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate" title={ad.adName}>{ad.adName}</p>
                   {saving === ad.adName && <span className="text-xs text-gray-400 shrink-0">Saving…</span>}
-                  {ad.teamIds.length === 0 && saving !== ad.adName && (
+                  {!ad.archived && ad.teamIds.length === 0 && saving !== ad.adName && (
                     <span className="text-xs text-amber-600 font-medium shrink-0">→ Default team</span>
                   )}
                   <button
-                    onClick={() => removeAd(ad.adName)}
-                    disabled={removingAd === ad.adName}
-                    title="Remove this ad route"
-                    className="shrink-0 text-gray-300 hover:text-rose-500 transition disabled:opacity-40"
+                    onClick={() => toggleArchive(ad.adName, ad.adId, ad.archived)}
+                    title={ad.archived ? "Unarchive" : "Archive this ad"}
+                    className="shrink-0 text-gray-300 hover:text-amber-500 transition"
                   >
-                    {removingAd === ad.adName ? (
-                      <span className="text-xs text-gray-400">Removing…</span>
+                    {ad.archived ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 21 12 21 4 21"/><path d="M4 21V9l8-7 8 7v12"/><line x1="9" y1="21" x2="9" y2="12"/><line x1="15" y1="21" x2="15" y2="12"/>
+                      </svg>
                     ) : (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                        <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
                       </svg>
                     )}
                   </button>
+                  {!ad.archived && (
+                    <button
+                      onClick={() => removeAd(ad.adName)}
+                      disabled={removingAd === ad.adName}
+                      title="Delete permanently"
+                      className="shrink-0 text-gray-300 hover:text-rose-500 transition disabled:opacity-40"
+                    >
+                      {removingAd === ad.adName ? (
+                        <span className="text-xs text-gray-400">…</span>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                        </svg>
+                      )}
+                    </button>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {managers.map((m) => {
-                    const active = ad.teamIds.includes(m.id)
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={() => toggleTeam(ad.adName, ad.adId, m.id)}
-                        className={`text-xs font-semibold px-2.5 py-1.5 rounded-xl transition ${
-                          active
-                            ? "bg-blue-600 text-white shadow-sm"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        {m.name}
-                      </button>
-                    )
-                  })}
-                </div>
+                {!ad.archived && (
+                  <div className="flex flex-wrap gap-2">
+                    {managers.map((m) => {
+                      const active = ad.teamIds.includes(m.id)
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() => toggleTeam(ad.adName, ad.adId, m.id)}
+                          className={`text-xs font-semibold px-2.5 py-1.5 rounded-xl transition ${
+                            active ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {m.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            )
+          }
+
+          return (
+            <>
+              {activeAds.length === 0 && archivedAds.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-gray-400">No ads yet — add one above or wait for leads to come in.</div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {activeAds.map((ad) => <AdRow key={ad.adName} ad={ad} />)}
+                </div>
+              )}
+              {archivedAds.length > 0 && (
+                <div className="border-t border-gray-100">
+                  <div className="px-5 py-2.5 bg-gray-50/60">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Archived ({archivedAds.length})</p>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {archivedAds.map((ad) => <AdRow key={ad.adName} ad={ad} />)}
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        })()}
       </div>
     </div>
   )

@@ -36,18 +36,22 @@ export async function GET() {
   return NextResponse.json({ ads: result, managers, defaultTeamId: defaultTeam?.id ?? null })
 }
 
-// POST: upsert a route for an ad
+// POST: upsert a route for an ad (also handles archive/unarchive via archived field)
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session || !isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
 
-  const { adName, adId, teamIds } = await req.json()
+  const { adName, adId, teamIds, archived } = await req.json()
   if (!adName) return new NextResponse("adName required", { status: 400 })
 
   const route = await db.adRoute.upsert({
     where: { adName },
-    create: { id: crypto.randomUUID(), adName, adId: adId ?? null, teamIds: teamIds ?? [] },
-    update: { teamIds: teamIds ?? [], adId: adId ?? undefined },
+    create: { id: crypto.randomUUID(), adName, adId: adId ?? null, teamIds: teamIds ?? [], archived: archived ?? false },
+    update: {
+      ...(teamIds !== undefined && { teamIds }),
+      ...(adId !== undefined && { adId }),
+      ...(archived !== undefined && { archived }),
+    },
   })
 
   return NextResponse.json(route)

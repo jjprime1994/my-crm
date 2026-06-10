@@ -167,10 +167,10 @@ export async function POST(req: NextRequest) {
       if (!assignedToId && adName) {
         const adRoute = await db.adRoute.findUnique({
           where: { adName },
-          select: { teamIds: true },
+          select: { teamIds: true, archived: true },
         })
 
-        if (adRoute && adRoute.teamIds.length > 0) {
+        if (adRoute && !adRoute.archived && adRoute.teamIds.length > 0) {
           const salespeople = await db.user.findMany({
             where: { role: "SALESPERSON", managerId: { in: adRoute.teamIds } },
             select: { id: true, claimLimit: true },
