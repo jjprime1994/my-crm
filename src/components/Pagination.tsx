@@ -16,10 +16,12 @@ export default function Pagination({
   page,
   totalPages,
   pageParam = "page",
+  basePath,
 }: {
   page: number
   totalPages: number
   pageParam?: string
+  basePath: string
 }) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -30,7 +32,7 @@ export default function Pagination({
     const params = new URLSearchParams(searchParams.toString())
     if (p <= 1) params.delete(pageParam)
     else params.set(pageParam, String(p))
-    router.push(`/leads?${params.toString()}`)
+    router.push(`${basePath}?${params.toString()}`)
   }
 
   return (

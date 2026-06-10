@@ -3,6 +3,9 @@ import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import { getViewAsRole } from "@/lib/viewas"
+import Pagination from "@/components/Pagination"
+
+const PAGE_SIZE = 50
 
 const STATUS_COLORS: Record<string, string> = {
   NEW: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
@@ -210,13 +213,22 @@ function LeadList({ leads, showAssignee, emptyLabel }: { leads: LeadRow[]; showA
   )
 }
 
-export default async function FollowUpsPage() {
+export default async function FollowUpsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; myPage?: string; teamPage?: string }>
+}) {
   const session = await auth()
   const role = await getViewAsRole(session?.user.role)
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
   const isTeamLeader = role === "TEAM_LEADER"
   const isAdminRole = isSuperAdmin || isManager || isTeamLeader
+
+  const { page: pageParam, myPage: myPageParam, teamPage: teamPageParam } = await searchParams
+  const page     = Math.max(1, Number(pageParam     ?? "1"))
+  const myPage   = Math.max(1, Number(myPageParam   ?? "1"))
+  const teamPage = Math.max(1, Number(teamPageParam ?? "1"))
 
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
   const statusFilter = { status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] as LeadStatus[] } }
@@ -230,12 +242,11 @@ export default async function FollowUpsPage() {
   const orderBy = { updatedAt: "asc" as const }
 
   if (!isAdminRole) {
-    // Salesperson: their own leads only
-    const leads = await db.lead.findMany({
-      where: { AND: [statusFilter, staleness, { assignedToId: session?.user.id }] },
-      include,
-      orderBy,
-    })
+    const where = { AND: [statusFilter, staleness, { assignedToId: session?.user.id }] }
+    const [total, leads] = await Promise.all([
+      db.lead.count({ where }),
+      db.lead.findMany({ where, include, orderBy, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+    ])
     return (
       <div className="space-y-5 max-w-6xl">
         <div className="flex items-center justify-between">
@@ -243,11 +254,12 @@ export default async function FollowUpsPage() {
             <h1 className="text-2xl font-bold text-gray-900">Follow-ups</h1>
             <p className="text-sm text-gray-500 mt-0.5">Leads not updated in 2+ days</p>
           </div>
-          <span className={`text-sm font-semibold px-3.5 py-1.5 rounded-full ${leads.length > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}>
-            {leads.length} need attention
+          <span className={`text-sm font-semibold px-3.5 py-1.5 rounded-full ${total > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}>
+            {total} need attention
           </span>
         </div>
         <LeadList leads={leads} showAssignee={false} emptyLabel="All caught up — no follow-ups needed." />
+        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} pageParam="page" basePath="/follow-ups" />
       </div>
     )
   }
@@ -265,17 +277,18 @@ export default async function FollowUpsPage() {
         ],
         NOT: { assignedToId: session!.user.id },
       }
-    : // TEAM_LEADER
-      { assignedTo: { managerId: session!.user.id }, NOT: { assignedToId: session!.user.id } }
+    : { assignedTo: { managerId: session!.user.id }, NOT: { assignedToId: session!.user.id } }
 
   const teamFilter = { AND: [statusFilter, staleness, teamScopeFilter] }
 
-  const [myLeads, teamLeads] = await Promise.all([
-    db.lead.findMany({ where: myFilter, include, orderBy, take: 100 }),
-    db.lead.findMany({ where: teamFilter, include, orderBy, take: 200 }),
+  const [myTotal, myLeads, teamTotal, teamLeads] = await Promise.all([
+    db.lead.count({ where: myFilter }),
+    db.lead.findMany({ where: myFilter, include, orderBy, skip: (myPage - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+    db.lead.count({ where: teamFilter }),
+    db.lead.findMany({ where: teamFilter, include, orderBy, skip: (teamPage - 1) * PAGE_SIZE, take: PAGE_SIZE }),
   ])
 
-  const total = myLeads.length + teamLeads.length
+  const total = myTotal + teamTotal
 
   return (
     <div className="space-y-7 max-w-6xl">
@@ -289,28 +302,28 @@ export default async function FollowUpsPage() {
         </span>
       </div>
 
-      {/* My own leads */}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">My Leads</h2>
-          {myLeads.length > 0 && (
-            <span className="text-xs font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{myLeads.length}</span>
+          {myTotal > 0 && (
+            <span className="text-xs font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{myTotal}</span>
           )}
         </div>
         <LeadList leads={myLeads} showAssignee={false} emptyLabel="No personal follow-ups — you're all caught up." />
+        <Pagination page={myPage} totalPages={Math.ceil(myTotal / PAGE_SIZE)} pageParam="myPage" basePath="/follow-ups" />
       </div>
 
-      {/* Team leads */}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
             {isSuperAdmin ? "All Team Leads" : "My Team's Leads"}
           </h2>
-          {teamLeads.length > 0 && (
-            <span className="text-xs font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{teamLeads.length}</span>
+          {teamTotal > 0 && (
+            <span className="text-xs font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{teamTotal}</span>
           )}
         </div>
         <LeadList leads={teamLeads} showAssignee emptyLabel="No team follow-ups needed." />
+        <Pagination page={teamPage} totalPages={Math.ceil(teamTotal / PAGE_SIZE)} pageParam="teamPage" basePath="/follow-ups" />
       </div>
     </div>
   )
