@@ -55,15 +55,17 @@ export default async function LeadsPage({
   const [salespeople, sources] = await Promise.all([
     isAdmin
       ? db.user.findMany({
-          where: isManager
-            ? {
-                role: "SALESPERSON",
-                OR: [
-                  { managerId: session!.user.id },
-                  { manager: { managerId: session!.user.id } },
-                ],
-              }
-            : { role: "SALESPERSON", managerId: session!.user.id },
+          where: isSuperAdmin
+            ? { role: "SALESPERSON" }
+            : isManager
+              ? {
+                  role: "SALESPERSON",
+                  OR: [
+                    { managerId: session!.user.id },
+                    { manager: { managerId: session!.user.id } },
+                  ],
+                }
+              : { role: "SALESPERSON", managerId: session!.user.id },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
