@@ -171,8 +171,22 @@ export async function POST(req: NextRequest) {
         })
 
         if (adRoute && !adRoute.archived && adRoute.teamIds.length > 0) {
+          // If the lead has a state, only use managers whose coveredStates includes it
+          // (managers with empty coveredStates are treated as unconstrained / catch-all)
+          let eligibleManagerIds = adRoute.teamIds
+          if (branch) {
+            const managers = await db.user.findMany({
+              where: { id: { in: adRoute.teamIds } },
+              select: { id: true, coveredStates: true },
+            })
+            const matching = managers.filter(
+              (m) => m.coveredStates.length === 0 || m.coveredStates.includes(branch)
+            )
+            eligibleManagerIds = matching.map((m) => m.id)
+          }
+
           const salespeople = await db.user.findMany({
-            where: { role: "SALESPERSON", managerId: { in: adRoute.teamIds } },
+            where: { role: "SALESPERSON", managerId: { in: eligibleManagerIds } },
             select: { id: true, claimLimit: true },
             orderBy: { name: "asc" },
           })
