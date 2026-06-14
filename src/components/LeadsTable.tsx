@@ -14,6 +14,7 @@ export type LeadRow = {
   isDuplicate: boolean
   campaignName?: string | null
   adName?: string | null
+  branch?: string | null
   claimedAt?: Date | null
   firstContactedAt?: Date | null
   createdAt: Date
@@ -110,6 +111,9 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                   {(lead.campaignName ?? lead.adName) && (
                     <span className="text-xs text-gray-400 truncate max-w-[120px]">{lead.campaignName ?? lead.adName}</span>
                   )}
+                  {lead.branch && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200 shrink-0">{lead.branch}</span>
+                  )}
                   <div className="ml-auto flex items-center gap-1.5">
                     {lead.phone && (
                       <a
@@ -144,13 +148,14 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>
               )}
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Notes</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Added</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
-              <tr><td colSpan={showAssignedTo ? 7 : 6}>{empty}</td></tr>
+              <tr><td colSpan={showAssignedTo ? 8 : 7}>{empty}</td></tr>
             )}
             {leads.map((lead) => (
               <tr
@@ -244,6 +249,12 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                 )}
                 <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate">
                   {lead.campaignName ?? lead.adName ?? "—"}
+                </td>
+                <td className="px-5 py-3.5">
+                  {lead.branch
+                    ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200">{lead.branch}</span>
+                    : <span className="text-xs text-gray-300">—</span>
+                  }
                 </td>
                 <td className="px-5 py-3.5">
                   {lead._count.notes > 0 ? (
