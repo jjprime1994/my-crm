@@ -20,5 +20,14 @@ export async function POST(req: NextRequest) {
     data: { assignedToId: assignedToId || null },
   })
 
+  await db.leadAssignmentLog.createMany({
+    data: leadIds.map((leadId: string) => ({
+      leadId,
+      assignedToId: assignedToId || null,
+      assignedById: session.user.id,
+      source: "BULK_ASSIGN",
+    })),
+  })
+
   return NextResponse.json({ updated: leadIds.length })
 }

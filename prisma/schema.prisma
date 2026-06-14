@@ -8,25 +8,27 @@ datasource db {
 }
 
 model User {
-  id                String               @id @default(cuid())
+  id                String              @id @default(cuid())
   name              String
-  email             String               @unique
+  email             String              @unique
   password          String
-  role              Role                 @default(SALESPERSON)
-  claimLimit        Int                  @default(5)
-  newLeadThreshold  Int                  @default(0)
-  coveredStates     String[]             @default([])
-  isDefaultTeam     Boolean              @default(false)
+  role              Role                @default(SALESPERSON)
+  claimLimit        Int                 @default(5)
+  newLeadThreshold  Int                 @default(0)
+  coveredStates     String[]            @default([])
+  isDefaultTeam     Boolean             @default(false)
   managerId         String?
-  manager           User?                @relation("TeamMembers", fields: [managerId], references: [id])
-  teamMembers       User[]               @relation("TeamMembers")
-  leads             Lead[]               @relation("AssignedLeads")
+  manager           User?               @relation("TeamMembers", fields: [managerId], references: [id])
+  teamMembers       User[]              @relation("TeamMembers")
+  leads             Lead[]              @relation("AssignedLeads")
   notes             LeadNote[]
   statusChanges     LeadStatusHistory[]
   suggestions       Suggestion[]
   pushSubscriptions PushSubscription[]
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  assignmentsMade   LeadAssignmentLog[] @relation("AssignedByLogs")
+  assignmentsReceived LeadAssignmentLog[] @relation("AssignedToLogs")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
 enum Role {
@@ -37,31 +39,32 @@ enum Role {
 }
 
 model Lead {
-  id            String              @id @default(cuid())
-  metaLeadId    String?             @unique
-  formId        String?
-  adId          String?
-  adName        String?
-  campaignId    String?
-  campaignName  String?
-  firstName     String?
-  lastName      String?
-  email         String?
-  phone         String?
-  branch        String?
-  source        String              @default("META")
+  id               String              @id @default(cuid())
+  metaLeadId       String?             @unique
+  formId           String?
+  adId             String?
+  adName           String?
+  campaignId       String?
+  campaignName     String?
+  firstName        String?
+  lastName         String?
+  email            String?
+  phone            String?
+  branch           String?
+  source           String              @default("META")
   firstContactedAt DateTime?
-  status        LeadStatus          @default(NEW)
-  assignedTo    User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
-  assignedToId  String?
-  claimedAt     DateTime?
-  followUpAt    DateTime?
-  isDuplicate   Boolean             @default(false)
-  notes         LeadNote[]
-  statusHistory LeadStatusHistory[]
-  rawData       Json?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  status           LeadStatus          @default(NEW)
+  assignedTo       User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  assignedToId     String?
+  claimedAt        DateTime?
+  followUpAt       DateTime?
+  isDuplicate      Boolean             @default(false)
+  notes            LeadNote[]
+  statusHistory    LeadStatusHistory[]
+  assignmentLogs   LeadAssignmentLog[]
+  rawData          Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   @@index([assignedToId])
   @@index([assignedToId, status])
@@ -123,23 +126,39 @@ model Suggestion {
 }
 
 model StateRoute {
-  id                 String   @id @default(cuid())
-  state              String   @unique
-  userIds            String[]
-  lastAssignedIndex  Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String   @id @default(cuid())
+  state             String   @unique
+  userIds           String[]
+  lastAssignedIndex Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model LeadStatusHistory {
-  id          String     @id @default(cuid())
-  lead        Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  id          String      @id @default(cuid())
+  lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   leadId      String
   from        LeadStatus?
   to          LeadStatus
-  changedBy   User?      @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  changedBy   User?       @relation(fields: [changedById], references: [id], onDelete: SetNull)
   changedById String?
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime    @default(now())
 
   @@index([leadId])
+}
+
+model LeadAssignmentLog {
+  id           String   @id @default(cuid())
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId       String
+  assignedTo   User?    @relation("AssignedToLogs", fields: [assignedToId], references: [id])
+  assignedToId String?
+  assignedBy   User     @relation("AssignedByLogs", fields: [assignedById], references: [id])
+  assignedById String
+  source       String   @default("ADMIN")
+  createdAt    DateTime @default(now())
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@index([assignedById])
 }

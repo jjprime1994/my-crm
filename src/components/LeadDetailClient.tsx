@@ -22,6 +22,15 @@ type StatusHistoryEntry = {
 
 type FormField = { name: string; values: string[] }
 
+type AssignmentLog = {
+  id: string
+  createdAt: string | Date
+  source: string
+  assignedTo: { name: string } | null
+  assignedBy: { name: string }
+}
+
+
 type Lead = {
   id: string
   firstName?: string | null
@@ -34,6 +43,7 @@ type Lead = {
   source?: string | null
   formId?: string | null
   adId?: string | null
+  branch?: string | null
   followUpAt?: string | Date | null
   claimedAt?: string | Date | null
   firstContactedAt?: string | Date | null
@@ -54,6 +64,7 @@ function roleLabel(role: string) {
 interface Props {
   lead: Lead
   salespeople: { id: string; name: string; role: string }[]
+  assignmentLogs: AssignmentLog[]
   currentUser: { id: string; role?: string }
 }
 
@@ -88,7 +99,7 @@ function initials(first?: string | null, last?: string | null) {
   return ((first?.[0] ?? "") + (last?.[0] ?? "")).toUpperCase() || "?"
 }
 
-export default function LeadDetailClient({ lead, salespeople, currentUser }: Props) {
+export default function LeadDetailClient({ lead, salespeople, assignmentLogs, currentUser }: Props) {
   const router = useRouter()
   const toast = useToast()
   const isAdmin = currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN" || currentUser.role === "TEAM_LEADER"
@@ -276,6 +287,7 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
               {[
                 { label: "Email", value: lead.email },
                 { label: "Phone", value: lead.phone },
+                { label: "State", value: lead.branch },
                 { label: "Ad", value: lead.adName },
                 { label: "Campaign", value: lead.campaignName },
                 { label: "Form ID", value: lead.formId, mono: true },
@@ -476,6 +488,27 @@ export default function LeadDetailClient({ lead, salespeople, currentUser }: Pro
                     <p className="text-xs text-gray-400">{lead.assignedTo.email}</p>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Assignment history */}
+            {assignmentLogs.length > 0 && (
+              <div className="pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-400 font-medium mb-2">Assignment history</p>
+                <ul className="space-y-2">
+                  {assignmentLogs.map((log) => (
+                    <li key={log.id} className="text-xs text-gray-500">
+                      <span className="font-medium text-gray-700">{log.assignedBy.name}</span>
+                      {" → "}
+                      <span className="font-medium text-gray-700">{log.assignedTo?.name ?? "Unassigned"}</span>
+                      <span className="block text-gray-400">
+                        {new Date(log.createdAt).toLocaleString("en-MY", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        {" · "}
+                        {log.source === "BULK_ASSIGN" ? "Bulk assign" : log.source === "SINGLE_ASSIGN" ? "Manual assign" : log.source}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

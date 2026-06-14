@@ -67,7 +67,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       },
     }).catch(() => {})
 
-    // Record first contact time if status moves to CONTACTED for the first time
     if (status === "CONTACTED") {
       db.lead.updateMany({
         where: { id, firstContactedAt: null },
@@ -76,13 +75,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  // Notify salesperson when a lead is assigned to them
-  if ("assignedToId" in body && data.assignedToId && data.assignedToId !== existing.assignedToId) {
-    sendPushToUser(data.assignedToId, {
-      title: "New lead assigned to you",
-      body: `${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim() || "A new lead",
-      url: `/leads/${id}`,
+  // Record assignment change and notify salesperson
+  const assignmentChanged = "assignedToId" in body && data.assignedToId !== existing.assignedToId
+  if (assignmentChanged) {
+    db.leadAssignmentLog.create({
+      data: {
+        leadId: id,
+        assignedToId: data.assignedToId ?? null,
+        assignedById: session.user.id,
+        source: "SINGLE_ASSIGN",
+      },
     }).catch(() => {})
+
+    if (data.assignedToId) {
+      sendPushToUser(data.assignedToId, {
+        title: "New lead assigned to you",
+        body: `${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim() || "A new lead",
+        url: `/leads/${id}`,
+      }).catch(() => {})
+    }
   }
 
   return NextResponse.json(lead)

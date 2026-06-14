@@ -9,7 +9,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const adminAccess = role === "ADMIN" || role === "SUPER_ADMIN" || role === "TEAM_LEADER"
   const { id } = await params
 
-  const [leadBase, salespeople, statusHistory] = await Promise.all([
+  const [leadBase, salespeople, statusHistory, assignmentLogs] = await Promise.all([
     db.lead.findUnique({
       where: { id },
       include: {
@@ -44,6 +44,16 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         orderBy: { createdAt: "asc" },
       })
       .catch(() => []),
+    adminAccess
+      ? db.leadAssignmentLog.findMany({
+          where: { leadId: id },
+          include: {
+            assignedTo: { select: { name: true } },
+            assignedBy: { select: { name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
   ])
 
   if (!leadBase) notFound()
@@ -57,6 +67,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     <LeadDetailClient
       lead={lead}
       salespeople={salespeople}
+      assignmentLogs={assignmentLogs}
       currentUser={{ id: session!.user.id, role: role }}
     />
   )
