@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
 
           const [users, activeCounts] = await Promise.all([
             db.user.findMany({
-              where: { id: { in: userIds } },
+              where: { id: { in: userIds }, autoAssign: true },
               select: { id: true, claimLimit: true },
             }),
             db.lead.groupBy({
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
           }
 
           const salespeople = await db.user.findMany({
-            where: { role: "SALESPERSON", managerId: { in: eligibleManagerIds } },
+            where: { role: "SALESPERSON", autoAssign: true, managerId: { in: eligibleManagerIds } },
             select: { id: true, claimLimit: true },
             orderBy: { name: "asc" },
           })

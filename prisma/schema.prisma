@@ -17,6 +17,7 @@ model User {
   newLeadThreshold  Int                 @default(0)
   coveredStates     String[]            @default([])
   isDefaultTeam     Boolean             @default(false)
+  autoAssign        Boolean             @default(true)
   managerId         String?
   manager           User?               @relation("TeamMembers", fields: [managerId], references: [id])
   teamMembers       User[]              @relation("TeamMembers")
