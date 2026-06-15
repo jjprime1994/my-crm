@@ -7,6 +7,28 @@ export type PatchNote = {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.8.0",
+    date: "2026-06-11",
+    title: "Dashboard Claim Insights & What's New Page",
+    items: [
+      "Dashboard now shows how many salespeople have hit their daily claim limit (e.g. 2 / 5) and the percentage of the team at limit",
+      "Team Performance rows now show each salesperson's daily claim progress bar and an 'At limit' badge when they've maxed out",
+      "New 'What's New' page in the sidebar — shows all release notes with a badge for unread updates",
+      "Help & FAQ page cleaned up — patch notes moved to the dedicated What's New page",
+    ],
+  },
+  {
+    version: "1.7.0",
+    date: "2026-06-11",
+    title: "Lead Visibility & Contact Fixes",
+    items: [
+      "Fixed: available leads were invisible when ad routing had no default team configured",
+      "WhatsApp and Call buttons now appear correctly — phone numbers from 'Whatsapp Number' form fields are captured",
+      "Recovered phone numbers for 149 existing leads that were missing contact info",
+      "Admin available lead count badge now shows the correct number instead of always showing 0",
+    ],
+  },
+  {
     version: "1.6.0",
     date: "2026-05-15",
     title: "Ad Routing & Branch Separation",

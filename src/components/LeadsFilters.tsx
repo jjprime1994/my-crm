@@ -62,7 +62,7 @@ export default function LeadsFilters({ isAdmin, salespeople, sources }: Props) {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, email or phone…"
+          placeholder="Search lead name, email, phone or salesperson…"
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
         />
         {search && (

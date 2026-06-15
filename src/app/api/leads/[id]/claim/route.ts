@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isAdmin } from "@/lib/roles"
+import { getEffectiveAdmin } from "@/lib/available-leads"
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -13,6 +14,24 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return new NextResponse("User not found", { status: 404 })
 
   const isSuperAdmin = session.user.role === "SUPER_ADMIN"
+
+  // State coverage check — enforce team boundary even if the lead URL is known directly
+  if (!isSuperAdmin) {
+    const [lead, effectiveAdmin] = await Promise.all([
+      db.lead.findUnique({ where: { id }, select: { branch: true, assignedToId: true } }),
+      getEffectiveAdmin(session.user.id, session.user.role),
+    ])
+    if (!lead) return NextResponse.json({ error: "Lead not found." }, { status: 404 })
+    if (lead.assignedToId !== null) return NextResponse.json({ error: "This lead has already been claimed." }, { status: 409 })
+    if (
+      effectiveAdmin &&
+      effectiveAdmin.coveredStates.length > 0 &&
+      lead.branch !== null &&
+      !effectiveAdmin.coveredStates.includes(lead.branch)
+    ) {
+      return NextResponse.json({ error: "This lead is outside your team's covered states." }, { status: 403 })
+    }
+  }
 
   if (!isSuperAdmin && user.newLeadThreshold > 0) {
     const newLeadsCount = await db.lead.count({

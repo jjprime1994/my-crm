@@ -4,6 +4,7 @@ import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import { getViewAsRole } from "@/lib/viewas"
 import AnimatedBar from "@/components/AnimatedBar"
+import ResetLimitsButton from "@/components/ResetLimitsButton"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
@@ -73,9 +74,15 @@ export default async function DashboardPage() {
 
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 
+  const MYT_OFFSET = 8 * 60 * 60 * 1000
+  const nowMs = Date.now()
+  const nowInMYT = nowMs + MYT_OFFSET
+  const startOfDayInMYT = nowInMYT - (nowInMYT % (24 * 60 * 60 * 1000))
+  const startOfDayUTC = new Date(startOfDayInMYT - MYT_OFFSET)
+
   const teamMembersWhere = isAdmin
     ? isSuperAdmin
-      ? { role: "SALESPERSON" as const }
+      ? {}
       : isManager
       ? {
           role: "SALESPERSON" as const,
@@ -87,7 +94,7 @@ export default async function DashboardPage() {
       : { role: "SALESPERSON" as const, managerId: session!.user.id }
     : null
 
-  const [total, byStatus, recent, followUpCount, unassignedCount, teamMembers, wonCounts] = await Promise.all([
+  const [total, byStatus, recent, followUpCount, unassignedCount, teamMembers, wonCounts, todayClaimCounts] = await Promise.all([
     db.lead.count({ where }),
     db.lead.groupBy({ by: ["status"], _count: true, where }),
     isSuperAdmin
@@ -109,7 +116,7 @@ export default async function DashboardPage() {
     teamMembersWhere
       ? db.user.findMany({
           where: teamMembersWhere,
-          select: { id: true, name: true, _count: { select: { leads: true } } },
+          select: { id: true, name: true, role: true, claimLimit: true, _count: { select: { leads: true } } },
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
@@ -120,10 +127,24 @@ export default async function DashboardPage() {
           _count: { id: true },
         })
       : Promise.resolve([]),
+    teamMembersWhere
+      ? db.lead.groupBy({
+          by: ["assignedToId"],
+          where: { claimedAt: { gte: startOfDayUTC } },
+          _count: { id: true },
+        })
+      : Promise.resolve([]),
   ])
 
   const wonByUserId = Object.fromEntries(wonCounts.map((r) => [r.assignedToId, r._count.id]))
-  const teamStats = teamMembers.map((m) => ({ ...m, won: wonByUserId[m.id] ?? 0 }))
+  const claimedTodayById = Object.fromEntries(todayClaimCounts.map((r) => [r.assignedToId, r._count.id]))
+  const teamStats = teamMembers.map((m) => ({
+    ...m,
+    won: wonByUserId[m.id] ?? 0,
+    claimedToday: claimedTodayById[m.id] ?? 0,
+  }))
+  const atLimitCount = teamStats.filter((m) => m.claimedToday >= m.claimLimit).length
+  const atLimitPct = teamStats.length > 0 ? Math.round((atLimitCount / teamStats.length) * 100) : 0
 
   const statusMap = Object.fromEntries(byStatus.map((s) => [s.status, s._count]))
   const wonCount = statusMap["CLOSED_WON"] ?? 0
@@ -164,15 +185,18 @@ export default async function DashboardPage() {
         />
         {isAdmin ? (
           <StatCard
-            label="Unassigned"
-            value={unassignedCount}
-            valueClass={unassignedCount > 0 ? "text-rose-500" : "text-gray-900"}
-            sub={unassignedCount > 0 && (
-              <Link href="/admin/assign" className="text-xs text-rose-500 hover:text-rose-600 font-medium">
-                Assign now →
-              </Link>
-            )}
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={unassignedCount > 0 ? "#f43f5e" : "currentColor"} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>}
+            label="At Daily Limit"
+            value={`${atLimitCount} / ${teamStats.length}`}
+            valueClass={atLimitCount > 0 ? "text-rose-500" : "text-gray-900"}
+            sub={
+              <div>
+                <p className={`text-xs font-medium ${atLimitCount > 0 ? "text-rose-400" : "text-gray-400"}`}>
+                  {atLimitPct}% of team at limit
+                </p>
+                {isSuperAdmin && <ResetLimitsButton />}
+              </div>
+            }
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={atLimitCount > 0 ? "#f43f5e" : "currentColor"} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
           />
         ) : (
           <StatCard
@@ -258,24 +282,37 @@ export default async function DashboardPage() {
               {teamStats.map((member) => {
                 const won = member.won
                 const rate = member._count.leads > 0 ? Math.round((won / member._count.leads) * 100) : 0
+                const atLimit = member.claimedToday >= member.claimLimit
+                const claimPct = member.claimLimit > 0 ? Math.min(100, Math.round((member.claimedToday / member.claimLimit) * 100)) : 0
                 return (
                   <li key={member.id} className="flex items-center gap-4 px-6 py-3.5">
-                    <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-violet-600">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${atLimit ? "bg-rose-100" : "bg-violet-100"}`}>
+                      <span className={`text-xs font-bold ${atLimit ? "text-rose-500" : "text-violet-600"}`}>
                         {(member.name?.[0] ?? "?").toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">{member.name}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-medium text-gray-900 text-sm truncate">{member.name}</p>
+                        {isSuperAdmin && member.role !== "SALESPERSON" && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600 ring-1 ring-violet-200 shrink-0">
+                            {member.role === "SUPER_ADMIN" ? "Super Admin" : member.role === "ADMIN" ? "Manager" : "Team Leader"}
+                          </span>
+                        )}
+                        {atLimit && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-500 ring-1 ring-rose-200 shrink-0">At limit</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <AnimatedBar pct={rate} className="bg-emerald-500" />
+                          <AnimatedBar pct={claimPct} className={atLimit ? "bg-rose-400" : "bg-blue-400"} />
                         </div>
-                        <span className="text-xs text-gray-400 shrink-0">{member._count.leads} leads</span>
+                        <span className="text-xs text-gray-400 shrink-0">{member.claimedToday}/{member.claimLimit} claimed</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold text-emerald-600">{rate}%</p>
+                      <p className="text-xs text-gray-400">{member._count.leads} leads</p>
                     </div>
                   </li>
                 )

@@ -1,85 +1,7 @@
 import { auth } from "@/auth"
 import FAQItem from "@/components/FAQItem"
+import Link from "next/link"
 import { getViewAsRole } from "@/lib/viewas"
-
-type PatchEntry = {
-  date: string
-  label?: string
-  changes: string[]
-}
-
-const patchNotes: PatchEntry[] = [
-  {
-    date: "10 Jun 2026",
-    label: "Latest",
-    changes: [
-      "Ad routing now actually assigns leads — incoming leads are automatically routed to the correct salesperson based on the ad name, as a fallback after state routing",
-      "Pre-configure ad routes — you can now add an ad by name before any leads arrive, so routing is ready the moment the campaign goes live",
-      "Archive stopped ads — ads that are no longer running can be archived to keep the routing list clean; archived routes are skipped by the webhook",
-      "Follow-ups split — managers, team leaders, and super admins now see two separate sections: My Leads (personally assigned to you) and Team Leads (your team's stale leads)",
-      "Routing priority — leads now follow a clear chain: state routing → ad routing → default team → unassigned pool",
-    ],
-  },
-  {
-    date: "8 Jun 2026",
-    changes: [
-      "State routing — leads are now automatically assigned to salespeople by state in round-robin order, no manual routing needed",
-      "Assign to managers and team leaders — the Assign Leads page now lets you assign to managers and team leaders, not just salespeople",
-      "Lead reassignment — reassign any lead to a different team member directly from the lead detail page",
-      "WA and Call buttons on leads list — contact a lead without opening it; buttons appear next to each lead on desktop and on mobile cards",
-      "Success toasts — a confirmation message appears in the bottom-right after saving, adding a note, or assigning leads",
-    ],
-  },
-  {
-    date: "19 May 2026",
-    changes: [
-      "TikTok leads — leads from TikTok Instant Form ads are now captured alongside Meta leads, with a platform badge on every lead",
-      "Response time tracking — tracks how long each salesperson takes to first contact a lead; shown on lead cards and the leaderboard",
-      "Export improvements — new filters for platform, state, team, assignment status, and duplicate exclusion; live lead count as you adjust filters",
-      "Team Breakdown — manager and business overview pages now show per-person stats (claimed, assigned, won, conversion, stale) grouped by team",
-      "Tabbed overview pages — Business Overview and Team Overview reorganised into tabs to reduce clutter",
-    ],
-  },
-  {
-    date: "15 May 2026",
-    changes: [
-      "Ad routing — super admins can assign each ad to specific teams; salespersons only see leads from their team's assigned ads",
-      "State-based lead filtering — leads are automatically tagged by state from the form answer; teams can be restricted to specific states",
-      "City-to-state lookup — common Malaysian city names are automatically resolved to their state (e.g. Petaling Jaya → Selangor)",
-      "Default team — unrouted or unrecognised leads are automatically directed to a designated fallback team",
-    ],
-  },
-  {
-    date: "14 May 2026",
-    changes: [
-      "Status history timeline — see how a lead progressed through each stage on the lead detail page",
-      "Feedback page — submit bug reports or feature suggestions; managers can track and update their status",
-      "Claim animation — leads fade out with a green flash after being claimed on the Available Leads page",
-      "Age badges on Available Leads — colour-coded indicators showing how old each unclaimed lead is",
-      "Display name fix — name changes on the Settings page now update immediately without requiring a re-login",
-    ],
-  },
-  {
-    date: "12 May 2026",
-    changes: [
-      "Team Leader role — a new role between Manager and Salesperson with managerial capabilities scoped to their team",
-      "Inline name editing — admins can rename team members directly in Manage Team without a separate form",
-      "Self name editing — all users can update their own display name from the Settings page",
-      "Super Admin overview — now shows full nested team counts including team leaders and their sub-teams",
-      "Push notifications — salespersons are notified when a lead is assigned to them",
-      "Claim rate limit — managers can set how many leads a salesperson can claim per 15-minute window",
-    ],
-  },
-  {
-    date: "1 May 2026",
-    changes: [
-      "Follow-ups page — view all leads with upcoming or overdue follow-up reminders in one place",
-      "Export leads — super admins can export leads to CSV with filters by status, campaign, and date range",
-      "Business overview — super admin dashboard with pipeline funnel, campaign performance, and leaderboards",
-      "Duplicate detection — leads with the same phone number are automatically flagged as duplicates",
-    ],
-  },
-]
 
 type FAQSection = {
   category: string
@@ -297,41 +219,15 @@ export default async function FAQPage() {
         <p className="text-sm text-gray-500 mt-0.5">Answers to common questions about using the CRM</p>
       </div>
 
-      {/* Patch notes */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 pt-4 pb-3 border-b border-gray-50">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">What&apos;s New</p>
+      <Link href="/patch-notes" className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 hover:bg-gray-50 transition group">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">What&apos;s New</p>
+          <p className="text-xs text-gray-400 mt-0.5">See the latest updates and improvements</p>
         </div>
-        <div className="px-5 py-4 space-y-6">
-          {patchNotes.map((entry, i) => (
-            <div key={entry.date} className="relative pl-5">
-              {/* Timeline line */}
-              {i < patchNotes.length - 1 && (
-                <span className="absolute left-[5px] top-5 bottom-0 w-px bg-gray-100" />
-              )}
-              {/* Dot */}
-              <span className={`absolute left-0 top-1 w-2.5 h-2.5 rounded-full border-2 ${i === 0 ? "bg-blue-500 border-blue-500" : "bg-white border-gray-300"}`} />
-
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-gray-700">{entry.date}</span>
-                {entry.label && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-200">
-                    {entry.label}
-                  </span>
-                )}
-              </div>
-              <ul className="space-y-1.5">
-                {entry.changes.map((change) => (
-                  <li key={change} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="mt-1.5 w-1 h-1 rounded-full bg-gray-300 shrink-0" />
-                    {change}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 group-hover:text-gray-500 transition">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </Link>
 
       {visible.map((section) => (
         <div key={section.category} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">

@@ -181,17 +181,15 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-sm text-gray-500 italic">Hidden until claimed</p>
+                <p className="text-sm text-gray-500 italic">Hidden until claimed</p>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   {lead.branch && (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200 shrink-0">{lead.branch}</span>
                   )}
-                </div>
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <SourceBadge source={lead.source} />
                   {(lead.campaignName ?? lead.adName) && (
                     <p className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</p>
                   )}
-                  <SourceBadge source={lead.source} />
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">

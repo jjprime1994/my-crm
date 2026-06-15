@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         fieldData = fields
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
         email = get("email")
-        phone = get("phone_number") ?? get("phone")
+        phone = get("phone_number") ?? get("phone") ?? get("whatsapp_number") ?? get("whatsapp") ?? get("mobile_phone") ?? get("mobile") ?? get("contact_number") ?? get("hp") ?? get("handphone") ?? get("no_telefon") ?? get("telefon")
 
         // Extract branch from state/location form field
         const rawLocation = get("state") ?? get("location") ?? get("city") ?? get("where_are_you_from") ?? get("negeri") ?? get("kawasan") ?? get("which_state_are_you_located_in?") ?? get("which_state_are_you_located_in")

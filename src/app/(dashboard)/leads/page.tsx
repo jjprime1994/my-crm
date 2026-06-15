@@ -40,11 +40,12 @@ export default async function LeadsPage({
       { lastName: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
       { phone: { contains: search } },
+      { assignedTo: { name: { contains: search, mode: "insensitive" } } },
     ]})
   }
 
   const orderBy = { createdAt: "desc" } as const
-  const splitView = isAdmin && !assignedToId
+  const splitView = isAdmin && !assignedToId && !search
 
   let myLeads: LeadRow[] = []
   let teamLeads: LeadRow[] = []
@@ -116,6 +117,8 @@ export default async function LeadsPage({
     if (isAdmin) {
       if (isSuperAdmin && assignedToId === "unassigned") andClauses.push({ assignedToId: null })
       else if (assignedToId) andClauses.push({ assignedToId })
+      else if (isSuperAdmin) { /* no scope restriction — super admin sees all */ }
+      else if (isManager) andClauses.push({ OR: [{ assignedToId: session!.user.id }, { assignedTo: { managerId: session!.user.id } }, { assignedTo: { manager: { managerId: session!.user.id } } }] })
       else andClauses.push({ OR: [{ assignedToId: session!.user.id }, { assignedTo: { managerId: session!.user.id } }] })
     } else {
       andClauses.push({ assignedToId: session?.user.id })

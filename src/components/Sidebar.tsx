@@ -2,9 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import { signOut } from "next-auth/react"
 import { isAdmin, isSuperAdmin, isManagerLevel } from "@/lib/roles"
 import ViewAsSelector from "@/components/ViewAsSelector"
+import { PATCH_NOTES } from "@/lib/patch-notes"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
@@ -75,6 +77,11 @@ const Icons = {
       <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
   ),
+  whatsNew: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  ),
   feedback: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -107,6 +114,12 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
   const admin = isAdmin(user.role)
   const superAdmin = isSuperAdmin(user.role)
   const managerLevel = isManagerLevel(user.role)
+
+  const [unreadPatch, setUnreadPatch] = useState(0)
+  useEffect(() => {
+    const lastSeen = localStorage.getItem("lastSeenPatchVersion")
+    setUnreadPatch(PATCH_NOTES.filter((n) => !lastSeen || n.version > lastSeen).length)
+  }, [pathname])
 
   const nav = [
     { href: "/", label: "Dashboard", icon: Icons.dashboard, count: 0 },
@@ -204,10 +217,11 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
       {/* Settings + FAQ */}
       <div className="px-3 pb-1 border-t border-slate-800 pt-2">
         {[
-          { href: "/feedback", label: "Feedback", icon: Icons.feedback },
-          { href: "/faq", label: "Help & FAQ", icon: Icons.faq },
-          { href: "/settings", label: "Settings", icon: Icons.settings },
-        ].map(({ href, label, icon }) => {
+          { href: "/patch-notes", label: "What's New", icon: Icons.whatsNew, badge: unreadPatch },
+          { href: "/feedback", label: "Feedback", icon: Icons.feedback, badge: 0 },
+          { href: "/faq", label: "Help & FAQ", icon: Icons.faq, badge: 0 },
+          { href: "/settings", label: "Settings", icon: Icons.settings, badge: 0 },
+        ].map(({ href, label, icon, badge }) => {
           const active = pathname === href
           return (
             <Link
@@ -220,6 +234,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
             >
               <span className={active ? "text-white" : "text-slate-500"}>{icon}</span>
               {label}
+              {badge > 0 && <Badge n={badge} />}
             </Link>
           )
         })}

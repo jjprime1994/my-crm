@@ -2,7 +2,7 @@ import { db } from "@/lib/db"
 
 type AdminInfo = { id: string; coveredStates: string[]; isDefaultTeam: boolean } | null
 
-async function getEffectiveAdmin(userId: string, role: string): Promise<AdminInfo> {
+export async function getEffectiveAdmin(userId: string, role: string): Promise<AdminInfo> {
   if (role === "ADMIN" || role === "SUPER_ADMIN") {
     return db.user.findUnique({
       where: { id: userId },
@@ -39,6 +39,7 @@ function filterLeads<T extends Lead>(
   routeIndex: Record<string, string[]>,
   routedAdNames: Set<string>,
   managerStates: Record<string, string[]>,
+  hasDefaultTeam: boolean,
 ): T[] {
   return allLeads.filter((lead) => {
     if (!effectiveAdmin) return false
@@ -47,11 +48,16 @@ function filterLeads<T extends Lead>(
     const branch = lead.branch ?? null
     const adIsRouted = adName ? routedAdNames.has(adName) : false
 
-    if (!adIsRouted) {
-      return effectiveAdmin.isDefaultTeam
+    const assignedTeams = adIsRouted && adName ? (routeIndex[adName] ?? []) : []
+    const hasTeamsAssigned = assignedTeams.length > 0
+
+    // Lead is effectively unrouted when: no AdRoute record exists, or the route has no teams
+    // assigned yet. When a default team is configured it handles these as the catch-all;
+    // otherwise fall through to all admins so leads are never invisible.
+    if (!adIsRouted || !hasTeamsAssigned) {
+      return hasDefaultTeam ? effectiveAdmin.isDefaultTeam : true
     }
 
-    const assignedTeams = adName ? (routeIndex[adName] ?? []) : []
     const teamIsAssigned = assignedTeams.includes(effectiveAdmin.id)
 
     if (!teamIsAssigned) {
@@ -66,8 +72,24 @@ function filterLeads<T extends Lead>(
       return false
     }
 
-    if (!branch) return true
-    if (effectiveAdmin.coveredStates.length === 0) return true
+    // No state on lead: prefer teams with no state restriction.
+    // If every assigned team has a state restriction, fall back to showing all so the lead isn't invisible.
+    if (!branch) {
+      if (effectiveAdmin.coveredStates.length === 0) return true
+      const anyUnconfiguredTeam = assignedTeams.some((id) => (managerStates[id] ?? []).length === 0)
+      return !anyUnconfiguredTeam
+    }
+    if (effectiveAdmin.coveredStates.length === 0) {
+      // No state restriction configured. If another assigned team explicitly covers
+      // this branch, defer to them so the same lead doesn't bleed across teams.
+      const anotherTeamCoversThisBranch = assignedTeams
+        .filter((id) => id !== effectiveAdmin.id)
+        .some((teamId) => {
+          const states = managerStates[teamId] ?? []
+          return states.length > 0 && states.includes(branch)
+        })
+      return !anotherTeamCoversThisBranch
+    }
     return effectiveAdmin.coveredStates.includes(branch)
   })
 }
@@ -80,22 +102,22 @@ export async function getAvailableLeads(userId: string, role: string) {
       orderBy: { createdAt: "desc" },
     }),
     db.adRoute.findMany().catch(() => []),
-    db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true } }).catch(() => []),
+    db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
     getEffectiveAdmin(userId, role).catch(() => null),
   ])
 
   const routeIndex = Object.fromEntries(allRoutes.map((r) => [r.adName, r.teamIds]))
   const routedAdNames = new Set(allRoutes.map((r) => r.adName))
   const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
+  const hasDefaultTeam = allManagers.some((m) => m.isDefaultTeam)
 
-  return filterLeads(allLeads, effectiveAdmin, routeIndex, routedAdNames, managerStates)
+  return filterLeads(allLeads, effectiveAdmin, routeIndex, routedAdNames, managerStates, hasDefaultTeam)
 }
 
 export async function getAvailableLeadsCount(userId: string, role: string): Promise<number> {
   if (role === "SUPER_ADMIN") {
     return db.lead.count({ where: { assignedToId: null, isDuplicate: false } }).catch(() => 0)
   }
-  if (role === "ADMIN") return 0
 
   try {
     // Fetch only the two fields filterLeads needs — avoids transferring full lead rows just for a count
@@ -105,13 +127,14 @@ export async function getAvailableLeadsCount(userId: string, role: string): Prom
         select: { adName: true, branch: true },
       }),
       db.adRoute.findMany({ select: { adName: true, teamIds: true } }).catch(() => []),
-      db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true } }).catch(() => []),
+      db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
       getEffectiveAdmin(userId, role).catch(() => null),
     ])
     const routeIndex = Object.fromEntries(allRoutes.map((r) => [r.adName, r.teamIds]))
     const routedAdNames = new Set(allRoutes.map((r) => r.adName))
     const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
-    return filterLeads(leanLeads, effectiveAdmin, routeIndex, routedAdNames, managerStates).length
+    const hasDefaultTeam = allManagers.some((m) => m.isDefaultTeam)
+    return filterLeads(leanLeads, effectiveAdmin, routeIndex, routedAdNames, managerStates, hasDefaultTeam).length
   } catch {
     return 0
   }
