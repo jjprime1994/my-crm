@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 
 interface Props {
   isAdmin: boolean
+  isSuperAdmin: boolean
   salespeople: { id: string; name: string }[]
   sources: string[]
 }
@@ -19,7 +20,7 @@ const STATUSES = [
   { value: "CLOSED_LOST", label: "Lost" },
 ]
 
-export default function LeadsFilters({ isAdmin, salespeople, sources }: Props) {
+export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sources }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const activeStatus = searchParams.get("status") ?? ""
@@ -112,7 +113,7 @@ export default function LeadsFilters({ isAdmin, salespeople, sources }: Props) {
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
           >
             <option value="">All salespeople</option>
-            <option value="unassigned">Unassigned</option>
+            {isSuperAdmin && <option value="unassigned">Unassigned</option>}
             {salespeople.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}

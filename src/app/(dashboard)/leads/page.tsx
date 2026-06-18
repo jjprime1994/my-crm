@@ -141,7 +141,7 @@ export default async function LeadsPage({
         </div>
       </div>
 
-      <LeadsFilters isAdmin={isAdmin} salespeople={salespeople} sources={sources.map(s => s.campaignName!)} />
+      <LeadsFilters isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} salespeople={salespeople} sources={sources.map(s => s.campaignName!)} />
 
       {splitView ? (
         <div className="space-y-7">
