@@ -77,8 +77,10 @@ export default function ExportClient({ sources, branches, managers, counts }: Pr
     const a = document.createElement("a")
     a.href = url
     a.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
     setDownloading(false)
   }
 
