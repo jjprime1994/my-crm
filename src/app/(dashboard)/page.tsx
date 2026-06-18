@@ -129,15 +129,15 @@ export default async function DashboardPage() {
       : Promise.resolve([]),
     teamMembersWhere
       ? db.lead.groupBy({
-          by: ["assignedToId"],
-          where: { claimedAt: { gte: startOfDayUTC } },
+          by: ["claimedById"],
+          where: { claimedAt: { gte: startOfDayUTC }, claimedById: { not: null } },
           _count: { id: true },
         })
       : Promise.resolve([]),
   ])
 
   const wonByUserId = Object.fromEntries(wonCounts.map((r) => [r.assignedToId, r._count.id]))
-  const claimedTodayById = Object.fromEntries(todayClaimCounts.map((r) => [r.assignedToId, r._count.id]))
+  const claimedTodayById = Object.fromEntries(todayClaimCounts.map((r) => [r.claimedById, r._count.id]))
   const teamStats = teamMembers.map((m) => ({
     ...m,
     won: wonByUserId[m.id] ?? 0,

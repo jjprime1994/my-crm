@@ -26,6 +26,7 @@ model User {
   statusChanges     LeadStatusHistory[]
   suggestions       Suggestion[]
   pushSubscriptions PushSubscription[]
+  claimedLeads      Lead[]              @relation("ClaimedLeads")
   assignmentsMade   LeadAssignmentLog[] @relation("AssignedByLogs")
   assignmentsReceived LeadAssignmentLog[] @relation("AssignedToLogs")
   createdAt         DateTime            @default(now())
@@ -58,6 +59,8 @@ model Lead {
   assignedTo       User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
   assignedToId     String?
   claimedAt        DateTime?
+  claimedById      String?
+  claimedBy        User?               @relation("ClaimedLeads", fields: [claimedById], references: [id], onDelete: SetNull)
   followUpAt       DateTime?
   isDuplicate      Boolean             @default(false)
   notes            LeadNote[]

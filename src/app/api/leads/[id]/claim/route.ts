@@ -46,7 +46,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (isSuperAdmin) {
-    const lead = await db.lead.update({ where: { id, assignedToId: null }, data: { assignedToId: session.user.id, claimedAt: new Date() } }).catch(() => null)
+    const lead = await db.lead.update({ where: { id, assignedToId: null }, data: { assignedToId: session.user.id, claimedById: session.user.id, claimedAt: new Date() } }).catch(() => null)
     if (!lead) return NextResponse.json({ error: "This lead has already been claimed." }, { status: 409 })
     return NextResponse.json(lead)
   }
@@ -58,8 +58,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const startOfDayInMYT = nowInMYT - (nowInMYT % (24 * 60 * 60 * 1000))
   const startOfDayUTC = new Date(startOfDayInMYT - MYT_OFFSET)
 
+  // Count by claimedById so reassigning a lead to a team member doesn't reduce the count
   const todayClaims = await db.lead.count({
-    where: { assignedToId: session.user.id, claimedAt: { gte: startOfDayUTC } },
+    where: { claimedById: session.user.id, claimedAt: { gte: startOfDayUTC } },
   })
 
   if (todayClaims >= user.claimLimit) {
@@ -76,7 +77,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   try {
     const lead = await db.lead.update({
       where: { id, assignedToId: null },
-      data: { assignedToId: session.user.id, claimedAt: new Date() },
+      data: { assignedToId: session.user.id, claimedById: session.user.id, claimedAt: new Date() },
     })
     return NextResponse.json(lead)
   } catch {

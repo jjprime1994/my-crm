@@ -22,7 +22,7 @@ export default async function AvailableLeadsPage() {
       select: { claimLimit: true, newLeadThreshold: true },
     }),
     db.lead.count({
-      where: { assignedToId: session.user.id, claimedAt: { gte: startOfDayUTC } },
+      where: { claimedById: session.user.id, claimedAt: { gte: startOfDayUTC } },
     }),
     db.lead.count({
       where: { assignedToId: session.user.id, status: "NEW" },
