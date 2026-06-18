@@ -7,6 +7,16 @@ export type PatchNote = {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.9.0",
+    date: "2026-06-18",
+    title: "State Routing & Lead Pool Fix",
+    items: [
+      "Leads assigned via state routing (e.g. Kelantan, Melaka) now go directly to the designated person — no more leads slipping to the wrong team",
+      "State-routed members now only see available leads from their own state, keeping the pool clean for everyone else",
+      "Team search: you can now search by team name in Manage Team",
+    ],
+  },
+  {
     version: "1.8.0",
     date: "2026-06-11",
     title: "Dashboard Claim Insights & What's New Page",
