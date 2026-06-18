@@ -151,12 +151,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Check for duplicate phone/email
+      // Flag as duplicate only if an active lead with same contact exists within 30 days
       let isDuplicate = false
       if (phone || email) {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
         const existing = await db.lead.findFirst({
           where: {
             metaLeadId: { not: leadgen_id },
+            createdAt: { gte: thirtyDaysAgo },
+            status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] },
             OR: [
               phone ? { phone } : undefined,
               email ? { email } : undefined,

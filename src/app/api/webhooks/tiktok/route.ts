@@ -74,12 +74,15 @@ export async function POST(req: NextRequest) {
   if (!branch && campaignName) branch = resolveStateBranch(campaignName)
   if (!branch && adName) branch = resolveStateBranch(adName)
 
-  // Duplicate check
+  // Flag as duplicate only if an active lead with same contact exists within 30 days
   let isDuplicate = false
   if (phone || email) {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     const existing = await db.lead.findFirst({
       where: {
         metaLeadId: { not: `tiktok_${leadId}` },
+        createdAt: { gte: thirtyDaysAgo },
+        status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] },
         OR: [
           phone ? { phone } : undefined,
           email ? { email } : undefined,
