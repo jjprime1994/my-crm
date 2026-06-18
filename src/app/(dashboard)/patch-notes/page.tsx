@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import Image from "next/image"
 import { PATCH_NOTES } from "@/lib/patch-notes"
 
 export default function PatchNotesPage() {
@@ -14,6 +15,19 @@ export default function PatchNotesPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">What's New</h1>
         <p className="text-sm text-gray-500 mt-0.5">Latest updates and improvements to the CRM</p>
+      </div>
+
+      {/* Install card */}
+      <div className="bg-violet-50 border border-violet-100 rounded-2xl p-5 flex items-center gap-6">
+        <Image src="/install-qr.png" alt="Install QR code" width={100} height={100} className="rounded-xl shrink-0" />
+        <div>
+          <p className="text-sm font-bold text-violet-900 mb-1">Install the app on your phone</p>
+          <p className="text-xs text-violet-700 leading-relaxed">
+            <span className="font-semibold">iPhone:</span> Open in Safari → Share → Add to Home Screen<br />
+            <span className="font-semibold">Android:</span> Open in Chrome → 3 dots → Add to Home Screen
+          </p>
+          <p className="text-[11px] text-violet-400 mt-2 font-mono">my-crm-wine.vercel.app</p>
+        </div>
       </div>
 
       <div className="relative">
