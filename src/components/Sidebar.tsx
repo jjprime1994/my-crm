@@ -6,7 +6,7 @@ import { useEffect, useState } from "react"
 import { signOut } from "next-auth/react"
 import { isAdmin, isSuperAdmin, isManagerLevel } from "@/lib/roles"
 import ViewAsSelector from "@/components/ViewAsSelector"
-import { PATCH_NOTES } from "@/lib/patch-notes"
+import { PATCH_NOTES, compareVersions } from "@/lib/patch-notes"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
@@ -117,8 +117,13 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
 
   const [unreadPatch, setUnreadPatch] = useState(0)
   useEffect(() => {
+    if (pathname === "/patch-notes" && PATCH_NOTES.length > 0) {
+      localStorage.setItem("lastSeenPatchVersion", PATCH_NOTES[0].version)
+      setUnreadPatch(0)
+      return
+    }
     const lastSeen = localStorage.getItem("lastSeenPatchVersion")
-    setUnreadPatch(PATCH_NOTES.filter((n) => !lastSeen || n.version > lastSeen).length)
+    setUnreadPatch(PATCH_NOTES.filter((n) => !lastSeen || compareVersions(n.version, lastSeen) > 0).length)
   }, [pathname])
 
   const nav = [
