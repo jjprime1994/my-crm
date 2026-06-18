@@ -70,14 +70,14 @@ export async function GET(req: NextRequest) {
     new Date(l.updatedAt).toLocaleDateString("en-MY"),
   ])
 
-  const csv = [headers, ...rows]
+  const csv = "﻿" + [headers, ...rows]
     .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     .join("\r\n")
 
   return new NextResponse(csv, {
     status: 200,
     headers: {
-      "Content-Type": "text/csv",
+      "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="leads-export-${new Date().toISOString().slice(0, 10)}.csv"`,
     },
   })

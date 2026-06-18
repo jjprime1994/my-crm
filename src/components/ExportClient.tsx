@@ -69,19 +69,15 @@ export default function ExportClient({ sources, branches, managers, counts }: Pr
     return () => clearTimeout(timer)
   }, [buildUrl])
 
-  async function download() {
+  function download() {
     setDownloading(true)
-    const res = await fetch(buildUrl("export"))
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
-    a.href = url
+    a.href = buildUrl("export")
     a.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    setDownloading(false)
+    setTimeout(() => setDownloading(false), 1500)
   }
 
   function ChipGroup<T extends string>({
