@@ -73,6 +73,7 @@ model Lead {
   @@index([assignedToId])
   @@index([assignedToId, status])
   @@index([assignedToId, claimedAt])
+  @@index([claimedById, claimedAt])
   @@index([status])
   @@index([isDuplicate, assignedToId])
   @@index([createdAt])
