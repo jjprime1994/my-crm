@@ -95,6 +95,21 @@ function filterLeads<T extends Lead>(
 }
 
 export async function getAvailableLeads(userId: string, role: string) {
+  // StateRoute members only see unassigned leads from their assigned state(s)
+  const stateRoutes = await db.stateRoute.findMany({
+    where: { userIds: { has: userId } },
+    select: { state: true },
+  }).catch(() => [])
+
+  if (stateRoutes.length > 0) {
+    const states = stateRoutes.map((r) => r.state)
+    return db.lead.findMany({
+      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false, branch: { in: states } },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    })
+  }
+
   const [allLeads, allRoutes, allManagers, effectiveAdmin] = await Promise.all([
     db.lead.findMany({
       where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false },
@@ -120,6 +135,19 @@ export async function getAvailableLeadsCount(userId: string, role: string): Prom
   }
 
   try {
+    // StateRoute members only count leads from their assigned state(s)
+    const stateRoutes = await db.stateRoute.findMany({
+      where: { userIds: { has: userId } },
+      select: { state: true },
+    }).catch(() => [])
+
+    if (stateRoutes.length > 0) {
+      const states = stateRoutes.map((r) => r.state)
+      return db.lead.count({
+        where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false, branch: { in: states } },
+      }).catch(() => 0)
+    }
+
     // Fetch only the two fields filterLeads needs — avoids transferring full lead rows just for a count
     const [leanLeads, allRoutes, allManagers, effectiveAdmin] = await Promise.all([
       db.lead.findMany({

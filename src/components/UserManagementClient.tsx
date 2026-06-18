@@ -184,7 +184,12 @@ export default function UserManagementClient({ users: initial, currentUserId, is
     .filter((u) => {
       if (search) {
         const q = search.toLowerCase()
-        if (!u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false
+        const teamName = managers.find((m) => m.id === u.managerId)?.name ?? ""
+        if (
+          !u.name.toLowerCase().includes(q) &&
+          !u.email.toLowerCase().includes(q) &&
+          !teamName.toLowerCase().includes(q)
+        ) return false
       }
       if (roleFilter && u.role !== roleFilter) return false
       if (managerFilter === "__none__" && u.managerId !== null) return false
@@ -239,7 +244,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
           </svg>
           <input
             type="text"
-            placeholder="Search name or email…"
+            placeholder="Search name, email or team…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
@@ -262,7 +267,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
             onChange={(e) => setManagerFilter(e.target.value)}
             className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition text-gray-700"
           >
-            <option value="">All managers</option>
+            <option value="">All teams</option>
             <option value="__none__">Unassigned</option>
             {managers.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>

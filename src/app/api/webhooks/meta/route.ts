@@ -112,8 +112,8 @@ export async function POST(req: NextRequest) {
       if (!branch && campaignName) branch = resolveStateBranch(campaignName)
       if (!branch && adName) branch = resolveStateBranch(adName)
 
-      // Resolve state route assignment (round-robin with capacity check)
-      let assignedToId: string | undefined
+      // Auto-assign via StateRoute round-robin — only members of a StateRoute are eligible
+      let assignedToId: string | null = null
       if (branch) {
         const stateRoute = await db.stateRoute.findUnique({
           where: { state: branch },
@@ -121,26 +121,16 @@ export async function POST(req: NextRequest) {
         })
         if (stateRoute && stateRoute.userIds.length > 0) {
           const userIds = stateRoute.userIds
-
           const [users, activeCounts] = await Promise.all([
-            db.user.findMany({
-              where: { id: { in: userIds }, autoAssign: true },
-              select: { id: true, claimLimit: true },
-            }),
+            db.user.findMany({ where: { id: { in: userIds } }, select: { id: true, claimLimit: true } }),
             db.lead.groupBy({
               by: ["assignedToId"],
-              where: {
-                assignedToId: { in: userIds },
-                status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] },
-              },
+              where: { assignedToId: { in: userIds }, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
               _count: { id: true },
             }),
           ])
-
           const limitMap = Object.fromEntries(users.map((u) => [u.id, u.claimLimit]))
           const countMap = Object.fromEntries(activeCounts.map((r) => [r.assignedToId!, r._count.id]))
-
-          // Walk the rotation starting at lastAssignedIndex, pick first user with capacity
           const startIdx = stateRoute.lastAssignedIndex % userIds.length
           let chosenIdx = -1
           for (let i = 0; i < userIds.length; i++) {
@@ -152,67 +142,11 @@ export async function POST(req: NextRequest) {
               break
             }
           }
-
           if (chosenIdx !== -1) {
             await db.stateRoute.update({
               where: { id: stateRoute.id },
               data: { lastAssignedIndex: chosenIdx + 1 },
             })
-          }
-          // If everyone is full, assignedToId stays undefined → lead lands in the available pool
-        }
-      }
-
-      // If state routing didn't assign anyone, try ad routing by adName
-      if (!assignedToId && adName) {
-        const adRoute = await db.adRoute.findUnique({
-          where: { adName },
-          select: { teamIds: true, archived: true },
-        })
-
-        if (adRoute && !adRoute.archived && adRoute.teamIds.length > 0) {
-          // If the lead has a state, only use managers whose coveredStates includes it
-          // (managers with empty coveredStates are treated as unconstrained / catch-all)
-          let eligibleManagerIds = adRoute.teamIds
-          if (branch) {
-            const managers = await db.user.findMany({
-              where: { id: { in: adRoute.teamIds } },
-              select: { id: true, coveredStates: true },
-            })
-            const matching = managers.filter(
-              (m) => m.coveredStates.length === 0 || m.coveredStates.includes(branch)
-            )
-            eligibleManagerIds = matching.map((m) => m.id)
-          }
-
-          const salespeople = await db.user.findMany({
-            where: { role: "SALESPERSON", autoAssign: true, managerId: { in: eligibleManagerIds } },
-            select: { id: true, claimLimit: true },
-            orderBy: { name: "asc" },
-          })
-
-          if (salespeople.length > 0) {
-            const spIds = salespeople.map((s) => s.id)
-            const activeCounts = await db.lead.groupBy({
-              by: ["assignedToId"],
-              where: { assignedToId: { in: spIds }, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
-              _count: { id: true },
-            })
-
-            const countMap = Object.fromEntries(activeCounts.map((r) => [r.assignedToId!, r._count.id]))
-
-            // Pick the salesperson with fewest active leads who still has capacity
-            let bestId: string | undefined
-            let bestCount = Infinity
-            for (const sp of salespeople) {
-              const count = countMap[sp.id] ?? 0
-              const limit = sp.claimLimit ?? 5
-              if (count < limit && count < bestCount) {
-                bestId = sp.id
-                bestCount = count
-              }
-            }
-            if (bestId) assignedToId = bestId
           }
         }
       }
@@ -250,7 +184,7 @@ export async function POST(req: NextRequest) {
           branch,
           source: "META",
           isDuplicate,
-          assignedToId: assignedToId ?? null,
+          assignedToId,
           rawData: { ...change.value, field_data: fieldData },
         },
       })
