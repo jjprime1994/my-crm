@@ -166,6 +166,7 @@ export async function POST(req: NextRequest) {
         })
         if (existing) isDuplicate = true
       }
+      if (isDuplicate) assignedToId = null
 
       await db.lead.upsert({
         where: { metaLeadId: leadgen_id },
