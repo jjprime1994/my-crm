@@ -7,6 +7,15 @@ export type PatchNote = {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.10.0",
+    date: "2026-06-18",
+    title: "Bug Fixes",
+    items: [
+      "Fixed: claim limit could be bypassed by reassigning a claimed lead to a team member — claims are now tracked permanently regardless of reassignment",
+      "Fixed: CSV export was downloading as a blank file — now downloads correctly with all data",
+    ],
+  },
+  {
     version: "1.9.0",
     date: "2026-06-18",
     title: "State Routing & Lead Pool Fix",
