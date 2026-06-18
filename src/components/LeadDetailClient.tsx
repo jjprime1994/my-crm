@@ -140,9 +140,13 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
       }
     }
 
-    await patchRes
-    setStatusNote("")
+    const res = await patchRes
     setSaving(false)
+    if (!res.ok) {
+      toast("Failed to save changes", "error")
+      return
+    }
+    setStatusNote("")
     toast("Changes saved")
     router.refresh()
   }
@@ -243,7 +247,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
           <div className="flex items-center gap-2 flex-wrap">
             {lead.phone && (
               <a
-                href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                href={`https://wa.me/${lead.phone.replace(/\D/g, "").replace(/^0/, "60")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => logContact("WhatsApp")}

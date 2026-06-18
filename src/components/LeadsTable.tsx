@@ -117,7 +117,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                   <div className="ml-auto flex items-center gap-1.5">
                     {lead.phone && (
                       <a
-                        href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                        href={`https://wa.me/${lead.phone.replace(/\D/g, "").replace(/^0/, "60")}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -182,7 +182,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="text-gray-400 text-xs">{lead.phone}</span>
                       <a
-                        href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                        href={`https://wa.me/${lead.phone.replace(/\D/g, "").replace(/^0/, "60")}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
