@@ -12,6 +12,7 @@ export type LeadRow = {
   phone?: string | null
   status: LeadStatus
   isDuplicate: boolean
+  source?: string | null
   campaignName?: string | null
   adName?: string | null
   branch?: string | null
@@ -21,6 +22,12 @@ export type LeadRow = {
   updatedAt: Date
   assignedTo?: { id: string; name: string } | null
   _count: { notes: number }
+}
+
+function SourceBadge({ source }: { source?: string | null }) {
+  if (source === "TIKTOK") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-50 text-pink-600 ring-1 ring-pink-200">TikTok</span>
+  if (source === "META") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 ring-1 ring-blue-200">Meta</span>
+  return null
 }
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -91,6 +98,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</span>
                       {lead.isDuplicate && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">DUP</span>}
+                      {lead.isDuplicate && <SourceBadge source={lead.source} />}
                     </div>
                     <p className="text-xs text-gray-400 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
                   </div>
@@ -168,11 +176,12 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                       <span className="text-xs font-bold text-blue-600">{(lead.firstName?.[0] ?? "?").toUpperCase()}</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</span>
                       {lead.isDuplicate && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 ring-1 ring-amber-200">DUP</span>
                       )}
+                      {lead.isDuplicate && <SourceBadge source={lead.source} />}
                     </div>
                   </div>
                 </td>

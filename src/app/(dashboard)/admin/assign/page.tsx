@@ -40,7 +40,7 @@ export default async function AssignPage() {
         select: {
           id: true, phone: true,
           campaignName: true, adName: true, status: true,
-          assignedTo: { select: { name: true } },
+          assignedTo: { select: { id: true, name: true } },
         },
       })
     : []

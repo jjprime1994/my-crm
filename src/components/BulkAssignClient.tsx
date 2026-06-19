@@ -11,7 +11,7 @@ type DupSibling = {
   campaignName?: string | null
   adName?: string | null
   status: string
-  assignedTo?: { name: string } | null
+  assignedTo?: { id: string; name: string } | null
 }
 
 type Lead = {
@@ -137,6 +137,35 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
     router.refresh()
   }
 
+  async function autoAssignDups() {
+    const assignable = leads.filter((l) => l.isDuplicate && l.dupSibling?.assignedTo?.id)
+    if (assignable.length === 0) return
+    setSaving(true)
+    const groups = new Map<string, string[]>()
+    for (const lead of assignable) {
+      const aid = lead.dupSibling!.assignedTo!.id
+      if (!groups.has(aid)) groups.set(aid, [])
+      groups.get(aid)!.push(lead.id)
+    }
+    await Promise.all(
+      Array.from(groups.entries()).map(([assignedToId, leadIds]) =>
+        fetch("/api/leads/assign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leadIds, assignedToId }),
+        })
+      )
+    )
+    setSaving(false)
+    const assignedIds = new Set(assignable.map((l) => l.id))
+    const remaining = leads.filter((l) => !assignedIds.has(l.id))
+    setLeads(remaining)
+    setSelected((prev) => { const n = new Set(prev); assignedIds.forEach((id) => n.delete(id)); return n })
+    setPage((p) => Math.min(p, Math.max(1, Math.ceil(remaining.length / PAGE_SIZE))))
+    toast(`${assignable.length} dup lead${assignable.length !== 1 ? "s" : ""} sent to original handlers`)
+    router.refresh()
+  }
+
   function goPage(p: number) {
     setPage(Math.max(1, Math.min(p, totalPages)))
   }
@@ -172,6 +201,19 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
               )
             })}
           </select>
+          {(() => {
+            const dupCount = leads.filter((l) => l.isDuplicate && l.dupSibling?.assignedTo?.id).length
+            if (dupCount === 0) return null
+            return (
+              <button
+                onClick={autoAssignDups}
+                disabled={saving}
+                className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition disabled:opacity-40 shadow-sm shadow-amber-100 w-full sm:w-auto whitespace-nowrap"
+              >
+                {saving ? "Assigning…" : `Send ${dupCount} dup${dupCount !== 1 ? "s" : ""} to original handler`}
+              </button>
+            )
+          })()}
           <button
             onClick={assign}
             disabled={saving || selected.size === 0 || !assignTo}
