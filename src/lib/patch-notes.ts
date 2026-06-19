@@ -17,6 +17,18 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.11.0",
+    date: "2026-06-19",
+    title: "Duplicate Lead Improvements",
+    items: [
+      "Duplicate leads now show a DUP badge on your leads list with a tooltip explaining which original campaign triggered the flag",
+      "Available leads pool also shows the DUP badge with the previous campaign — so you know before you claim",
+      "Opening a duplicate lead shows a callout explaining which campaign the contact originally submitted via and who is handling it",
+      "Fixed: duplicate leads were incorrectly auto-assigned via state routing — they now go straight to the available pool as intended",
+      "Smarter duplicate detection: only flags as duplicate if the original lead is still active (not closed/lost) and was submitted within 30 days",
+    ],
+  },
+  {
     version: "1.10.0",
     date: "2026-06-18",
     title: "Bug Fixes",
