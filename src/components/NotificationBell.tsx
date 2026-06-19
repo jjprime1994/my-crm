@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { PATCH_NOTES } from "@/lib/patch-notes"
+import { PATCH_NOTES, compareVersions } from "@/lib/patch-notes"
 
 type FollowUp = {
   id: string
@@ -38,7 +38,7 @@ export default function NotificationBell() {
     if (!open) {
       // Snapshot which notes are new before marking read
       const newSet = new Set(
-        PATCH_NOTES.filter((n) => !lastSeen || n.version > lastSeen).map((n) => n.version)
+        PATCH_NOTES.filter((n) => !lastSeen || compareVersions(n.version, lastSeen) > 0).map((n) => n.version)
       )
       setNewAtOpen(newSet)
       // Mark all as read
@@ -50,7 +50,7 @@ export default function NotificationBell() {
     setOpen(!open)
   }
 
-  const unreadPatch = PATCH_NOTES.filter((n) => !lastSeen || n.version > lastSeen).length
+  const unreadPatch = PATCH_NOTES.filter((n) => !lastSeen || compareVersions(n.version, lastSeen) > 0).length
   const totalBadge = followUps.length + unreadPatch
 
   const now = new Date()
