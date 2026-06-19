@@ -12,11 +12,12 @@ export default async function AssignPage() {
 
   const [rawLeads, salespeople] = await Promise.all([
     db.lead.findMany({
-      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
+      where: { status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
       select: {
         id: true, firstName: true, lastName: true, email: true, phone: true,
         adName: true, campaignName: true, branch: true, source: true,
         isDuplicate: true, createdAt: true,
+        assignedTo: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 500,
