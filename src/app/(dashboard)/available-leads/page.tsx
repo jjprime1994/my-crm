@@ -46,12 +46,24 @@ export default async function AvailableLeadsPage() {
     : []
   const claimedPhones = new Set(claimedContacts.map((l) => l.phone).filter(Boolean))
   const claimedEmails = new Set(claimedContacts.map((l) => l.email).filter(Boolean))
+
+  // Fetch sibling leads for dup leads so we can show why they're flagged
+  const dupPhones = [...new Set(rawLeads.filter((l) => l.isDuplicate && l.phone).map((l) => l.phone!))]
+  const dupSiblings = dupPhones.length > 0
+    ? await db.lead.findMany({
+        where: { phone: { in: dupPhones }, isDuplicate: false },
+        select: { phone: true, campaignName: true, createdAt: true, status: true },
+      })
+    : []
+  const siblingByPhone = Object.fromEntries(dupSiblings.map((s) => [s.phone!, s]))
+
   const leads = rawLeads.map((l) => ({
     ...l,
     claimedBefore: !!(
       (l.phone && claimedPhones.has(l.phone)) ||
       (l.email && claimedEmails.has(l.email))
     ),
+    dupSibling: l.isDuplicate && l.phone ? (siblingByPhone[l.phone] ?? null) : null,
   }))
 
   const resetAt = nextMidnightUTC.toISOString()

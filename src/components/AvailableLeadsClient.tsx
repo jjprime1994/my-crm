@@ -16,6 +16,7 @@ type Lead = {
   isDuplicate?: boolean | null
   claimedBefore?: boolean
   createdAt: Date | string
+  dupSibling?: { campaignName?: string | null; createdAt: Date | string; status: string } | null
 }
 
 function SourceBadge({ source }: { source?: string | null }) {
@@ -193,6 +194,9 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                   {(lead.campaignName ?? lead.adName) && (
                     <p className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</p>
                   )}
+                  {(lead.isDuplicate || lead.claimedBefore) && lead.dupSibling && (
+                    <p className="text-[10px] text-amber-600 truncate w-full">Prev: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -272,7 +276,16 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                   <p className="text-sm text-gray-500 truncate">{lead.campaignName ?? lead.adName ?? "—"}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <SourceBadge source={lead.source} />
-                    {(lead.isDuplicate || lead.claimedBefore) && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">DUP</span>}
+                    {(lead.isDuplicate || lead.claimedBefore) && (
+                      <span className="relative group/dup cursor-default">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">DUP</span>
+                        {lead.dupSibling && (
+                          <span className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/dup:block bg-gray-800 text-white text-xs rounded-lg px-2.5 py-1.5 whitespace-nowrap z-20 shadow-lg">
+                            Prev: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-5 py-3.5">
