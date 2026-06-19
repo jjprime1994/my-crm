@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import crypto from "crypto"
 import { resolveStateBranch } from "@/lib/branch"
+import { assignToDefaultTeam } from "@/lib/assign-default-team"
 
 // GET: Meta webhook verification
 export async function GET(req: NextRequest) {
@@ -170,6 +171,11 @@ export async function POST(req: NextRequest) {
         if (existing) isDuplicate = true
       }
       if (isDuplicate) assignedToId = null
+
+      // Fallback: if no state route matched and not a duplicate, assign to Johnny's team
+      if (!assignedToId && !isDuplicate) {
+        assignedToId = await assignToDefaultTeam()
+      }
 
       await db.lead.upsert({
         where: { metaLeadId: leadgen_id },

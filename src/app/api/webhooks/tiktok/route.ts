@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { Prisma } from "@/generated/prisma/client"
 import crypto from "crypto"
 import { resolveStateBranch } from "@/lib/branch"
+import { assignToDefaultTeam } from "@/lib/assign-default-team"
 
 // TikTok sends a GET with a verification code to confirm the endpoint on setup
 export async function GET(req: NextRequest) {
@@ -93,6 +94,12 @@ export async function POST(req: NextRequest) {
     if (existing) isDuplicate = true
   }
 
+  // Assign to Johnny's team unless it's a duplicate
+  let assignedToId: string | null = null
+  if (!isDuplicate) {
+    assignedToId = await assignToDefaultTeam()
+  }
+
   await db.lead.upsert({
     where: { metaLeadId: `tiktok_${leadId}` },
     update: {},
@@ -110,6 +117,7 @@ export async function POST(req: NextRequest) {
       branch,
       source: "TIKTOK",
       isDuplicate,
+      assignedToId,
       rawData: body as Prisma.InputJsonValue,
     },
   })
