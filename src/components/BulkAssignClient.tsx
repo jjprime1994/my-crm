@@ -27,7 +27,6 @@ type Lead = {
   isDuplicate: boolean
   dupSibling?: DupSibling | null
   createdAt: Date | string
-  assignedTo?: { id: string; name: string } | null
 }
 
 type Salesperson = {
@@ -177,9 +176,9 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
       body: JSON.stringify({ leadIds: ids, assignedToId: null }),
     })
     setSaving(false)
-    setLeads((prev) => prev.map((l) => selected.has(l.id) ? { ...l, assignedTo: null } : l))
+    setLeads((prev) => prev.filter((l) => !selected.has(l.id)))
     setSelected(new Set())
-    toast(`${ids.length} lead${ids.length !== 1 ? "s" : ""} returned to pool`)
+    toast(`${ids.length} lead${ids.length !== 1 ? "s" : ""} kept in pool`)
     router.refresh()
   }
 
@@ -192,9 +191,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Assign Leads</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {leads.filter(l => !l.assignedTo).length} unassigned · {leads.filter(l => l.assignedTo).length} assigned
-          </p>
+          <p className="text-sm text-gray-500 mt-0.5">{leads.length} unassigned leads</p>
         </div>
       </div>
 
@@ -328,7 +325,6 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
               </th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Platform</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Ad / Campaign</th>
@@ -338,7 +334,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
               <tr>
-                <td colSpan={8} className="text-center py-16">
+                <td colSpan={7} className="text-center py-16">
                   <div className="flex flex-col items-center gap-2 text-sm text-gray-400">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300"><polyline points="20 6 9 17 4 12"/></svg>
                     All leads are assigned.
@@ -365,11 +361,6 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                 <td className="px-5 py-3.5 text-sm">
                   <div className="text-gray-700">{lead.email ?? "—"}</div>
                   {lead.phone && <div className="text-xs text-gray-400 mt-0.5">{lead.phone}</div>}
-                </td>
-                <td className="px-5 py-3.5 text-sm">
-                  {lead.assignedTo
-                    ? <span className="font-medium text-gray-800">{lead.assignedTo.name}</span>
-                    : <span className="text-xs text-gray-300 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">Unassigned</span>}
                 </td>
                 <td className="px-5 py-3.5 text-sm text-gray-600">
                   {lead.branch ?? <span className="text-gray-300">—</span>}
