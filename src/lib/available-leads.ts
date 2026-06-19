@@ -104,16 +104,16 @@ export async function getAvailableLeads(userId: string, role: string) {
   if (stateRoutes.length > 0) {
     const states = stateRoutes.map((r) => r.state)
     return db.lead.findMany({
-      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false, branch: { in: states } },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, createdAt: true },
+      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, branch: { in: states } },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, isDuplicate: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     })
   }
 
   const [allLeads, allRoutes, allManagers, effectiveAdmin] = await Promise.all([
     db.lead.findMany({
-      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, createdAt: true },
+      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, isDuplicate: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     }),
     db.adRoute.findMany().catch(() => []),
@@ -131,7 +131,7 @@ export async function getAvailableLeads(userId: string, role: string) {
 
 export async function getAvailableLeadsCount(userId: string, role: string): Promise<number> {
   if (role === "SUPER_ADMIN") {
-    return db.lead.count({ where: { assignedToId: null, isDuplicate: false } }).catch(() => 0)
+    return db.lead.count({ where: { assignedToId: null } }).catch(() => 0)
   }
 
   try {
@@ -144,14 +144,14 @@ export async function getAvailableLeadsCount(userId: string, role: string): Prom
     if (stateRoutes.length > 0) {
       const states = stateRoutes.map((r) => r.state)
       return db.lead.count({
-        where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false, branch: { in: states } },
+        where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, branch: { in: states } },
       }).catch(() => 0)
     }
 
     // Fetch only the two fields filterLeads needs — avoids transferring full lead rows just for a count
     const [leanLeads, allRoutes, allManagers, effectiveAdmin] = await Promise.all([
       db.lead.findMany({
-        where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, isDuplicate: false },
+        where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
         select: { adName: true, branch: true },
       }),
       db.adRoute.findMany({ select: { adName: true, teamIds: true } }).catch(() => []),

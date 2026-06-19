@@ -13,6 +13,8 @@ type Lead = {
   campaignName?: string | null
   branch?: string | null
   source?: string | null
+  isDuplicate?: boolean | null
+  claimedBefore?: boolean
   createdAt: Date | string
 }
 
@@ -187,6 +189,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200 shrink-0">{lead.branch}</span>
                   )}
                   <SourceBadge source={lead.source} />
+                  {(lead.isDuplicate || lead.claimedBefore) && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200 shrink-0">DUP</span>}
                   {(lead.campaignName ?? lead.adName) && (
                     <p className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</p>
                   )}
@@ -269,6 +272,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                   <p className="text-sm text-gray-500 truncate">{lead.campaignName ?? lead.adName ?? "—"}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <SourceBadge source={lead.source} />
+                    {(lead.isDuplicate || lead.claimedBefore) && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">DUP</span>}
                   </div>
                 </td>
                 <td className="px-5 py-3.5">

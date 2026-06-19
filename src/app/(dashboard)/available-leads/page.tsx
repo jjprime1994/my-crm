@@ -15,7 +15,7 @@ export default async function AvailableLeadsPage() {
   const startOfDayUTC = new Date(startOfDayInMYT - MYT_OFFSET)
   const nextMidnightUTC = new Date(startOfDayInMYT + 24 * 60 * 60 * 1000 - MYT_OFFSET)
 
-  const [leads, user, recentClaims, newLeadsCount] = await Promise.all([
+  const [rawLeads, user, recentClaims, newLeadsCount] = await Promise.all([
     getAvailableLeads(session.user.id, session.user.role),
     db.user.findUnique({
       where: { id: session.user.id },
@@ -28,6 +28,31 @@ export default async function AvailableLeadsPage() {
       where: { assignedToId: session.user.id, status: "NEW" },
     }),
   ])
+
+  // Mark leads where the same phone/email has been claimed before
+  const phones = rawLeads.filter((l) => l.phone).map((l) => l.phone!)
+  const emails = rawLeads.filter((l) => l.email).map((l) => l.email!)
+  const claimedContacts = (phones.length > 0 || emails.length > 0)
+    ? await db.lead.findMany({
+        where: {
+          claimedAt: { not: null },
+          OR: [
+            ...(phones.length > 0 ? [{ phone: { in: phones } }] : []),
+            ...(emails.length > 0 ? [{ email: { in: emails } }] : []),
+          ],
+        },
+        select: { phone: true, email: true },
+      })
+    : []
+  const claimedPhones = new Set(claimedContacts.map((l) => l.phone).filter(Boolean))
+  const claimedEmails = new Set(claimedContacts.map((l) => l.email).filter(Boolean))
+  const leads = rawLeads.map((l) => ({
+    ...l,
+    claimedBefore: !!(
+      (l.phone && claimedPhones.has(l.phone)) ||
+      (l.email && claimedEmails.has(l.email))
+    ),
+  }))
 
   const resetAt = nextMidnightUTC.toISOString()
   const threshold = user?.newLeadThreshold ?? 0
