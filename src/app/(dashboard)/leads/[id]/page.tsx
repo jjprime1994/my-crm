@@ -63,9 +63,21 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   // Salespeople can only view leads assigned to them
   if (!adminAccess && lead.assignedToId !== session?.user.id) notFound()
 
+  const dupSibling = lead.isDuplicate && lead.phone
+    ? await db.lead.findFirst({
+        where: { phone: lead.phone, isDuplicate: false },
+        select: {
+          campaignName: true,
+          createdAt: true,
+          status: true,
+          assignedTo: { select: { name: true } },
+        },
+      })
+    : null
+
   return (
     <LeadDetailClient
-      lead={lead}
+      lead={{ ...lead, dupSibling }}
       salespeople={salespeople}
       assignmentLogs={assignmentLogs}
       currentUser={{ id: session!.user.id, role: role }}

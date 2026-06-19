@@ -132,6 +132,28 @@ export default async function LeadsPage({
 
   const displayTotal = splitView ? myTotal + teamTotal + otherTotal : singleTotal
 
+  // Enrich dup leads with sibling info for tooltip/subtext
+  const allPageLeads = splitView ? [...myLeads, ...teamLeads, ...otherLeads] : leads
+  const dupPhones = [...new Set(allPageLeads.filter((l) => l.isDuplicate && l.phone).map((l) => l.phone!))]
+  const dupSiblings = dupPhones.length > 0
+    ? await db.lead.findMany({
+        where: { phone: { in: dupPhones }, isDuplicate: false },
+        select: { phone: true, campaignName: true, createdAt: true, status: true },
+      })
+    : []
+  const siblingByPhone = Object.fromEntries(dupSiblings.map((s) => [s.phone!, s]))
+  const enrichLeads = (arr: LeadRow[]) => arr.map((l) => ({
+    ...l,
+    dupSibling: l.isDuplicate && l.phone ? (siblingByPhone[l.phone] ?? null) : null,
+  }))
+  if (splitView) {
+    myLeads = enrichLeads(myLeads)
+    teamLeads = enrichLeads(teamLeads)
+    otherLeads = enrichLeads(otherLeads)
+  } else {
+    leads = enrichLeads(leads)
+  }
+
   return (
     <div className="space-y-5 max-w-6xl">
       <div className="flex items-center justify-between">

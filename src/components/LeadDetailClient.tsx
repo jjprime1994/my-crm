@@ -48,6 +48,12 @@ type Lead = {
   claimedAt?: string | Date | null
   firstContactedAt?: string | Date | null
   isDuplicate?: boolean
+  dupSibling?: {
+    campaignName?: string | null
+    createdAt: string | Date
+    status: string
+    assignedTo?: { name: string } | null
+  } | null
   createdAt: string | Date
   rawData?: unknown
   assignedTo?: { id: string; name: string; email: string } | null
@@ -201,6 +207,25 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
         </svg>
         Back
       </button>
+
+      {/* Duplicate callout */}
+      {lead.isDuplicate && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 shrink-0 mt-0.5">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">This is a duplicate lead</p>
+            <p className="text-sm text-amber-700 mt-0.5">
+              {lead.dupSibling
+                ? `This contact previously submitted via ${lead.dupSibling.campaignName ?? "another campaign"} on ${new Date(lead.dupSibling.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}${lead.dupSibling.assignedTo ? ` — handled by ${lead.dupSibling.assignedTo.name}` : ""}.`
+                : "This contact has submitted a lead via another campaign before."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
