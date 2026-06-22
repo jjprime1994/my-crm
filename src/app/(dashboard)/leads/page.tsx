@@ -46,7 +46,7 @@ export default async function LeadsPage({
   }
 
   const orderBy = { createdAt: "desc" } as const
-  const splitView = isAdmin && !assignedToId && !search
+  const splitView = isAdmin && !assignedToId && !search && !branch
 
   let myLeads: LeadRow[] = []
   let teamLeads: LeadRow[] = []
