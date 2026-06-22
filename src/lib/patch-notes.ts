@@ -17,6 +17,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.12.0",
+    date: "2026-06-22",
+    title: "Claim Tracking & Bug Fixes",
+    items: [
+      "Leads now show the date and time they were claimed — visible on the lead detail page and in the leads table",
+      "Fixed: rapid or simultaneous claim attempts could push a salesperson past their daily limit (e.g. 6/5) — the limit is now enforced atomically",
+    ],
+  },
+  {
     version: "1.11.0",
     date: "2026-06-19",
     title: "Duplicate Lead Improvements",
