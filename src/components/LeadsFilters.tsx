@@ -8,6 +8,7 @@ interface Props {
   isSuperAdmin: boolean
   salespeople: { id: string; name: string }[]
   sources: string[]
+  branches: string[]
 }
 
 const STATUSES = [
@@ -20,7 +21,7 @@ const STATUSES = [
   { value: "CLOSED_LOST", label: "Lost" },
 ]
 
-export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sources }: Props) {
+export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sources, branches }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const activeStatus = searchParams.get("status") ?? ""
@@ -105,6 +106,20 @@ export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sourc
           </select>
         )}
 
+        {/* State filter */}
+        {branches.length > 0 && (
+          <select
+            value={searchParams.get("branch") ?? ""}
+            onChange={(e) => update("branch", e.target.value)}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+          >
+            <option value="">All states</option>
+            {branches.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+        )}
+
         {/* Salesperson filter (admin only) */}
         {isAdmin && salespeople.length > 0 && (
           <select
@@ -121,7 +136,7 @@ export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sourc
         )}
 
         {/* Clear filters */}
-        {(activeStatus || searchParams.get("source") || searchParams.get("assignedToId") || search) && (
+        {(activeStatus || searchParams.get("source") || searchParams.get("branch") || searchParams.get("assignedToId") || search) && (
           <button
             onClick={() => { setSearch(""); router.push("/leads?") }}
             className="text-xs text-gray-400 hover:text-gray-600 font-medium px-3 py-2 rounded-xl hover:bg-gray-100 transition"

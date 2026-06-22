@@ -16,7 +16,7 @@ const includeOpts = {
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; assignedToId?: string; search?: string; source?: string; page?: string; myPage?: string; teamPage?: string; otherPage?: string }>
+  searchParams: Promise<{ status?: string; assignedToId?: string; search?: string; source?: string; branch?: string; page?: string; myPage?: string; teamPage?: string; otherPage?: string }>
 }) {
   const session = await auth()
   const role = await getViewAsRole(session?.user.role)
@@ -24,7 +24,7 @@ export default async function LeadsPage({
   const isManager = role === "ADMIN"
   const isTeamLeaderRole = role === "TEAM_LEADER"
   const isAdmin = isSuperAdmin || isManager || isTeamLeaderRole
-  const { status, assignedToId, search, source, page: pageParam, myPage: myPageParam, teamPage: teamPageParam, otherPage: otherPageParam } = await searchParams
+  const { status, assignedToId, search, source, branch, page: pageParam, myPage: myPageParam, teamPage: teamPageParam, otherPage: otherPageParam } = await searchParams
 
   const page     = Math.max(1, Number(pageParam     ?? "1"))
   const myPage   = Math.max(1, Number(myPageParam   ?? "1"))
@@ -34,6 +34,7 @@ export default async function LeadsPage({
   const commonClauses: Record<string, unknown>[] = []
   if (status) commonClauses.push({ status: status as LeadStatus })
   if (source) commonClauses.push({ campaignName: source })
+  if (branch) commonClauses.push({ branch })
   if (search) {
     commonClauses.push({ OR: [
       { firstName: { contains: search, mode: "insensitive" } },
@@ -53,7 +54,7 @@ export default async function LeadsPage({
   let leads: LeadRow[] = []
   let myTotal = 0, teamTotal = 0, otherTotal = 0, singleTotal = 0
 
-  const [salespeople, sources] = await Promise.all([
+  const [salespeople, sources, branchRows] = await Promise.all([
     isAdmin
       ? db.user.findMany({
           where: isSuperAdmin
@@ -77,7 +78,14 @@ export default async function LeadsPage({
       distinct: ["campaignName"],
       orderBy: { campaignName: "asc" },
     }),
+    db.lead.findMany({
+      where: { branch: { not: null } },
+      select: { branch: true },
+      distinct: ["branch"],
+      orderBy: { branch: "asc" },
+    }),
   ])
+  const branches = branchRows.map((r) => r.branch!)
 
   if (splitView) {
     const myWhere = { AND: [{ assignedToId: session!.user.id }, ...commonClauses] }
@@ -163,7 +171,7 @@ export default async function LeadsPage({
         </div>
       </div>
 
-      <LeadsFilters isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} salespeople={salespeople} sources={sources.map(s => s.campaignName!)} />
+      <LeadsFilters isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} salespeople={salespeople} sources={sources.map(s => s.campaignName!)} branches={branches} />
 
       {splitView ? (
         <div className="space-y-7">
