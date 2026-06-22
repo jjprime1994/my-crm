@@ -59,27 +59,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const startOfDayUTC = new Date(startOfDayInMYT - MYT_OFFSET)
   const nextMidnightUTC = new Date(startOfDayInMYT + 24 * 60 * 60 * 1000 - MYT_OFFSET)
 
-  // Serializable transaction so concurrent claim attempts can't both pass the limit check
-  type TxResult = { tooMany: true } | { lead: Awaited<ReturnType<typeof db.lead.update>> } | { conflict: true }
-  let txResult: TxResult
-  try {
-    txResult = await db.$transaction(async (tx) => {
-      const todayClaims = await tx.lead.count({
-        where: { claimedById: session.user.id, claimedAt: { gte: startOfDayUTC } },
-      })
-      if (todayClaims >= user.claimLimit) return { tooMany: true }
-      const lead = await tx.lead.update({
-        where: { id, assignedToId: null },
-        data: { assignedToId: session.user.id, claimedById: session.user.id, claimedAt: new Date() },
-      }).catch(() => null)
-      if (!lead) return { conflict: true }
-      return { lead }
-    }, { isolationLevel: "Serializable" })
-  } catch {
-    return NextResponse.json({ error: "This lead has already been claimed." }, { status: 409 })
-  }
+  // Pre-check for fast rejection with a helpful message
+  const todayClaims = await db.lead.count({
+    where: { claimedById: session.user.id, claimedAt: { gte: startOfDayUTC } },
+  })
 
-  if ("tooMany" in txResult) {
+  if (todayClaims >= user.claimLimit) {
     const secondsLeft = Math.ceil((nextMidnightUTC.getTime() - nowMs) / 1000)
     const hoursLeft = Math.floor(secondsLeft / 3600)
     const minsLeft = Math.floor((secondsLeft % 3600) / 60)
@@ -89,9 +74,33 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     )
   }
 
-  if ("conflict" in txResult) {
+  // Claim then re-count inside a transaction — if concurrent requests both passed the pre-check,
+  // the post-claim count will catch the overage and roll back via throw.
+  let lead: Awaited<ReturnType<typeof db.lead.update>>
+  try {
+    lead = await db.$transaction(async (tx) => {
+      const claimed = await tx.lead.update({
+        where: { id, assignedToId: null },
+        data: { assignedToId: session.user.id, claimedById: session.user.id, claimedAt: new Date() },
+      })
+      const countAfter = await tx.lead.count({
+        where: { claimedById: session.user.id, claimedAt: { gte: startOfDayUTC } },
+      })
+      if (countAfter > user.claimLimit) throw new Error("LIMIT_EXCEEDED")
+      return claimed
+    })
+  } catch (e) {
+    if (e instanceof Error && e.message === "LIMIT_EXCEEDED") {
+      const secondsLeft = Math.ceil((nextMidnightUTC.getTime() - nowMs) / 1000)
+      const hoursLeft = Math.floor(secondsLeft / 3600)
+      const minsLeft = Math.floor((secondsLeft % 3600) / 60)
+      return NextResponse.json(
+        { error: `Claim limit reached (${user.claimLimit}/day). Resets at midnight MYT (in ${hoursLeft}h ${minsLeft}m).` },
+        { status: 429 }
+      )
+    }
     return NextResponse.json({ error: "This lead has already been claimed." }, { status: 409 })
   }
 
-  return NextResponse.json(txResult.lead)
+  return NextResponse.json(lead)
 }
