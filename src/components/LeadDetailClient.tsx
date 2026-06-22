@@ -517,6 +517,17 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                     <p className="text-xs text-gray-400">{lead.assignedTo.email}</p>
                   </div>
                 </div>
+                {lead.claimedAt && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Claimed on{" "}
+                    <span className="text-gray-600 font-medium">
+                      {new Date(lead.claimedAt).toLocaleString("en-MY", {
+                        day: "numeric", month: "short", year: "numeric",
+                        hour: "2-digit", minute: "2-digit",
+                      })}
+                    </span>
+                  </p>
+                )}
               </div>
             )}
 

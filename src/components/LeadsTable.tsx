@@ -164,12 +164,13 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Notes</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Added</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
-              <tr><td colSpan={showAssignedTo ? 8 : 7}>{empty}</td></tr>
+              <tr><td colSpan={showAssignedTo ? 9 : 8}>{empty}</td></tr>
             )}
             {leads.map((lead) => (
               <tr
@@ -286,6 +287,16 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                     </span>
                   ) : (
                     <span className="text-xs text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-5 py-3.5 text-xs text-gray-400">
+                  {lead.claimedAt ? (
+                    <div>
+                      <div>{new Date(lead.claimedAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", year: "numeric" })}</div>
+                      <div className="text-gray-300">{new Date(lead.claimedAt).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" })}</div>
+                    </div>
+                  ) : (
+                    <span className="text-gray-300">—</span>
                   )}
                 </td>
                 <td className="px-5 py-3.5 text-xs text-gray-400">
