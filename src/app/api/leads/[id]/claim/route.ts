@@ -57,14 +57,29 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const nowInMYT = nowMs + MYT_OFFSET
   const startOfDayInMYT = nowInMYT - (nowInMYT % (24 * 60 * 60 * 1000))
   const startOfDayUTC = new Date(startOfDayInMYT - MYT_OFFSET)
+  const nextMidnightUTC = new Date(startOfDayInMYT + 24 * 60 * 60 * 1000 - MYT_OFFSET)
 
-  // Count by claimedById so reassigning a lead to a team member doesn't reduce the count
-  const todayClaims = await db.lead.count({
-    where: { claimedById: session.user.id, claimedAt: { gte: startOfDayUTC } },
-  })
+  // Serializable transaction so concurrent claim attempts can't both pass the limit check
+  type TxResult = { tooMany: true } | { lead: Awaited<ReturnType<typeof db.lead.update>> } | { conflict: true }
+  let txResult: TxResult
+  try {
+    txResult = await db.$transaction(async (tx) => {
+      const todayClaims = await tx.lead.count({
+        where: { claimedById: session.user.id, claimedAt: { gte: startOfDayUTC } },
+      })
+      if (todayClaims >= user.claimLimit) return { tooMany: true }
+      const lead = await tx.lead.update({
+        where: { id, assignedToId: null },
+        data: { assignedToId: session.user.id, claimedById: session.user.id, claimedAt: new Date() },
+      }).catch(() => null)
+      if (!lead) return { conflict: true }
+      return { lead }
+    }, { isolationLevel: "Serializable" })
+  } catch {
+    return NextResponse.json({ error: "This lead has already been claimed." }, { status: 409 })
+  }
 
-  if (todayClaims >= user.claimLimit) {
-    const nextMidnightUTC = new Date(startOfDayInMYT + 24 * 60 * 60 * 1000 - MYT_OFFSET)
+  if ("tooMany" in txResult) {
     const secondsLeft = Math.ceil((nextMidnightUTC.getTime() - nowMs) / 1000)
     const hoursLeft = Math.floor(secondsLeft / 3600)
     const minsLeft = Math.floor((secondsLeft % 3600) / 60)
@@ -74,13 +89,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     )
   }
 
-  try {
-    const lead = await db.lead.update({
-      where: { id, assignedToId: null },
-      data: { assignedToId: session.user.id, claimedById: session.user.id, claimedAt: new Date() },
-    })
-    return NextResponse.json(lead)
-  } catch {
+  if ("conflict" in txResult) {
     return NextResponse.json({ error: "This lead has already been claimed." }, { status: 409 })
   }
+
+  return NextResponse.json(txResult.lead)
 }
