@@ -17,6 +17,14 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.13.0",
+    date: "2026-06-25",
+    title: "Quality of Life",
+    items: [
+      "Middle-click a lead to open it in a new tab — handy for working multiple leads side by side",
+    ],
+  },
+  {
     version: "1.12.0",
     date: "2026-06-22",
     title: "Claim Tracking & Bug Fixes",
