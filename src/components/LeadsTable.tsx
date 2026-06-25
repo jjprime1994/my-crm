@@ -88,7 +88,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
             <div
               key={lead.id}
               onClick={() => router.push(`/leads/${lead.id}`)}
-              onAuxClick={(e) => { if (e.button === 1) window.open(`/leads/${lead.id}`, "_blank") }}
+              onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); window.open(`/leads/${lead.id}`, "_blank") } }}
               className="flex items-start gap-3 bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3.5 hover:bg-gray-50 transition cursor-pointer"
             >
               <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
@@ -177,7 +177,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
               <tr
                 key={lead.id}
                 onClick={() => router.push(`/leads/${lead.id}`)}
-                onAuxClick={(e) => { if (e.button === 1) window.open(`/leads/${lead.id}`, "_blank") }}
+                onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); window.open(`/leads/${lead.id}`, "_blank") } }}
                 className="hover:bg-gray-50/70 transition cursor-pointer"
               >
                 <td className="px-5 py-3.5">
