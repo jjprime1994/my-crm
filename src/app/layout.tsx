@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Geist } from "next/font/google"
 import "./globals.css"
 import PwaRegister from "@/components/PwaRegister"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
   title: "Nu Vending CRM",
@@ -21,8 +21,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} h-full`}>
-      <body className="h-full bg-gray-50 font-sans antialiased">
+    <html lang="en" suppressHydrationWarning className={`${geist.variable} h-full`}>
+      <head>
+        {/* Prevent dark mode flash by applying class before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})()` }} />
+      </head>
+      <body className="h-full font-sans antialiased">
         <PwaRegister />
         {children}
       </body>

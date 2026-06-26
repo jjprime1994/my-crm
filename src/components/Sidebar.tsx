@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react"
 import { isAdmin, isSuperAdmin, isManagerLevel } from "@/lib/roles"
 import ViewAsSelector from "@/components/ViewAsSelector"
 import { PATCH_NOTES, compareVersions } from "@/lib/patch-notes"
+import ThemeToggle from "@/components/ThemeToggle"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
@@ -221,6 +222,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
 
       {/* Settings + FAQ */}
       <div className="px-3 pb-1 border-t border-slate-800 pt-2">
+        <ThemeToggle />
         {[
           { href: "/patch-notes", label: "What's New", icon: Icons.whatsNew, badge: unreadPatch },
           { href: "/feedback", label: "Feedback", icon: Icons.feedback, badge: 0 },
