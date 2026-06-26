@@ -22,6 +22,7 @@ export const PATCH_NOTES: PatchNote[] = [
     title: "Quality of Life",
     items: [
       "Middle-click a lead to open it in a new tab — handy for working multiple leads side by side",
+      "On mobile, long-press a lead card to get the browser's Open in New Tab option",
     ],
   },
   {
