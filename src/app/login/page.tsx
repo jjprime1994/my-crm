@@ -3,6 +3,10 @@
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -74,36 +78,38 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             {error && (
-              <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+              <Alert variant="destructive">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
                   <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
-                {error}
-              </div>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-700">Email address</label>
-              <input
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white"
                 placeholder="you@example.com"
+                className="bg-gray-50 focus:bg-white"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <input
+                <Input
+                  id="password"
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white"
                   placeholder="••••••••"
+                  className="bg-gray-50 focus:bg-white pr-11"
                 />
                 <button
                   type="button"
@@ -124,20 +130,21 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-3 rounded-xl text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-sm shadow-blue-200"
+              className="w-full"
+              size="lg"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
+                <span className="flex items-center gap-2">
                   <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                   </svg>
                   Signing in…
                 </span>
               ) : "Sign in"}
-            </button>
+            </Button>
           </form>
         </div>
       </div>
