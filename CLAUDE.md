@@ -35,6 +35,7 @@ META_PAGE_ACCESS_TOKEN    # Facebook Graph API token for fetching lead details
 - **NextAuth v5** (beta) — credentials-based auth, JWT sessions
 - **Prisma 7** + **PostgreSQL** — via `@prisma/adapter-pg` driver adapter
 - **Tailwind CSS v4**
+- **shadcn/ui** — standard UI component library (buttons, modals, forms, dropdowns, inputs, charts, etc.). Always use shadcn/ui components for new UI work. Add components via `npx shadcn@latest add <component>`. Tremor is NOT installed — shadcn/ui charts cover dashboard needs.
 
 ### Data Model
 
