@@ -85,10 +85,10 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
           const days = Math.floor((Date.now() - new Date(lead.updatedAt).getTime()) / 86400000)
           const stale = lead.status !== "CLOSED_WON" && lead.status !== "CLOSED_LOST" && days >= 2
           return (
-            <div
+            <a
               key={lead.id}
-              onClick={() => router.push(`/leads/${lead.id}`)}
-              onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); window.open(`/leads/${lead.id}`, "_blank") } }}
+              href={`/leads/${lead.id}`}
+              onClick={(e) => { e.preventDefault(); router.push(`/leads/${lead.id}`) }}
               className="flex items-start gap-3 bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3.5 hover:bg-gray-50 transition cursor-pointer"
             >
               <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
@@ -146,7 +146,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                   </div>
                 </div>
               </div>
-            </div>
+            </a>
           )
         })}
       </div>
