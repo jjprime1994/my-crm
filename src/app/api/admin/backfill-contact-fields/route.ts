@@ -12,15 +12,7 @@ function getField(fields: FieldEntry[], ...keys: string[]): string | undefined {
   }
 }
 
-export async function POST(req: Request) {
-  const url = new URL(req.url)
-  const key = url.searchParams.get("key")
-  if (key !== process.env.BACKFILL_SECRET || !key) {
-    const session = await auth()
-    if (!session || !isSuperAdmin(session.user.role))
-      return new NextResponse("Forbidden", { status: 403 })
-  }
-
+async function runBackfill() {
   const leads = await db.lead.findMany({
     where: {
       OR: [{ phone: null }, { email: null }, { firstName: null }],
@@ -70,21 +62,25 @@ export async function POST(req: Request) {
     updated++
   }
 
-  return NextResponse.json({ total: leads.length, updated, skipped })
+  return { total: leads.length, updated, skipped }
 }
 
-export async function GET() {
+export async function POST(req: Request) {
+  const url = new URL(req.url)
+  const key = url.searchParams.get("key")
+  if (key !== process.env.BACKFILL_SECRET || !key) {
+    const session = await auth()
+    if (!session || !isSuperAdmin(session.user.role))
+      return new NextResponse("Forbidden", { status: 403 })
+  }
+
+  return NextResponse.json(await runBackfill())
+}
+
+export async function GET(req: Request) {
   const session = await auth()
   if (!session || !isSuperAdmin(session.user.role))
     return new NextResponse("Forbidden", { status: 403 })
 
-  const total = await db.lead.count({ where: { OR: [{ phone: null }, { email: null }, { firstName: null }] } })
-  const withRawFieldData = await db.lead.count({
-    where: {
-      OR: [{ phone: null }, { email: null }, { firstName: null }],
-      rawData: { not: {} },
-    },
-  })
-
-  return NextResponse.json({ leadsWithMissingContactFields: total, withRawFieldData })
+  return NextResponse.json(await runBackfill())
 }
