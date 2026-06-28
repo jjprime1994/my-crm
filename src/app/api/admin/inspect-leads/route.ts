@@ -46,8 +46,24 @@ export async function GET() {
     }
   })
 
+  // Collect unique field names from blank leads
+  const blankLeads = await db.lead.findMany({
+    where: { OR: [{ phone: null }, { email: null }, { firstName: null }] },
+    select: { rawData: true },
+    take: 200,
+  })
+  const fieldNameCounts: Record<string, number> = {}
+  for (const l of blankLeads) {
+    const raw = l.rawData as Record<string, unknown> | null
+    const fd = raw?.field_data
+    if (!Array.isArray(fd)) continue
+    for (const f of fd as { name: string }[]) {
+      fieldNameCounts[f.name] = (fieldNameCounts[f.name] ?? 0) + 1
+    }
+  }
+
   return new NextResponse(
-    `<pre style="font-family:monospace;padding:2rem;font-size:13px">${JSON.stringify({ summary, recent20: recent }, null, 2)}</pre>`,
+    `<pre style="font-family:monospace;padding:2rem;font-size:13px">${JSON.stringify({ summary, recent20: recent, fieldNamesInBlankLeads: fieldNameCounts }, null, 2)}</pre>`,
     { headers: { "Content-Type": "text/html" } }
   )
 }
