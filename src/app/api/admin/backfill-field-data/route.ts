@@ -11,7 +11,8 @@ async function runBackfill(token: string) {
 
   const toUpdate = leads.filter((l) => {
     const raw = l.rawData as Record<string, unknown> | null
-    return !raw?.field_data
+    const fd = raw?.field_data
+    return !fd || (Array.isArray(fd) && fd.length === 0)
   })
 
   let updated = 0, failed = 0, noData = 0
