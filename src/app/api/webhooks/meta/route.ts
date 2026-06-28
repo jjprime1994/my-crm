@@ -58,7 +58,13 @@ export async function POST(req: NextRequest) {
           `https://graph.facebook.com/v19.0/${leadgen_id}?fields=field_data&access_token=${token}`
         )
         const leadData = await leadRes.json()
+        if (leadData.error) {
+          console.error("[meta-webhook] leadgen fetch error:", JSON.stringify(leadData.error), "leadgen_id:", leadgen_id)
+        }
         const fields: { name: string; values: string[] }[] = leadData.field_data ?? []
+        if (fields.length === 0) {
+          console.warn("[meta-webhook] empty field_data for leadgen_id:", leadgen_id, "raw:", JSON.stringify(leadData))
+        }
         fieldData = fields
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
         email = get("email")
