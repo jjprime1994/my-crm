@@ -17,6 +17,17 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.14.0",
+    date: "2026-06-28",
+    title: "Meta Token Alert & Blank Lead Recovery",
+    items: [
+      "Super admins now receive a push notification the moment incoming leads start arriving blank — no more discovering the issue days later",
+      "When you get the alert 'Meta Token Broken', it means the Facebook access token has expired. To fix: log into the Nu Vending Meta Developer account → your app → Tools → Graph API Explorer → Generate Access Token (tick leads_retrieval) → copy the token → give it to your developer to update META_PAGE_ACCESS_TOKEN in Vercel",
+      "After updating the token, run /api/admin/backfill-contact-fields (while logged in as Super Admin) to recover contact info for any leads that came in blank during the outage",
+      "Alert is rate-limited to once per hour so you won't get spammed if many leads arrive during an outage",
+    ],
+  },
+  {
     version: "1.13.0",
     date: "2026-06-25",
     title: "Quality of Life",

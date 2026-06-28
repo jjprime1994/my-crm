@@ -3,6 +3,11 @@ import { db } from "@/lib/db"
 import crypto from "crypto"
 import { resolveStateBranch } from "@/lib/branch"
 import { assignToDefaultTeam } from "@/lib/assign-default-team"
+import { sendPushToSuperAdmins } from "@/lib/push"
+
+// Cooldown so super admins don't get spammed if many leads arrive while token is broken
+let lastTokenAlertAt = 0
+const TOKEN_ALERT_COOLDOWN_MS = 60 * 60 * 1000 // 1 hour
 
 // GET: Meta webhook verification
 export async function GET(req: NextRequest) {
@@ -60,6 +65,15 @@ export async function POST(req: NextRequest) {
         const leadData = await leadRes.json()
         if (leadData.error) {
           console.error("[meta-webhook] leadgen fetch error:", JSON.stringify(leadData.error), "leadgen_id:", leadgen_id)
+          const now = Date.now()
+          if (now - lastTokenAlertAt > TOKEN_ALERT_COOLDOWN_MS) {
+            lastTokenAlertAt = now
+            sendPushToSuperAdmins({
+              title: "⚠️ Meta Token Broken — Leads Coming in Blank",
+              body: "The Facebook access token has expired or lost permission. Go to patch notes for fix instructions.",
+              url: "/patch-notes",
+            }).catch(() => {})
+          }
         }
         const fields: { name: string; values: string[] }[] = leadData.field_data ?? []
         if (fields.length === 0) {
