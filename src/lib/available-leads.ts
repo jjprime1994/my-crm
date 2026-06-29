@@ -51,9 +51,21 @@ function filterLeads<T extends Lead>(
     const assignedTeams = adIsRouted && adName ? (routeIndex[adName] ?? []) : []
     const hasTeamsAssigned = assignedTeams.length > 0
 
-    // Lead is effectively unrouted when: no AdRoute record exists, or the route has no teams
-    // assigned yet. When a default team is configured it handles these as the catch-all;
-    // otherwise fall through to all admins so leads are never invisible.
+    // Leads with no adName at all (source unknown) route by state coverage so they reach
+    // the right team without being locked to the default team.
+    if (!adName) {
+      if (!branch) return hasDefaultTeam ? effectiveAdmin.isDefaultTeam : true
+      if (effectiveAdmin.coveredStates.length === 0) {
+        const anyTeamCoversThisState = Object.entries(managerStates).some(
+          ([id, states]) => id !== effectiveAdmin.id && states.length > 0 && states.includes(branch)
+        )
+        return !anyTeamCoversThisState
+      }
+      return effectiveAdmin.coveredStates.includes(branch)
+    }
+
+    // Lead has an adName but no AdRoute configured (or route has no teams yet).
+    // Default team handles these as catch-all; otherwise visible to all.
     if (!adIsRouted || !hasTeamsAssigned) {
       return hasDefaultTeam ? effectiveAdmin.isDefaultTeam : true
     }
