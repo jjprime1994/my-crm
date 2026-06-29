@@ -106,7 +106,7 @@ export default function NotificationBell() {
                             {lead.firstName} {lead.lastName}
                           </p>
                           <p className={`text-xs ${overdue ? "text-rose-500 font-medium" : "text-amber-600"}`}>
-                            {overdue ? "Overdue" : "Due today"} · {due.toLocaleDateString("en-MY", { month: "short", day: "numeric" })}
+                            {overdue ? "Overdue" : "Due today"} · {due.toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
                           </p>
                         </div>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-300 shrink-0">

@@ -65,9 +65,9 @@ export async function GET(req: NextRequest) {
     l.source ?? "META",
     l.assignedTo?.name ?? "Unassigned",
     l.isDuplicate ? "Yes" : "No",
-    l.followUpAt ? new Date(l.followUpAt).toLocaleDateString("en-MY") : "",
-    new Date(l.createdAt).toLocaleDateString("en-MY"),
-    new Date(l.updatedAt).toLocaleDateString("en-MY"),
+    l.followUpAt ? new Date(l.followUpAt).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }) : "",
+    new Date(l.createdAt).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }),
+    new Date(l.updatedAt).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }),
   ])
 
   const csv = "﻿" + [headers, ...rows]

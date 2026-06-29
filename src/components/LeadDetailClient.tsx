@@ -220,7 +220,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
             <p className="text-sm font-semibold text-amber-800">This is a duplicate lead</p>
             <p className="text-sm text-amber-700 mt-0.5">
               {lead.dupSibling
-                ? `This contact previously submitted via ${lead.dupSibling.campaignName ?? "another campaign"} on ${new Date(lead.dupSibling.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}${lead.dupSibling.assignedTo ? ` — handled by ${lead.dupSibling.assignedTo.name}` : ""}.`
+                ? `This contact previously submitted via ${lead.dupSibling.campaignName ?? "another campaign"} on ${new Date(lead.dupSibling.createdAt).toLocaleDateString("en-MY", { month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Kuala_Lumpur" })}${lead.dupSibling.assignedTo ? ` — handled by ${lead.dupSibling.assignedTo.name}` : ""}.`
                 : "This contact has submitted a lead via another campaign before."}
             </p>
           </div>
@@ -262,7 +262,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                   return null
                 })()}
                 <span className="text-xs text-gray-400">
-                  Added {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  Added {new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
                 </span>
               </div>
             </div>

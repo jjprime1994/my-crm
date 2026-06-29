@@ -581,7 +581,7 @@ export default async function SuperAdminOverviewPage({
                 <td className="px-6 py-3.5 text-sm text-gray-500 max-w-[150px] truncate">{lead.campaignName ?? lead.adName ?? "—"}</td>
                 <td className="px-6 py-3.5 text-sm text-gray-600">{lead.assignedTo?.name ?? <span className="text-gray-300 text-xs">Unassigned</span>}</td>
                 <td className="px-6 py-3.5 text-xs text-gray-400">
-                  {new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric" })}
+                  {new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
                 </td>
               </tr>
             ))}

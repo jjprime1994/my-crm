@@ -105,7 +105,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                     <p className="text-xs text-gray-400 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
                     {lead.isDuplicate && lead.dupSibling && (
                       <p className="text-[10px] text-amber-600 mt-0.5 truncate">
-                        Orig: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        Orig: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
                       </p>
                     )}
                   </div>
@@ -142,7 +142,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                         {WA_ICON}
                       </a>
                     )}
-                    <span className="text-xs text-gray-400">{new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    <span className="text-xs text-gray-400">{new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}</span>
                   </div>
                 </div>
               </div>
@@ -192,7 +192,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 ring-1 ring-amber-200">DUP</span>
                           {lead.dupSibling && (
                             <span className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/dup:block bg-gray-800 text-white text-xs rounded-lg px-2.5 py-1.5 whitespace-nowrap z-20 shadow-lg">
-                              Orig: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {STATUS_LABELS[lead.dupSibling.status as LeadStatus] ?? lead.dupSibling.status}
+                              Orig: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })} · {STATUS_LABELS[lead.dupSibling.status as LeadStatus] ?? lead.dupSibling.status}
                             </span>
                           )}
                         </span>
@@ -294,15 +294,18 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                 <td className="px-5 py-3.5 text-xs text-gray-400">
                   {lead.claimedAt ? (
                     <div>
-                      <div>{new Date(lead.claimedAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", year: "numeric" })}</div>
-                      <div className="text-gray-300">{new Date(lead.claimedAt).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" })}</div>
+                      <div>{new Date(lead.claimedAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kuala_Lumpur" })}</div>
+                      <div className="text-gray-300">{new Date(lead.claimedAt).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })}</div>
                     </div>
                   ) : (
-                    <span className="text-gray-300">—</span>
+                    <div className="text-gray-300">
+                      <div>{new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kuala_Lumpur" })}</div>
+                      <div className="text-gray-200 text-[10px]">Assigned</div>
+                    </div>
                   )}
                 </td>
                 <td className="px-5 py-3.5 text-xs text-gray-400">
-                  {new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
                 </td>
               </tr>
             ))}

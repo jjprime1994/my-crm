@@ -33,7 +33,7 @@ function dupReason(lead: Lead): string {
     const s = lead.dupSibling
     const status = STATUS_LABEL[s.status] ?? s.status
     const campaign = s.campaignName ?? "Unknown campaign"
-    const date = new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    const date = new Date(s.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })
     const claimedBy = s.assignedTo?.name ? `Claimed by ${s.assignedTo.name}` : null
     return [claimedBy, campaign, date, status].filter(Boolean).join(" · ")
   }
