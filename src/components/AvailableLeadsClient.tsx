@@ -19,6 +19,27 @@ type Lead = {
   dupSibling?: { campaignName?: string | null; createdAt: Date | string; status: string } | null
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  NEW: "New",
+  CONTACTED: "Contacted",
+  QUALIFIED: "Qualified",
+  PROPOSAL: "Proposal",
+  CLOSED_WON: "Won",
+  CLOSED_LOST: "Lost",
+}
+
+function dupReason(lead: Lead): string {
+  if (lead.isDuplicate && lead.dupSibling) {
+    const s = lead.dupSibling
+    const status = STATUS_LABEL[s.status] ?? s.status
+    const campaign = s.campaignName ?? "Unknown campaign"
+    const date = new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    return `${campaign} · ${date} · ${status}`
+  }
+  if (lead.claimedBefore) return "Contact was previously claimed"
+  return ""
+}
+
 function SourceBadge({ source }: { source?: string | null }) {
   if (source === "TIKTOK") {
     return (
@@ -194,8 +215,8 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                   {(lead.campaignName ?? lead.adName) && (
                     <p className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</p>
                   )}
-                  {(lead.isDuplicate || lead.claimedBefore) && lead.dupSibling && (
-                    <p className="text-[10px] text-amber-600 truncate w-full">Prev: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                  {(lead.isDuplicate || lead.claimedBefore) && dupReason(lead) && (
+                    <p className="text-[10px] text-amber-600 truncate w-full">{dupReason(lead)}</p>
                   )}
                 </div>
               </div>
@@ -279,9 +300,9 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                     {(lead.isDuplicate || lead.claimedBefore) && (
                       <span className="relative group/dup cursor-default">
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">DUP</span>
-                        {lead.dupSibling && (
+                        {dupReason(lead) && (
                           <span className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/dup:block bg-gray-800 text-white text-xs rounded-lg px-2.5 py-1.5 whitespace-nowrap z-20 shadow-lg">
-                            Prev: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            {dupReason(lead)}
                           </span>
                         )}
                       </span>
