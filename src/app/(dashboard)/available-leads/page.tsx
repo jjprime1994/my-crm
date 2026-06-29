@@ -52,7 +52,7 @@ export default async function AvailableLeadsPage() {
   const dupSiblings = dupPhones.length > 0
     ? await db.lead.findMany({
         where: { phone: { in: dupPhones }, isDuplicate: false },
-        select: { phone: true, campaignName: true, createdAt: true, status: true },
+        select: { phone: true, campaignName: true, createdAt: true, status: true, assignedTo: { select: { name: true } } },
       })
     : []
   const siblingByPhone = Object.fromEntries(dupSiblings.map((s) => [s.phone!, s]))

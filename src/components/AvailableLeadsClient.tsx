@@ -16,7 +16,7 @@ type Lead = {
   isDuplicate?: boolean | null
   claimedBefore?: boolean
   createdAt: Date | string
-  dupSibling?: { campaignName?: string | null; createdAt: Date | string; status: string } | null
+  dupSibling?: { campaignName?: string | null; createdAt: Date | string; status: string; assignedTo?: { name: string } | null } | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -34,7 +34,8 @@ function dupReason(lead: Lead): string {
     const status = STATUS_LABEL[s.status] ?? s.status
     const campaign = s.campaignName ?? "Unknown campaign"
     const date = new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    return `${campaign} · ${date} · ${status}`
+    const claimedBy = s.assignedTo?.name ? `Claimed by ${s.assignedTo.name}` : null
+    return [claimedBy, campaign, date, status].filter(Boolean).join(" · ")
   }
   if (lead.claimedBefore) return "Contact was previously claimed"
   return ""
