@@ -116,7 +116,7 @@ export async function getAvailableLeads(userId: string, role: string) {
       select: { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, isDuplicate: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     }),
-    db.adRoute.findMany().catch(() => []),
+    db.adRoute.findMany({ where: { archived: false } }).catch(() => []),
     db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
     getEffectiveAdmin(userId, role).catch(() => null),
   ])
@@ -154,7 +154,7 @@ export async function getAvailableLeadsCount(userId: string, role: string): Prom
         where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
         select: { adName: true, branch: true },
       }),
-      db.adRoute.findMany({ select: { adName: true, teamIds: true } }).catch(() => []),
+      db.adRoute.findMany({ where: { archived: false }, select: { adName: true, teamIds: true } }).catch(() => []),
       db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
       getEffectiveAdmin(userId, role).catch(() => null),
     ])
