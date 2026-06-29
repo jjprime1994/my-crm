@@ -49,6 +49,10 @@ export async function POST(req: NextRequest) {
 
   const requestedRole = role ?? "SALESPERSON"
 
+  // Only SUPER_ADMIN can create other SUPER_ADMIN accounts
+  if (requestedRole === "SUPER_ADMIN" && !isSuperAdmin(session.user.role)) {
+    return new NextResponse("Only Super Admin can create Super Admin accounts", { status: 403 })
+  }
   // Only SUPER_ADMIN can create managers
   if (requestedRole === "ADMIN" && !isSuperAdmin(session.user.role)) {
     return new NextResponse("Only Super Admin can create managers", { status: 403 })

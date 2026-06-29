@@ -15,17 +15,20 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
 
-  // Verify HMAC-SHA256 signature from TikTok
-  // TikTok sends the signature in the x-tiktok-signature header
+  // Verify HMAC-SHA256 signature from TikTok — return 200 even on failure so TikTok doesn't retry
+  const webhookSecret = process.env.TIKTOK_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    console.error("[tiktok-webhook] TIKTOK_WEBHOOK_SECRET not configured — payload rejected")
+    return NextResponse.json({ ok: true })
+  }
   const signature = req.headers.get("x-tiktok-signature")
-  if (process.env.TIKTOK_WEBHOOK_SECRET && signature) {
-    const expected = crypto
-      .createHmac("sha256", process.env.TIKTOK_WEBHOOK_SECRET)
-      .update(rawBody)
-      .digest("hex")
-    if (signature !== expected) {
-      return NextResponse.json({ ok: true })
-    }
+  if (!signature) {
+    console.error("[tiktok-webhook] Missing x-tiktok-signature header — payload rejected")
+    return NextResponse.json({ ok: true })
+  }
+  const expected = crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex")
+  if (signature !== expected) {
+    return NextResponse.json({ ok: true })
   }
 
   let body: Record<string, unknown>

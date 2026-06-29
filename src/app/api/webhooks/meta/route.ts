@@ -27,18 +27,20 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
 
-  // Verify signature from Meta — return 200 even on mismatch so Meta doesn't mark as rejected
+  // Verify signature from Meta — return 200 even on failure so Meta doesn't retry
+  const appSecret = process.env.META_APP_SECRET
+  if (!appSecret) {
+    console.error("[meta-webhook] META_APP_SECRET not configured — payload rejected")
+    return NextResponse.json({ ok: true })
+  }
   const signature = req.headers.get("x-hub-signature-256")
-  if (process.env.META_APP_SECRET && signature) {
-    const expectedSig =
-      "sha256=" +
-      crypto
-        .createHmac("sha256", process.env.META_APP_SECRET)
-        .update(rawBody)
-        .digest("hex")
-    if (signature !== expectedSig) {
-      return NextResponse.json({ ok: true })
-    }
+  if (!signature) {
+    console.error("[meta-webhook] Missing x-hub-signature-256 header — payload rejected")
+    return NextResponse.json({ ok: true })
+  }
+  const expectedSig = "sha256=" + crypto.createHmac("sha256", appSecret).update(rawBody).digest("hex")
+  if (signature !== expectedSig) {
+    return NextResponse.json({ ok: true })
   }
 
   const body = JSON.parse(rawBody)
