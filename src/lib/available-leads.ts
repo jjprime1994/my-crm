@@ -106,6 +106,32 @@ function filterLeads<T extends Lead>(
   })
 }
 
+// Build a Prisma WHERE fragment that excludes leads from other teams' ad routes.
+// Non-default teams don't need to load the entire unassigned pool — they only need:
+//   1. Leads from their own ad routes
+//   2. Leads with no adName (routed by state, filtered further in JS)
+//   3. Unrouted leads (no route exists) when there's no default team to catch them
+// Default teams load everything because they handle overflow from all other routes.
+function buildAdNameFilter(
+  effectiveAdmin: AdminInfo,
+  allRoutes: { adName: string; teamIds: string[] }[],
+  hasDefaultTeam: boolean,
+): { OR?: object[] } {
+  if (!effectiveAdmin || effectiveAdmin.isDefaultTeam) return {}
+
+  const myAdNames = allRoutes.filter((r) => r.teamIds.includes(effectiveAdmin.id)).map((r) => r.adName)
+  const allRoutedAdNames = allRoutes.map((r) => r.adName)
+
+  const or: object[] = [
+    { adName: null }, // no-source leads, state-filtered later in JS
+    ...(myAdNames.length > 0 ? [{ adName: { in: myAdNames } }] : []),
+    // Unrouted leads: only include when there's no default team (otherwise default team handles them)
+    ...(!hasDefaultTeam && allRoutedAdNames.length > 0 ? [{ adName: { notIn: allRoutedAdNames } }] : []),
+  ]
+
+  return { OR: or }
+}
+
 export async function getAvailableLeads(userId: string, role: string) {
   // StateRoute members only see unassigned leads from their assigned state(s)
   const stateRoutes = await db.stateRoute.findMany({
@@ -122,12 +148,8 @@ export async function getAvailableLeads(userId: string, role: string) {
     })
   }
 
-  const [allLeads, allRoutes, allManagers, effectiveAdmin] = await Promise.all([
-    db.lead.findMany({
-      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, isDuplicate: true, createdAt: true },
-      orderBy: { createdAt: "desc" },
-    }),
+  // Step 1: fetch routing config first — lightweight, needed to build the lead query
+  const [allRoutes, allManagers, effectiveAdmin] = await Promise.all([
     db.adRoute.findMany({ where: { archived: false } }).catch(() => []),
     db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
     getEffectiveAdmin(userId, role).catch(() => null),
@@ -137,6 +159,17 @@ export async function getAvailableLeads(userId: string, role: string) {
   const routedAdNames = new Set(allRoutes.map((r) => r.adName))
   const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
   const hasDefaultTeam = allManagers.some((m) => m.isDefaultTeam)
+
+  // Step 2: pre-filter leads in the DB — non-default teams skip other teams' ad routes entirely,
+  // avoiding a full table scan of the unassigned pool on every page load.
+  const adNameFilter = buildAdNameFilter(effectiveAdmin, allRoutes, hasDefaultTeam)
+
+  // Step 3: fetch only leads that can possibly be visible to this admin
+  const allLeads = await db.lead.findMany({
+    where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, ...adNameFilter },
+    select: { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, isDuplicate: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  })
 
   return filterLeads(allLeads, effectiveAdmin, routeIndex, routedAdNames, managerStates, hasDefaultTeam)
 }
@@ -160,12 +193,7 @@ export async function getAvailableLeadsCount(userId: string, role: string): Prom
       }).catch(() => 0)
     }
 
-    // Fetch only the two fields filterLeads needs — avoids transferring full lead rows just for a count
-    const [leanLeads, allRoutes, allManagers, effectiveAdmin] = await Promise.all([
-      db.lead.findMany({
-        where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
-        select: { adName: true, branch: true },
-      }),
+    const [allRoutes, allManagers, effectiveAdmin] = await Promise.all([
       db.adRoute.findMany({ where: { archived: false }, select: { adName: true, teamIds: true } }).catch(() => []),
       db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
       getEffectiveAdmin(userId, role).catch(() => null),
@@ -174,6 +202,11 @@ export async function getAvailableLeadsCount(userId: string, role: string): Prom
     const routedAdNames = new Set(allRoutes.map((r) => r.adName))
     const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
     const hasDefaultTeam = allManagers.some((m) => m.isDefaultTeam)
+    const adNameFilter = buildAdNameFilter(effectiveAdmin, allRoutes, hasDefaultTeam)
+    const leanLeads = await db.lead.findMany({
+      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] }, ...adNameFilter },
+      select: { adName: true, branch: true },
+    })
     return filterLeads(leanLeads, effectiveAdmin, routeIndex, routedAdNames, managerStates, hasDefaultTeam).length
   } catch {
     return 0

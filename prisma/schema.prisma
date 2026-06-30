@@ -73,10 +73,15 @@ model Lead {
   @@index([assignedToId])
   @@index([assignedToId, status])
   @@index([assignedToId, claimedAt])
+  @@index([assignedToId, followUpAt])
   @@index([claimedById, claimedAt])
   @@index([status])
   @@index([isDuplicate, assignedToId])
   @@index([createdAt])
+  @@index([phone])
+  @@index([email])
+  @@index([branch])
+  @@index([adName])
 }
 
 model AdRoute {
