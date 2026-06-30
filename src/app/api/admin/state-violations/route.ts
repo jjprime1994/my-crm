@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   await db.lead.updateMany({
     where: { id: { in: violations.map((v) => v.leadId) } },
-    data: { assignedToId: null, claimedAt: null },
+    data: { assignedToId: null, claimedById: null, claimedAt: null },
   })
 
   return NextResponse.json({ unassigned: violations.length })
