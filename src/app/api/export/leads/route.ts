@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
     where,
     include: { assignedTo: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
+    take: 50000,
   })
 
   const headers = [
@@ -70,8 +71,14 @@ export async function GET(req: NextRequest) {
     new Date(l.updatedAt).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }),
   ])
 
+  const sanitize = (cell: string) => {
+    const s = String(cell)
+    // Prefix formula-triggering characters to prevent Excel injection
+    return /^[=+\-@]/.test(s) ? `\t${s}` : s
+  }
+
   const csv = "﻿" + [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .map((row) => row.map((cell) => `"${sanitize(String(cell)).replace(/"/g, '""')}"`).join(","))
     .join("\r\n")
 
   return new NextResponse(csv, {

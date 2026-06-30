@@ -16,19 +16,25 @@ export async function POST(req: NextRequest) {
     return new NextResponse("No leads specified", { status: 400 })
   }
 
-  await db.lead.updateMany({
-    where: { id: { in: leadIds } },
-    data: { assignedToId: assignedToId || null },
-  })
+  if (assignedToId) {
+    const target = await db.user.findUnique({ where: { id: assignedToId }, select: { id: true } })
+    if (!target) return new NextResponse("Assignee not found", { status: 400 })
+  }
 
-  await db.leadAssignmentLog.createMany({
-    data: leadIds.map((leadId: string) => ({
-      leadId,
-      assignedToId: assignedToId || null,
-      assignedById: session.user.id,
-      source: "BULK_ASSIGN",
-    })),
-  })
+  await db.$transaction([
+    db.lead.updateMany({
+      where: { id: { in: leadIds } },
+      data: { assignedToId: assignedToId || null },
+    }),
+    db.leadAssignmentLog.createMany({
+      data: leadIds.map((leadId: string) => ({
+        leadId,
+        assignedToId: assignedToId || null,
+        assignedById: session.user.id,
+        source: "BULK_ASSIGN",
+      })),
+    }),
+  ])
 
   // Notify the assignee
   if (assignedToId) {

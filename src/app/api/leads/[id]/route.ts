@@ -46,7 +46,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { status, assignedToId, followUpAt } = body
   const data: { status?: LeadStatus; assignedToId?: string | null; followUpAt?: Date | null } = {}
 
-  if (status) data.status = status as LeadStatus
+  const VALID_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
+  if (status) {
+    if (!VALID_STATUSES.includes(status)) return new NextResponse("Invalid status", { status: 400 })
+    data.status = status as LeadStatus
+  }
   if ("followUpAt" in body) data.followUpAt = followUpAt ? new Date(followUpAt) : null
 
   if ("assignedToId" in body) {
@@ -58,34 +62,34 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Record status change history
   if (status && status !== existing.status) {
-    db.leadStatusHistory.create({
+    await db.leadStatusHistory.create({
       data: {
         leadId: id,
         from: existing.status,
         to: status as LeadStatus,
         changedById: session.user.id,
       },
-    }).catch(() => {})
+    }).catch((e) => console.error("Failed to write status history:", e))
 
     if (status === "CONTACTED") {
-      db.lead.updateMany({
+      await db.lead.updateMany({
         where: { id, firstContactedAt: null },
         data: { firstContactedAt: new Date() },
-      }).catch(() => {})
+      }).catch((e) => console.error("Failed to set firstContactedAt:", e))
     }
   }
 
   // Record assignment change and notify salesperson
   const assignmentChanged = "assignedToId" in body && data.assignedToId !== existing.assignedToId
   if (assignmentChanged) {
-    db.leadAssignmentLog.create({
+    await db.leadAssignmentLog.create({
       data: {
         leadId: id,
         assignedToId: data.assignedToId ?? null,
         assignedById: session.user.id,
         source: "SINGLE_ASSIGN",
       },
-    }).catch(() => {})
+    }).catch((e) => console.error("Failed to write assignment log:", e))
 
     if (data.assignedToId) {
       sendPushToUser(data.assignedToId, {

@@ -67,8 +67,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!body.name?.trim()) return new NextResponse("Name is required", { status: 400 })
     data.name = body.name.trim()
   }
-  if ("claimLimit" in body) data.claimLimit = Number(body.claimLimit)
-  if ("newLeadThreshold" in body) data.newLeadThreshold = Number(body.newLeadThreshold)
+  if ("claimLimit" in body) {
+    const v = Number(body.claimLimit)
+    if (!Number.isInteger(v) || v < 1 || v > 100) return new NextResponse("claimLimit must be an integer between 1 and 100", { status: 400 })
+    data.claimLimit = v
+  }
+  if ("newLeadThreshold" in body) {
+    const v = Number(body.newLeadThreshold)
+    if (!Number.isInteger(v) || v < 0 || v > 10000) return new NextResponse("newLeadThreshold must be an integer between 0 and 10000", { status: 400 })
+    data.newLeadThreshold = v
+  }
   if ("managerId" in body) {
     if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
     data.managerId = body.managerId || null

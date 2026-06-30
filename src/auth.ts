@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { db } from "@/lib/db"
 import bcrypt from "bcryptjs"
+import { authConfig } from "@/auth.config"
 
 // In-memory rate limiter: max 10 failed attempts per email per 15 minutes.
 // Resets on Vercel cold starts, which is acceptable for this team size.
@@ -31,6 +32,7 @@ function clearFailures(email: string) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -52,22 +54,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  session: { strategy: "jwt" },
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = (user as { role?: string }).role
-      }
-      return token
-    },
-    session({ session, token }) {
-      session.user.id = token.id as string
-      session.user.role = token.role as string
-      return session
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
 })
