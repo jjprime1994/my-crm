@@ -135,15 +135,19 @@ export async function POST(req: NextRequest) {
       if (!branch && campaignName) branch = resolveStateBranch(campaignName)
       if (!branch && adName) branch = resolveStateBranch(adName)
 
-      // Auto-assign via StateRoute round-robin — only members of a StateRoute are eligible
+      // Auto-assign via StateRoute round-robin — only members of a StateRoute are eligible.
+      // The index is incremented atomically so concurrent webhooks get unique starting slots.
       let assignedToId: string | null = null
       if (branch) {
-        const stateRoute = await db.stateRoute.findUnique({
-          where: { state: branch },
-          select: { id: true, userIds: true, lastAssignedIndex: true },
-        })
-        if (stateRoute && stateRoute.userIds.length > 0) {
-          const userIds = stateRoute.userIds
+        const rows = await db.$queryRaw<{ userIds: string[]; slotIdx: number }[]>`
+          UPDATE "StateRoute"
+          SET "lastAssignedIndex" = "lastAssignedIndex" + 1
+          WHERE state = ${branch} AND array_length("userIds", 1) > 0
+          RETURNING "userIds",
+            (("lastAssignedIndex" - 1) % array_length("userIds", 1))::int AS "slotIdx"
+        `
+        if (rows.length > 0) {
+          const { userIds, slotIdx } = rows[0]
           const [users, activeCounts] = await Promise.all([
             db.user.findMany({ where: { id: { in: userIds } }, select: { id: true, claimLimit: true } }),
             db.lead.groupBy({
@@ -154,22 +158,12 @@ export async function POST(req: NextRequest) {
           ])
           const limitMap = Object.fromEntries(users.map((u) => [u.id, u.claimLimit]))
           const countMap = Object.fromEntries(activeCounts.map((r) => [r.assignedToId!, r._count.id]))
-          const startIdx = stateRoute.lastAssignedIndex % userIds.length
-          let chosenIdx = -1
           for (let i = 0; i < userIds.length; i++) {
-            const idx = (startIdx + i) % userIds.length
-            const uid = userIds[idx]
+            const uid = userIds[(slotIdx + i) % userIds.length]
             if ((countMap[uid] ?? 0) < (limitMap[uid] ?? 5)) {
               assignedToId = uid
-              chosenIdx = idx
               break
             }
-          }
-          if (chosenIdx !== -1) {
-            await db.stateRoute.update({
-              where: { id: stateRoute.id },
-              data: { lastAssignedIndex: chosenIdx + 1 },
-            })
           }
         }
       }

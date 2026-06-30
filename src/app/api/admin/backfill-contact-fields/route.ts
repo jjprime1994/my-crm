@@ -65,19 +65,15 @@ async function runBackfill() {
   return { total: leads.length, updated, skipped }
 }
 
-export async function POST(req: Request) {
-  const url = new URL(req.url)
-  const key = url.searchParams.get("key")
-  if (key !== process.env.BACKFILL_SECRET || !key) {
-    const session = await auth()
-    if (!session || !isSuperAdmin(session.user.role))
-      return new NextResponse("Forbidden", { status: 403 })
-  }
+export async function POST() {
+  const session = await auth()
+  if (!session || !isSuperAdmin(session.user.role))
+    return new NextResponse("Forbidden", { status: 403 })
 
   return NextResponse.json(await runBackfill())
 }
 
-export async function GET(req: Request) {
+export async function GET() {
   const session = await auth()
   if (!session || !isSuperAdmin(session.user.role))
     return new NextResponse("Forbidden", { status: 403 })

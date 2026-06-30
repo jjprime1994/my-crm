@@ -52,13 +52,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const url = new URL(req.url)
-  const key = url.searchParams.get("key")
-  if (key !== process.env.BACKFILL_SECRET) {
-    const session = await auth()
-    if (!session || !isSuperAdmin(session.user.role))
-      return new NextResponse("Forbidden", { status: 403 })
-  }
+  const session = await auth()
+  if (!session || !isSuperAdmin(session.user.role))
+    return new NextResponse("Forbidden", { status: 403 })
 
   const token = process.env.META_PAGE_ACCESS_TOKEN
   if (!token) return new NextResponse("META_PAGE_ACCESS_TOKEN not set", { status: 500 })

@@ -117,8 +117,8 @@ model LeadNote {
   id        String   @id @default(cuid())
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   leadId    String
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId  String?
   content   String
   createdAt DateTime @default(now())
 }
@@ -161,10 +161,10 @@ model LeadAssignmentLog {
   id           String   @id @default(cuid())
   lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   leadId       String
-  assignedTo   User?    @relation("AssignedToLogs", fields: [assignedToId], references: [id])
+  assignedTo   User?    @relation("AssignedToLogs", fields: [assignedToId], references: [id], onDelete: SetNull)
   assignedToId String?
-  assignedBy   User     @relation("AssignedByLogs", fields: [assignedById], references: [id])
-  assignedById String
+  assignedBy   User?    @relation("AssignedByLogs", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedById String?
   source       String   @default("ADMIN")
   createdAt    DateTime @default(now())
 

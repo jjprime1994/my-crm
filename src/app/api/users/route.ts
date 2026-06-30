@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs"
 
 export async function GET() {
   const session = await auth()
-  if (!session) return new NextResponse("Unauthorized", { status: 401 })
+  if (!session || !isAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
 
   const users = await db.user.findMany({
     select: { id: true, name: true, email: true, role: true, createdAt: true },

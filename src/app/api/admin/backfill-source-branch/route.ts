@@ -119,12 +119,8 @@ async function run() {
 }
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url)
-  const key = url.searchParams.get("key")
-  if (key !== process.env.BACKFILL_SECRET || !key) {
-    const session = await auth()
-    if (!session || !isSuperAdmin(session.user.role))
-      return new NextResponse("Forbidden", { status: 403 })
-  }
+  const session = await auth()
+  if (!session || !isSuperAdmin(session.user.role))
+    return new NextResponse("Forbidden", { status: 403 })
   return NextResponse.json(await run())
 }

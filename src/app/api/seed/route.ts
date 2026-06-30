@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
-// One-time seed endpoint: POST /api/seed with { secret, name, email, password }
-// Set SEED_SECRET in .env and call this once to create your first admin account.
+// Bootstrap endpoint: POST /api/seed with { secret, name, email, password }
+// Only works when zero users exist in the database (first-run only).
 export async function POST(req: NextRequest) {
+  const userCount = await db.user.count()
+  if (userCount > 0) {
+    return new NextResponse("Not Found", { status: 404 })
+  }
+
   const { secret, name, email, password } = await req.json()
 
   if (!process.env.SEED_SECRET || secret !== process.env.SEED_SECRET) {

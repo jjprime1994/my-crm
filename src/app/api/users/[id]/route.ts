@@ -26,7 +26,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     if (target.managerId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
   }
 
-  await db.user.delete({ where: { id } })
+  try {
+    await db.user.delete({ where: { id } })
+  } catch {
+    return new NextResponse("Cannot delete user — they still have associated data. Reassign their leads first.", { status: 409 })
+  }
   return new NextResponse(null, { status: 204 })
 }
 
