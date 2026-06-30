@@ -6,6 +6,7 @@ type RepairResult = {
   total: number
   updated: number
   skipped: number
+  sourceBranchUpdated?: number
 }
 
 export default function RepairBlankLeadsButton() {
@@ -31,7 +32,11 @@ export default function RepairBlankLeadsButton() {
       // Step 2: extract contact fields from stored rawData into DB columns
       const step2 = await fetch("/api/admin/backfill-contact-fields", { method: "POST" })
       if (!step2.ok) throw new Error("Contact field extraction failed")
-      setResult(await step2.json())
+      const s2 = await step2.json()
+      // Step 3: fill in missing source, adName, and branch (state)
+      const step3 = await fetch("/api/admin/backfill-source-branch")
+      const s3 = step3.ok ? await step3.json() : { updated: 0 }
+      setResult({ ...s2, sourceBranchUpdated: s3.updated ?? 0 })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Backfill failed — check META_PAGE_ACCESS_TOKEN.")
     } finally {
@@ -51,9 +56,9 @@ export default function RepairBlankLeadsButton() {
       {result && (
         <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 rounded-xl px-4 py-3">
           <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          {result.updated === 0
+          {result.updated === 0 && !result.sourceBranchUpdated
             ? "No blank leads found — all contacts already have data."
-            : `Fixed ${result.updated} of ${result.total} blank lead${result.total !== 1 ? "s" : ""}. ${result.skipped} had no recoverable data.`}
+            : `Fixed ${result.updated} of ${result.total} lead${result.total !== 1 ? "s" : ""} (name/phone/email)${result.sourceBranchUpdated ? `, ${result.sourceBranchUpdated} state/source` : ""}. ${result.skipped} had no recoverable data.`}
         </div>
       )}
 
