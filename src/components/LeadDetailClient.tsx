@@ -27,7 +27,7 @@ type AssignmentLog = {
   createdAt: string | Date
   source: string
   assignedTo: { name: string } | null
-  assignedBy: { name: string }
+  assignedBy: { name: string } | null
 }
 
 
@@ -538,7 +538,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 <ul className="space-y-2">
                   {assignmentLogs.map((log) => (
                     <li key={log.id} className="text-xs text-gray-500">
-                      <span className="font-medium text-gray-700">{log.assignedBy.name}</span>
+                      <span className="font-medium text-gray-700">{log.assignedBy?.name ?? "Deleted user"}</span>
                       {" → "}
                       <span className="font-medium text-gray-700">{log.assignedTo?.name ?? "Unassigned"}</span>
                       <span className="block text-gray-400">
