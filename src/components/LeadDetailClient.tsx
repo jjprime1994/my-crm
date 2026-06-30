@@ -9,7 +9,7 @@ type Note = {
   id: string
   content: string
   createdAt: string | Date
-  author: { id: string; name: string }
+  author: { id: string; name: string } | null
 }
 
 type StatusHistoryEntry = {
@@ -394,10 +394,10 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                   <p className="text-sm text-gray-800 leading-relaxed">{note.content}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-blue-600">{note.author.name[0].toUpperCase()}</span>
+                      <span className="text-[9px] font-bold text-blue-600">{(note.author?.name ?? "?")[0].toUpperCase()}</span>
                     </div>
                     <p className="text-xs text-gray-400">
-                      {note.author.name} · {new Date(note.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                      {note.author?.name ?? "Deleted user"} · {new Date(note.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                     </p>
                   </div>
                 </li>
