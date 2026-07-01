@@ -29,18 +29,32 @@ export async function POST(req: NextRequest) {
 
   const longLivedToken = exchangeData.access_token
 
-  // Step 2: get all pages for this user — page tokens from long-lived user tokens are permanent
+  // Step 2: get page token by querying the page directly (works even for Business Manager pages)
+  const pageRes = await fetch(
+    `https://graph.facebook.com/nuvendingmalaysia?fields=id,name,access_token&access_token=${longLivedToken}`
+  )
+  const pageData = await pageRes.json()
+
+  if (!pageData.error && pageData.access_token) {
+    return NextResponse.json({
+      permanentToken: pageData.access_token,
+      pageId: pageData.id,
+      pageName: pageData.name,
+    })
+  }
+
+  // Fallback: try /me/accounts (works for personal-admin pages)
   const accountsRes = await fetch(
     `https://graph.facebook.com/me/accounts?access_token=${longLivedToken}`
   )
   const accountsData = await accountsRes.json()
   if (accountsData.error)
-    return NextResponse.json({ error: `Accounts fetch failed: ${accountsData.error.message}` }, { status: 400 })
+    return NextResponse.json({ error: `Could not get page token: ${accountsData.error.message}` }, { status: 400 })
 
   const pages: { id: string; name: string; access_token: string }[] = accountsData.data ?? []
   if (pages.length === 0)
     return NextResponse.json({
-      error: "No Facebook pages found. Re-generate your token in Graph API Explorer with the 'pages_show_list' and 'pages_read_engagement' permissions checked, then try again.",
+      error: `Page token not found. Direct query error: ${pageData.error?.message ?? "no access_token returned"}. And /me/accounts returned no pages. Make sure your token has pages_show_list permission and you are an admin of the Nu Vending page.`,
     }, { status: 400 })
 
   const nuvendingPage =
@@ -51,6 +65,5 @@ export async function POST(req: NextRequest) {
     permanentToken: nuvendingPage.access_token,
     pageId: nuvendingPage.id,
     pageName: nuvendingPage.name,
-    allPages: pages.map((p) => ({ id: p.id, name: p.name })),
   })
 }
