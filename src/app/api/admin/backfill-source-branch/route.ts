@@ -51,7 +51,6 @@ async function run() {
       // Extract branch from stored rawData first — no API call needed
       let branch = lead.branch
       if (!branch) {
-        const raw = lead.rawData as Record<string, unknown> | null
         const fields: FieldEntry[] = Array.isArray(raw?.field_data) ? (raw!.field_data as FieldEntry[]) : []
         branch = extractBranchFromFields(fields)
       }
@@ -59,11 +58,12 @@ async function run() {
       // Fetch adName/campaignName from Meta if missing
       let adName = lead.adName
       let campaignName = lead.campaignName
-      let adId = lead.adId
-      let campaignId = lead.campaignId
+      const raw = lead.rawData as Record<string, unknown> | null
+      let adId = lead.adId ?? (raw?.ad_id as string | null) ?? null
+      let campaignId = lead.campaignId ?? (raw?.campaign_id as string | null) ?? null
 
       if (!adName || !campaignName) {
-        // Get ad_id/campaign_id from leadgen if not stored
+        // Get ad_id/campaign_id from Meta leadgen API if still not found
         if (!adId && !campaignId) {
           const lgRes = await fetch(
             `https://graph.facebook.com/v19.0/${lead.metaLeadId}?fields=ad_id,campaign_id&access_token=${token}`
