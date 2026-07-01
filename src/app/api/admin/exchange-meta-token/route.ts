@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
 
   const pages: { id: string; name: string; access_token: string }[] = accountsData.data ?? []
   if (pages.length === 0)
-    return NextResponse.json({ error: "No Facebook pages found for this user account" }, { status: 400 })
+    return NextResponse.json({
+      error: "No Facebook pages found. Re-generate your token in Graph API Explorer with the 'pages_show_list' and 'pages_read_engagement' permissions checked, then try again.",
+    }, { status: 400 })
 
   const nuvendingPage =
     pages.find((p) => p.name.toLowerCase().includes("nu vending") || p.name.toLowerCase().includes("nuvending")) ??
