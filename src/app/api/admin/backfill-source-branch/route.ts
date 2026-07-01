@@ -36,7 +36,7 @@ async function run() {
       ],
       metaLeadId: { not: null },
     },
-    select: { id: true, metaLeadId: true, adId: true, campaignId: true, adName: true, campaignName: true, branch: true, source: true, rawData: true },
+    select: { id: true, metaLeadId: true, formId: true, adId: true, campaignId: true, adName: true, campaignName: true, branch: true, source: true, rawData: true },
   })
 
   let updated = 0
@@ -95,6 +95,15 @@ async function run() {
           )
           const campData = await campRes.json()
           if (!campData.error && campData.name) campaignName = campData.name
+        }
+
+        // Final fallback: use form name if ad name still unavailable
+        if (!adName && lead.formId) {
+          const formRes = await fetch(
+            `https://graph.facebook.com/v19.0/${lead.formId}?fields=name&access_token=${token}`
+          )
+          const formData = await formRes.json()
+          if (!formData.error && formData.name) adName = formData.name
         }
 
         if (adId && adId !== lead.adId) updates.adId = adId
