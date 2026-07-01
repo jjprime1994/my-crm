@@ -27,6 +27,7 @@ async function run() {
   const leads = await db.lead.findMany({
     where: {
       OR: [
+        { source: null },
         { source: "" },
         { adName: null },
         { branch: null },
