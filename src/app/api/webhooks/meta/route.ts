@@ -58,11 +58,13 @@ export async function POST(req: NextRequest) {
       // Fetch full lead data from Meta Graph API
       let firstName, lastName, email, phone, adName, campaignName, branch: string | null = null
       let fieldData: { name: string; values: string[] }[] = []
+      let resolvedAdId: string | undefined = ad_id
+      let resolvedCampaignId: string | undefined = campaign_id
       const token = process.env.META_PAGE_ACCESS_TOKEN
       try {
-        // Fetch form fields (contact info)
+        // Fetch form fields and pick up ad_id/campaign_id if the webhook payload omitted them
         const leadRes = await fetch(
-          `https://graph.facebook.com/v19.0/${leadgen_id}?fields=field_data&access_token=${token}`
+          `https://graph.facebook.com/v19.0/${leadgen_id}?fields=field_data,ad_id,campaign_id&access_token=${token}`
         )
         const leadData = await leadRes.json()
         if (leadData.error) {
@@ -82,6 +84,8 @@ export async function POST(req: NextRequest) {
           console.warn("[meta-webhook] empty field_data for leadgen_id:", leadgen_id, "raw:", JSON.stringify(leadData))
         }
         fieldData = fields
+        if (!resolvedAdId && leadData.ad_id) resolvedAdId = leadData.ad_id
+        if (!resolvedCampaignId && leadData.campaign_id) resolvedCampaignId = leadData.campaign_id
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
         email = get("email")
         phone = get("phone_number") ?? get("phone") ?? get("whatsapp_number") ?? get("whatsapp") ?? get("mobile_phone") ?? get("mobile") ?? get("contact_number") ?? get("hp") ?? get("handphone") ?? get("no_telefon") ?? get("telefon")
@@ -101,14 +105,14 @@ export async function POST(req: NextRequest) {
           lastName = get("last_name")
         }
 
-        // Fetch ad name directly from the ad object using ad_id — more reliable than leadgen.ad_name
-        if (ad_id) {
+        // Fetch ad name directly from the ad object
+        if (resolvedAdId) {
           const adRes = await fetch(
-            `https://graph.facebook.com/v19.0/${ad_id}?fields=name,campaign{name}&access_token=${token}`
+            `https://graph.facebook.com/v19.0/${resolvedAdId}?fields=name,campaign{name}&access_token=${token}`
           )
           const adData = await adRes.json()
           if (adData.error) {
-            console.error("[meta-webhook] ad fetch error:", JSON.stringify(adData.error), "ad_id:", ad_id)
+            console.error("[meta-webhook] ad fetch error:", JSON.stringify(adData.error), "ad_id:", resolvedAdId)
           } else {
             if (adData.name) adName = adData.name
             if (adData.campaign?.name) campaignName = adData.campaign.name
@@ -116,16 +120,25 @@ export async function POST(req: NextRequest) {
         }
 
         // Fallback: try campaign name from campaign_id if still missing
-        if (!campaignName && campaign_id) {
+        if (!campaignName && resolvedCampaignId) {
           const campRes = await fetch(
-            `https://graph.facebook.com/v19.0/${campaign_id}?fields=name&access_token=${token}`
+            `https://graph.facebook.com/v19.0/${resolvedCampaignId}?fields=name&access_token=${token}`
           )
           const campData = await campRes.json()
           if (campData.error) {
-            console.error("[meta-webhook] campaign fetch error:", JSON.stringify(campData.error), "campaign_id:", campaign_id)
+            console.error("[meta-webhook] campaign fetch error:", JSON.stringify(campData.error), "campaign_id:", resolvedCampaignId)
           } else if (campData.name) {
             campaignName = campData.name
           }
+        }
+
+        // Final fallback: use form name when ad name still unavailable
+        if (!adName && form_id) {
+          const formRes = await fetch(
+            `https://graph.facebook.com/v19.0/${form_id}?fields=name&access_token=${token}`
+          )
+          const formData = await formRes.json()
+          if (!formData.error && formData.name) adName = formData.name
         }
       } catch (err) {
         console.error("[meta-webhook] fetch exception:", err)
@@ -199,9 +212,9 @@ export async function POST(req: NextRequest) {
         create: {
           metaLeadId: leadgen_id,
           formId: form_id,
-          adId: ad_id,
+          adId: resolvedAdId,
           adName,
-          campaignId: campaign_id,
+          campaignId: resolvedCampaignId,
           campaignName,
           firstName,
           lastName,
