@@ -50,6 +50,8 @@ async function run() {
       // Fix source
       if (!lead.source) updates.source = "META"
 
+      const raw = lead.rawData as Record<string, unknown> | null
+
       // Extract branch from stored rawData first — no API call needed
       let branch = lead.branch
       if (!branch) {
@@ -60,7 +62,6 @@ async function run() {
       // Fetch adName/campaignName from Meta if missing
       let adName = lead.adName
       let campaignName = lead.campaignName
-      const raw = lead.rawData as Record<string, unknown> | null
       let adId = lead.adId ?? (raw?.ad_id as string | null) ?? null
       let campaignId = lead.campaignId ?? (raw?.campaign_id as string | null) ?? null
 
