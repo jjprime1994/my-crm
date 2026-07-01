@@ -9,6 +9,7 @@ import AnimatedBar from "@/components/AnimatedBar"
 import { getViewAsRole } from "@/lib/viewas"
 import StateViolationsButton from "@/components/StateViolationsButton"
 import RepairBlankLeadsButton from "@/components/RepairBlankLeadsButton"
+import MetaTokenRefreshTool from "@/components/MetaTokenRefreshTool"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -922,6 +923,7 @@ export default async function SuperAdminOverviewPage({
       {tab === "tools" && (
         <div className="space-y-4 max-w-xl">
           <p className="text-sm text-gray-500">Admin tools for fixing data issues. These actions are reversible — leads returned to the pool can be re-claimed by the correct team.</p>
+          <MetaTokenRefreshTool />
           <StateViolationsButton />
           <RepairBlankLeadsButton />
         </div>
