@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Final fallback: use form name when ad name still unavailable
+        // Final fallback: use form name when ad name is unavailable
         if (!adName && form_id) {
           const formRes = await fetch(
             `https://graph.facebook.com/v19.0/${form_id}?fields=name&access_token=${token}`
