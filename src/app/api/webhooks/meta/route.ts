@@ -138,7 +138,12 @@ export async function POST(req: NextRequest) {
             `https://graph.facebook.com/v19.0/${form_id}?fields=name&access_token=${token}`
           )
           const formData = await formRes.json()
-          if (!formData.error && formData.name) adName = formData.name
+          if (formData.error) {
+            console.error("[meta-webhook] form fetch error:", JSON.stringify(formData.error), "form_id:", form_id)
+          } else if (formData.name) {
+            console.log("[meta-webhook] using form name as adName:", formData.name)
+            adName = formData.name
+          }
         }
       } catch (err) {
         console.error("[meta-webhook] fetch exception:", err)
