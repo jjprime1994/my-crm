@@ -103,7 +103,11 @@ async function run() {
             `https://graph.facebook.com/v19.0/${lead.formId}?fields=name&access_token=${token}`
           )
           const formData = await formRes.json()
-          if (!formData.error && formData.name) adName = formData.name
+          if (formData.error) {
+            console.error("[backfill] form fetch error:", JSON.stringify(formData.error), "form_id:", lead.formId)
+          } else if (formData.name) {
+            adName = formData.name
+          }
         }
 
         if (adId && adId !== lead.adId) updates.adId = adId
