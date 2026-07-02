@@ -73,3 +73,40 @@ Leads arrive unassigned (`assignedToId: null`). They become "available" for sale
 `POST /api/webhooks/meta` receives Facebook Lead Ads notifications. It verifies the `x-hub-signature-256` HMAC signature, then calls the Graph API to fetch the full lead record (`/v19.0/{leadgen_id}`), plus ad and campaign names. Leads are upserted by `metaLeadId` to avoid duplicates. Always returns `{ ok: true }` with HTTP 200 to prevent Meta from retrying — even on signature mismatch.
 
 `GET /api/webhooks/meta` handles the one-time webhook verification handshake Meta performs when you register the webhook URL.
+
+## Windows / Shell Rules
+
+Development happens on Windows 11 with **Windows PowerShell 5.1** (not PowerShell 7):
+
+- No `&&` / `||` chaining, no ternary `?:`, no `?.` / `??` operators — parser errors in 5.1. Use `;` and `if/else`.
+- Never run PowerShell cmdlets (`Get-ChildItem`, `Select-Object`, `Get-Content`, `Start-Sleep`, `2>$null`, …) through the Bash tool — Bash is Git Bash and takes POSIX only (`ls`, `grep`, `cat`, `sleep`, `2>/dev/null`).
+- The project path is under OneDrive and contains spaces — always quote it. Launch sessions from the project root (the `crm` PowerShell command from `setup-pc.ps1`), not from the home directory.
+- Use the `py` launcher for Python, never `python` (the Microsoft Store stub intercepts it).
+- Never update Claude Code from inside a running session — the exe is locked (EBUSY). Close Claude Code first, then `npm i -g @anthropic-ai/claude-code`.
+
+## Database Access
+
+- **Never print, request, or hardcode the `DATABASE_URL` / connection string** — not in chat, not in commands, not in settings files. If one leaks, the Neon password must be rotated.
+- Env files come from Vercel, not from the user: `vercel env pull .env.development.local` (dev), `vercel env pull .env.production.local --environment=production` (prod).
+- **Gotcha**: this project's env vars are marked *Sensitive* in Vercel, so `env pull` writes them as EMPTY (`DATABASE_URL=""`). Pulling again won't help — the user must untick "Sensitive" on the variable in the Vercel dashboard (or fill the local file from the Neon console themselves). See the `/db` skill.
+- The Prisma CLI doesn't read `.env.*.local` on its own — that's what every "datasource.url property is required" error means. Use the `/db` skill pattern: `npx dotenv-cli -e .env.development.local -- npx prisma <cmd>` (the package is `dotenv-cli`, NOT `dotenv` — `npx dotenv` fails with "could not determine executable to run").
+- Production DB: `migrate status` / `migrate deploy` / read-only queries only. Never `migrate dev` or `db push` against production.
+
+## Deploying
+
+Use the `/deploy-verify` skill. Never re-run `vercel --prod` repeatedly hoping it sticks — on failure read the build log (`vercel inspect --logs <url>`), fix the cause, deploy once more, and always confirm Ready + report the live URL.
+
+## Lead Routing Rules (business logic — code must conform to these)
+
+These rules come from the owner and are the source of truth. When changing routing/claiming/counter code, re-read this list and run `/check-routing` afterward.
+
+1. **State routing is strict**: members of a `StateRoute` see and claim ONLY unassigned leads whose `branch` (Malaysian state) is in their route. A Penang team member must never see a Selangor lead. New leads for a state distribute round-robin (`lastAssignedIndex`).
+2. **Ad routing**: `AdRoute` maps an `adName` to admin teams (`teamIds`). A salesperson's visibility comes from their *effective admin* (manager, or manager's manager — see `getEffectiveAdmin` in `src/lib/available-leads.ts`); that admin's `coveredStates` and `isDefaultTeam` decide what the team sees.
+3. **Default team is the catch-all**: unrouted ads, no-source/no-state leads, and leads whose assigned teams don't cover the lead's state fall to the default team — and only to it, when one exists.
+4. **The available-leads counter must equal the claimable list**: count and list must go through the same filter (`filterLeads`). A badge showing leads the user can't actually claim is a bug — this has regressed multiple times.
+5. **Claim limit**: at most `claimLimit` (default 5) claims per rolling 15-minute window → HTTP 429 with countdown. Reassigning leads to teammates must not bypass the limit.
+6. **Roles**: SUPER_ADMIN sees all unassigned leads and all users' claimed leads (not just salespeople's). Salespeople claim; admins assign; only SUPER_ADMIN gets overview stats and CSV export.
+
+## Verification Required
+
+A bug is not "fixed" until verified end-to-end: exercise the affected flow (query the DB, hit the endpoint, load the page) — don't just typecheck. After routing/claim/counter changes, run `/check-routing`. After every deploy, confirm the deployment is Ready and report the live URL. One-off debug scripts go in `scripts/` and load env like `scripts/check-routing.ts` does.
