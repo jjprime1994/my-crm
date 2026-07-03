@@ -23,6 +23,7 @@ NEXTAUTH_SECRET           # NextAuth JWT secret
 META_VERIFY_TOKEN         # Token for Meta webhook verification handshake
 META_APP_SECRET           # Used to verify HMAC-SHA256 signatures on incoming webhook payloads
 META_PAGE_ACCESS_TOKEN    # Facebook Graph API token for fetching lead details
+WEBSITE_FORM_SECRET       # Shared secret the website's contact form (or its backend) sends as x-website-secret
 ```
 
 ## Architecture
@@ -73,6 +74,19 @@ Leads arrive unassigned (`assignedToId: null`). They become "available" for sale
 `POST /api/webhooks/meta` receives Facebook Lead Ads notifications. It verifies the `x-hub-signature-256` HMAC signature, then calls the Graph API to fetch the full lead record (`/v19.0/{leadgen_id}`), plus ad and campaign names. Leads are upserted by `metaLeadId` to avoid duplicates. Always returns `{ ok: true }` with HTTP 200 to prevent Meta from retrying — even on signature mismatch.
 
 `GET /api/webhooks/meta` handles the one-time webhook verification handshake Meta performs when you register the webhook URL.
+
+### Website Enquiries Webhook
+
+`POST /api/webhooks/website` receives contact-form enquiries from the company website. Unlike Meta/TikTok this isn't a platform with its own retry policy, so it returns real HTTP status codes (401/400/500) instead of always-200.
+
+- **Auth**: the caller must send header `x-website-secret` matching `WEBSITE_FORM_SECRET`. There's no HMAC here — a browser form has no way to hold a server secret — so this only works safely if the website's own backend makes the call (not client-side JS), otherwise the secret is visible in the page source.
+- **Body** (JSON): `name` (or `firstName`/`lastName`), `email`, `phone`, `state` (free-text, resolved via `resolveStateBranch`), `message` (optional — stored as a `LeadNote`), `honeypot` (optional — if non-empty, silently returns `{ ok: true }` without creating a lead).
+- Requires at least one of `email`/`phone`.
+- **Routing**: same as Meta — resolves `branch` from the submitted state, tries `assignLeadByBranch` (StateRoute round-robin, shared with the Meta webhook via `src/lib/route-lead.ts`), falls back to `assignToDefaultTeam()`.
+- **Dedup**: same 30-day active-lead-by-phone/email check as Meta/TikTok; duplicates are flagged (`isDuplicate: true`) but still recorded, unassigned.
+- Leads are created with `source: "WEBSITE"`.
+
+As of 2026-07-03, the live website (nuvendingtech.com, WordPress + Divi) does not call this endpoint yet — a site revamp is planned within weeks, and this endpoint is built ahead of that so the new site (whatever stack it uses) just needs to POST here. Wiring up the current Divi site was deliberately skipped since it'd use Divi's native contact form module, which has no webhook support and would be replaced anyway.
 
 ## Windows / Shell Rules
 

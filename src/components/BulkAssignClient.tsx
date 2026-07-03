@@ -84,6 +84,7 @@ function DupBadge({ sibling }: { sibling?: DupSibling | null }) {
 function SourceBadge({ source }: { source?: string | null }) {
   if (!source || source === "META") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">Meta</span>
   if (source === "TIKTOK") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-50 text-pink-600">TikTok</span>
+  if (source === "WEBSITE") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-50 text-green-600">Website</span>
   return null
 }
 

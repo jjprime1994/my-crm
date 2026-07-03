@@ -28,6 +28,7 @@ export type LeadRow = {
 function SourceBadge({ source }: { source?: string | null }) {
   if (source === "TIKTOK") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-50 text-pink-600 ring-1 ring-pink-200">TikTok</span>
   if (source === "META") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 ring-1 ring-blue-200">Meta</span>
+  if (source === "WEBSITE") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-50 text-green-600 ring-1 ring-green-200">Website</span>
   return null
 }
 

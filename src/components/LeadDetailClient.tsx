@@ -333,6 +333,8 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 <p className="text-xs text-gray-400 font-medium mb-0.5">Platform</p>
                 {lead.source === "TIKTOK" ? (
                   <span className="inline-flex text-xs font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 ring-1 ring-pink-100">TikTok</span>
+                ) : lead.source === "WEBSITE" ? (
+                  <span className="inline-flex text-xs font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-600 ring-1 ring-green-100">Website</span>
                 ) : (
                   <span className="inline-flex text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100">Meta</span>
                 )}

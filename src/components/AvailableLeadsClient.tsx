@@ -47,6 +47,11 @@ function SourceBadge({ source }: { source?: string | null }) {
       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-pink-50 text-pink-600 ring-1 ring-pink-100 shrink-0">TikTok</span>
     )
   }
+  if (source === "WEBSITE") {
+    return (
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 ring-1 ring-green-100 shrink-0">Website</span>
+    )
+  }
   return (
     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100 shrink-0">Meta</span>
   )

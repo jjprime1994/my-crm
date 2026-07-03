@@ -178,12 +178,13 @@ export default function ExportClient({ sources, branches, managers, counts }: Pr
         <div className="p-6 space-y-3">
           <label className="text-sm font-semibold text-gray-700">Platform</label>
           <ChipGroup
-            value={platform as "" | "META" | "TIKTOK"}
+            value={platform as "" | "META" | "TIKTOK" | "WEBSITE"}
             onChange={setPlatform}
             options={[
               { value: "", label: "All platforms" },
               { value: "META", label: "Meta", activeClass: "bg-blue-50 text-blue-700 border-blue-200" },
               { value: "TIKTOK", label: "TikTok", activeClass: "bg-pink-50 text-pink-700 border-pink-200" },
+              { value: "WEBSITE", label: "Website", activeClass: "bg-green-50 text-green-700 border-green-200" },
             ]}
           />
         </div>
