@@ -49,9 +49,10 @@ export default async function SuperAdminOverviewPage({
   const since = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
   const dateFilter = since ? { createdAt: { gte: since } } : {}
 
-  const [total, byStatus, salespersonStats, managerStats, sourceStats, recentLeads, campaignLeads, mgmtStats] = await Promise.all([
+  const [total, byStatus, byPlatform, salespersonStats, managerStats, sourceStats, recentLeads, campaignLeads, mgmtStats] = await Promise.all([
     db.lead.count({ where: dateFilter }),
     db.lead.groupBy({ by: ["status"], _count: true, where: dateFilter }),
+    db.lead.groupBy({ by: ["source"], _count: true, where: dateFilter }),
     db.user.findMany({
       where: { role: "SALESPERSON" },
       select: {
@@ -121,6 +122,14 @@ export default async function SuperAdminOverviewPage({
   const active = total - won - lost
   const conversionRate = total > 0 ? Math.round((won / total) * 100) : 0
 
+  const platformMap = Object.fromEntries(byPlatform.map((s) => [s.source, s._count]))
+  const PLATFORMS = [
+    { key: "META", label: "Meta", color: "text-blue-600", bg: "bg-blue-50", dot: "bg-blue-500" },
+    { key: "WEBSITE", label: "Website", color: "text-emerald-600", bg: "bg-emerald-50", dot: "bg-emerald-500" },
+    { key: "TIKTOK", label: "TikTok", color: "text-pink-600", bg: "bg-pink-50", dot: "bg-pink-500" },
+  ] as const
+  const platformStats = PLATFORMS.map((p) => ({ ...p, count: platformMap[p.key] ?? 0 }))
+
   // Only show leads with a known campaign name
   const sourceRows = sourceStats
     .filter((s) => s.campaignName)
@@ -159,6 +168,8 @@ export default async function SuperAdminOverviewPage({
   const metaData = new Map<string, MetaCampaignData>()
   const metaToken = process.env.META_PAGE_ACCESS_TOKEN
   const metaAccountId = process.env.META_AD_ACCOUNT_ID
+    ? `act_${process.env.META_AD_ACCOUNT_ID.replace(/^act_/, "")}`
+    : undefined
   let metaError: string | null = null
 
   if (metaToken && metaAccountId) {
@@ -437,6 +448,24 @@ export default async function SuperAdminOverviewPage({
               <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
             </div>
             <div className={`p-2.5 ${bg} rounded-xl shrink-0`}>{icon}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Leads by platform */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {platformStats.map(({ key, label, count, color, bg, dot }) => (
+          <div key={key} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${dot}`} />
+                <p className="text-sm text-gray-500 font-medium">{label}</p>
+              </div>
+              <p className={`text-3xl font-bold mt-1 ${color}`}>{count}</p>
+            </div>
+            <div className={`p-2.5 ${bg} rounded-xl shrink-0 text-xs font-semibold ${color}`}>
+              {total > 0 ? Math.round((count / total) * 100) : 0}%
+            </div>
           </div>
         ))}
       </div>
