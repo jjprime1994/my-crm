@@ -82,11 +82,11 @@ Leads arrive unassigned (`assignedToId: null`). They become "available" for sale
 - **Auth**: the caller must send header `x-website-secret` matching `WEBSITE_FORM_SECRET`. There's no HMAC here — a browser form has no way to hold a server secret — so this only works safely if the website's own backend makes the call (not client-side JS), otherwise the secret is visible in the page source.
 - **Body** (JSON): `name` (or `firstName`/`lastName`), `email`, `phone`, `state` (free-text, resolved via `resolveStateBranch`), `message` (optional — stored as a `LeadNote`), `honeypot` (optional — if non-empty, silently returns `{ ok: true }` without creating a lead).
 - Requires at least one of `email`/`phone`.
-- **Routing**: same as Meta — resolves `branch` from the submitted state, tries `assignLeadByBranch` (StateRoute round-robin, shared with the Meta webhook via `src/lib/route-lead.ts`), falls back to `assignToDefaultTeam()`.
+- **Routing**: unlike Meta, website leads are always created with `assignedToId: null` — `branch` is still resolved from the submitted state so the lead lands in the right state team's Available Leads pool for self-claiming, rather than being auto-assigned to one specific person via round-robin.
 - **Dedup**: same 30-day active-lead-by-phone/email check as Meta/TikTok; duplicates are flagged (`isDuplicate: true`) but still recorded, unassigned.
 - Leads are created with `source: "WEBSITE"`.
 
-As of 2026-07-03, the live website (nuvendingtech.com, WordPress + Divi) does not call this endpoint yet — a site revamp is planned within weeks, and this endpoint is built ahead of that so the new site (whatever stack it uses) just needs to POST here. Wiring up the current Divi site was deliberately skipped since it'd use Divi's native contact form module, which has no webhook support and would be replaced anyway.
+As of 2026-07-06, the live website (nuvendingtech.com, WordPress + Divi) is wired up: the Divi contact form was replaced with a Fluent Forms form (`[fluentform id="3"]`), and a WPCode PHP snippet on the `fluentform/submission_inserted` hook POSTs new submissions to this endpoint.
 
 ## Windows / Shell Rules
 

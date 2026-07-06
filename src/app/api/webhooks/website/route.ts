@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { Prisma } from "@/generated/prisma/client"
 import { resolveStateBranch } from "@/lib/branch"
-import { assignLeadByBranch } from "@/lib/route-lead"
-import { assignToDefaultTeam } from "@/lib/assign-default-team"
 
 // Health check / connectivity test for whoever is wiring up the website form
 export async function GET() {
@@ -70,12 +68,8 @@ export async function POST(req: NextRequest) {
   })
   if (existing) isDuplicate = true
 
-  let assignedToId: string | null = null
-  if (!isDuplicate) {
-    assignedToId = await assignLeadByBranch(branch)
-    if (!assignedToId) assignedToId = await assignToDefaultTeam()
-  }
-
+  // Leave unassigned so it lands in the Available Leads pool for the right
+  // state team (or default team) to claim, rather than auto-assigning to one person.
   const lead = await db.lead.create({
     data: {
       firstName,
@@ -85,7 +79,7 @@ export async function POST(req: NextRequest) {
       branch,
       source: "WEBSITE",
       isDuplicate,
-      assignedToId,
+      assignedToId: null,
       rawData: body as Prisma.InputJsonValue,
     },
   })
