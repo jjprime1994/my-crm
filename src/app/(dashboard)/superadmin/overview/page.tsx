@@ -188,8 +188,10 @@ export default async function SuperAdminOverviewPage({
       ])
       const [campsJson, todayJson, periodJson] = await Promise.all([campsRes.json(), todayRes.json(), periodRes.json()])
 
-      if (campsJson.error) {
-        metaError = campsJson.error.message
+      const firstError = campsJson.error ?? todayJson.error ?? periodJson.error
+      if (firstError) {
+        const e = firstError
+        metaError = `${e.message} [type=${e.type}, code=${e.code}, subcode=${e.error_subcode ?? "none"}, trace=${e.fbtrace_id}]`
       } else {
         const budgetMap = new Map<string, { dailyBudget: number | null; status: string }>()
         for (const c of campsJson.data ?? []) {
