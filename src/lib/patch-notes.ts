@@ -17,6 +17,16 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.15.0",
+    date: "2026-07-06",
+    title: "Website Enquiries & Platform Breakdown",
+    items: [
+      "Website contact form submissions now flow straight into the CRM as leads, alongside Meta and TikTok — look for the green 'Website' badge",
+      "Website leads are routed by state just like Meta leads, so they land with the right team automatically",
+      "Business Overview now shows a Meta / Website / TikTok breakdown so you can see at a glance where leads are coming from",
+    ],
+  },
+  {
     version: "1.14.0",
     date: "2026-06-28",
     title: "Meta Token Alert & Blank Lead Recovery",
