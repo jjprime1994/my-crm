@@ -8,7 +8,12 @@ interface Props {
   isSuperAdmin: boolean
   salespeople: { id: string; name: string }[]
   sources: string[]
+  channels: string[]
   branches: string[]
+}
+
+function channelLabel(c: string) {
+  return c.charAt(0) + c.slice(1).toLowerCase()
 }
 
 const STATUSES = [
@@ -21,7 +26,7 @@ const STATUSES = [
   { value: "CLOSED_LOST", label: "Lost" },
 ]
 
-export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sources, branches }: Props) {
+export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sources, channels, branches }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const activeStatus = searchParams.get("status") ?? ""
@@ -92,6 +97,20 @@ export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sourc
           ))}
         </div>
 
+        {/* Channel filter (Meta / Website / …) */}
+        {channels.length > 1 && (
+          <select
+            value={searchParams.get("channel") ?? ""}
+            onChange={(e) => update("channel", e.target.value)}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+          >
+            <option value="">All channels</option>
+            {channels.map((c) => (
+              <option key={c} value={c}>{channelLabel(c)}</option>
+            ))}
+          </select>
+        )}
+
         {/* Source filter */}
         {sources.length > 0 && (
           <select
@@ -136,7 +155,7 @@ export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sourc
         )}
 
         {/* Clear filters */}
-        {(activeStatus || searchParams.get("source") || searchParams.get("branch") || searchParams.get("assignedToId") || search) && (
+        {(activeStatus || searchParams.get("source") || searchParams.get("channel") || searchParams.get("branch") || searchParams.get("assignedToId") || search) && (
           <button
             onClick={() => { setSearch(""); router.push("/leads?") }}
             className="text-xs text-gray-400 hover:text-gray-600 font-medium px-3 py-2 rounded-xl hover:bg-gray-100 transition"
