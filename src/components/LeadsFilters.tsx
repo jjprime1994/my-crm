@@ -97,28 +97,28 @@ export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sourc
           ))}
         </div>
 
-        {/* Channel filter (Meta / Website / …) */}
+        {/* Source filter — lead channel (Meta / Website / …), Lead.source column */}
         {channels.length > 1 && (
           <select
             value={searchParams.get("channel") ?? ""}
             onChange={(e) => update("channel", e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
           >
-            <option value="">All channels</option>
+            <option value="">All sources</option>
             {channels.map((c) => (
               <option key={c} value={c}>{channelLabel(c)}</option>
             ))}
           </select>
         )}
 
-        {/* Source filter */}
+        {/* Campaign filter — campaignName column */}
         {sources.length > 0 && (
           <select
             value={searchParams.get("source") ?? ""}
             onChange={(e) => update("source", e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
           >
-            <option value="">All sources</option>
+            <option value="">All campaigns</option>
             {sources.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
