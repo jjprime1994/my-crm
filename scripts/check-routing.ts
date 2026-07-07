@@ -53,17 +53,20 @@ for (const user of users) {
   console.log(`${user.name.padEnd(24)} ${user.role.padEnd(12)} sees ${String(list.length).padStart(4)} available leads`)
 }
 
-// Invariant 5: nobody exceeds claimLimit claims in the current 15-minute window
-const since = new Date(Date.now() - 15 * 60 * 1000)
+// Invariant 5: nobody exceeds their daily claim limit (window resets midnight MYT,
+// matching the claim endpoint)
+const MYT_OFFSET = 8 * 60 * 60 * 1000
+const nowInMYT = Date.now() + MYT_OFFSET
+const startOfDayUTC = new Date(nowInMYT - (nowInMYT % (24 * 60 * 60 * 1000)) - MYT_OFFSET)
 const recentClaims = await db.lead.groupBy({
   by: ["claimedById"],
-  where: { claimedAt: { gte: since }, claimedById: { not: null } },
+  where: { claimedAt: { gte: startOfDayUTC }, claimedById: { not: null } },
   _count: { _all: true },
 })
 for (const row of recentClaims) {
   const u = users.find((x) => x.id === row.claimedById)
   if (u && row._count._all > u.claimLimit) {
-    violations.push(`${u.name} claimed ${row._count._all} leads in the last 15 min (limit ${u.claimLimit})`)
+    violations.push(`${u.name} claimed ${row._count._all} leads today (limit ${u.claimLimit})`)
   }
 }
 

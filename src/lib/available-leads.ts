@@ -69,6 +69,35 @@ export async function getAvailableLeads(userId: string, role: string) {
   return filterLeads(allLeads, effectiveAdmin, routeIndex, routedAdNames, managerStates, hasDefaultTeam)
 }
 
+// Server-side guard for the claim endpoint: a lead is claimable iff it would
+// appear in this user's available-leads pool. Mirrors getAvailableLeads exactly,
+// for a single lead — keep the two in sync.
+export async function isLeadClaimableBy(
+  userId: string,
+  role: string,
+  lead: { adName: string | null; branch: string | null },
+): Promise<boolean> {
+  const stateRoutes = await db.stateRoute.findMany({
+    where: { userIds: { has: userId } },
+    select: { state: true },
+  }).catch(() => [])
+
+  if (stateRoutes.length > 0) {
+    return lead.branch !== null && stateRoutes.some((r) => r.state === lead.branch)
+  }
+
+  const [allRoutes, allManagers, effectiveAdmin] = await Promise.all([
+    db.adRoute.findMany({ where: { archived: false }, select: { adName: true, teamIds: true } }).catch(() => []),
+    db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
+    getEffectiveAdmin(userId, role).catch(() => null),
+  ])
+  const routeIndex = Object.fromEntries(allRoutes.map((r) => [r.adName, r.teamIds]))
+  const routedAdNames = new Set(allRoutes.map((r) => r.adName))
+  const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
+  const hasDefaultTeam = allManagers.some((m) => m.isDefaultTeam)
+  return filterLeads([lead], effectiveAdmin, routeIndex, routedAdNames, managerStates, hasDefaultTeam).length === 1
+}
+
 export async function getAvailableLeadsCount(userId: string, role: string): Promise<number> {
   if (role === "SUPER_ADMIN") {
     return db.lead.count({ where: { assignedToId: null } }).catch(() => 0)

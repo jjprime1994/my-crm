@@ -70,7 +70,7 @@ Leads arrive unassigned (`assignedToId: null`). They become "available" for sale
 | Overview stats | — | — | — | ✓ |
 | Export CSV | — | — | — | ✓ |
 
-**Claim rate limiting**: Salespeople can claim at most `claimLimit` leads per rolling 15-minute window. The API returns HTTP 429 with a countdown when the limit is hit.
+**Claim rate limiting**: Salespeople can claim at most `claimLimit` leads per day; the window resets at midnight MYT. The API returns HTTP 429 with a countdown when the limit is hit.
 
 ### Meta Webhook
 
@@ -121,11 +121,12 @@ These rules come from the owner and are the source of truth. When changing routi
 2. **Ad routing**: `AdRoute` maps an `adName` to admin teams (`teamIds`). A salesperson's visibility comes from their *effective admin* (manager, or manager's manager — see `getEffectiveAdmin` in `src/lib/available-leads.ts`); that admin's `coveredStates` and `isDefaultTeam` decide what the team sees.
 3. **Default team is the catch-all**: unrouted ads, no-source/no-state leads, and leads whose assigned teams don't cover the lead's state fall to the default team — and only to it, when one exists.
 4. **The available-leads counter must equal the claimable list**: count and list must go through the same filter (`filterLeads` in `src/lib/lead-filter.ts` — pure logic, unit-tested). A badge showing leads the user can't actually claim is a bug — this has regressed multiple times.
-5. **Claim limit**: at most `claimLimit` (default 5) claims per rolling 15-minute window → HTTP 429 with countdown. Reassigning leads to teammates must not bypass the limit.
+5. **Claim limit**: at most `claimLimit` (default 5) claims per day, resetting at midnight MYT → HTTP 429 with countdown. Reassigning leads to teammates must not bypass the limit.
 6. **Roles**: SUPER_ADMIN sees all unassigned leads and all users' claimed leads (not just salespeople's). Salespeople claim; admins assign; only SUPER_ADMIN gets overview stats and CSV export.
+7. **Claims are validated server-side**: the claim endpoint accepts a lead only if it would appear in that user's Available Leads pool (`isLeadClaimableBy` in `src/lib/available-leads.ts` — state routes AND ad routes). Knowing a lead's URL must never be enough to claim it.
 
 ## Verification Required
 
 A bug is not "fixed" until verified end-to-end: exercise the affected flow (query the DB, hit the endpoint, load the page) — don't just typecheck. After routing/claim/counter changes, run `npm test` (pure-logic tests) and `/check-routing` (live DB). After every deploy, confirm the deployment is Ready and report the live URL. One-off debug scripts go in `scripts/` and load env like `scripts/check-routing.ts` does.
 
-A nightly Vercel cron (`vercel.json` → `GET /api/cron/check-routing`, 6am MYT) runs the same invariants against production and push-notifies SUPER_ADMINs on violations. It authenticates via the `CRON_SECRET` env var; a logged-in SUPER_ADMIN can also open the URL to run it manually.
+A nightly Vercel cron (`vercel.json` → `GET /api/cron/check-routing`, 6am MYT) runs the same invariants against production and push-notifies SUPER_ADMINs on violations. It authenticates via the `CRON_SECRET` env var; a logged-in SUPER_ADMIN can also open the URL to run it manually. Besides the pool invariants it audits **assigned** leads (assignments made on/after 8 Jul 2026 MYT — earlier ones are grandfathered per the owner): every holder must be someone whose pool could have shown the lead. `scripts/run-invariants.ts` runs the identical suite from the CLI; `scripts/check-assignments.ts` audits ALL assigned leads with no grandfather cutoff.
