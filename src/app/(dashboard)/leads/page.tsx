@@ -33,7 +33,8 @@ export default async function LeadsPage({
 
   const commonClauses: Record<string, unknown>[] = []
   if (status) commonClauses.push({ status: status as LeadStatus })
-  if (source) commonClauses.push({ campaignName: source })
+  if (source === "__none__") commonClauses.push({ campaignName: null })
+  else if (source) commonClauses.push({ campaignName: source })
   if (channel) commonClauses.push({ source: channel })
   if (branch) commonClauses.push({ branch })
   if (search) {

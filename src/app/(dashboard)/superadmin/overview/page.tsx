@@ -247,8 +247,11 @@ export default async function SuperAdminOverviewPage({
       const avgResponseMs = responseTimes.length > 0
         ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
         : null
+      const notContacted = s.leads.filter((l) =>
+        l.claimedAt && !l.firstContactedAt && l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST"
+      ).length
       return {
-        id: s.id, name: s.name,
+        id: s.id, name: s.name, notContacted,
         managerId: s.managerId, managerName: s.manager?.name ?? null,
         managerRole: s.manager?.role ?? null,
         topManagerId: s.manager?.managerId ?? null,
@@ -275,8 +278,11 @@ export default async function SuperAdminOverviewPage({
     const avgResponseMs = responseTimes.length > 0
       ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
       : null
+    const notContacted = u.leads.filter((l) =>
+      l.claimedAt && !l.firstContactedAt && l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST"
+    ).length
     return [u.id, {
-      id: u.id, name: u.name, role: u.role,
+      id: u.id, name: u.name, role: u.role, notContacted,
       totalLeads, claimed: claimedCount, assigned: totalLeads - claimedCount,
       won: wonCount, stale: staleCount, avgResponseMs,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
@@ -755,9 +761,9 @@ export default async function SuperAdminOverviewPage({
       {tab === "leaderboard" && (() => {
         const mgmtLeaderboard = Array.from(mgmtRows.values())
           .filter((m) => m.totalLeads > 0)
-          .map((m) => ({ id: m.id, name: m.name, totalLeads: m.totalLeads, won: m.won, rate: m.rate, avgResponseMs: m.avgResponseMs }))
+          .map((m) => ({ id: m.id, name: m.name, totalLeads: m.totalLeads, won: m.won, rate: m.rate, avgResponseMs: m.avgResponseMs, notContacted: m.notContacted }))
         const leaderboardIndividuals = [
-          ...individuals.map((m) => ({ id: m.id, name: m.name, totalLeads: m.totalLeads, won: m.won, rate: m.rate, avgResponseMs: m.avgResponseMs })),
+          ...individuals.map((m) => ({ id: m.id, name: m.name, totalLeads: m.totalLeads, won: m.won, rate: m.rate, avgResponseMs: m.avgResponseMs, notContacted: m.notContacted })),
           ...mgmtLeaderboard,
         ].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
         return <LeaderboardTabs individuals={leaderboardIndividuals} teams={teams} />

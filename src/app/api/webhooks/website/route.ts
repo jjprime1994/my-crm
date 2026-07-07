@@ -55,6 +55,14 @@ export async function POST(req: NextRequest) {
   const branch = resolveStateBranch(str(body.state) ?? str(body.location) ?? str(body.branch))
   const message = str(body.message)
 
+  // Optional attribution from the website form. utm_campaign becomes campaignName so the
+  // Campaign filter/reports include website leads. adName is left null on purpose —
+  // routing keys off adName, and website leads must keep routing by state.
+  const utmSource = str(body.utm_source)
+  const utmMedium = str(body.utm_medium)
+  const utmCampaign = str(body.utm_campaign)
+  const page = str(body.page) ?? str(body.pageUrl) ?? str(body.url)
+
   // Flag as duplicate only if an active lead with same contact exists within 30 days
   let isDuplicate = false
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -78,6 +86,7 @@ export async function POST(req: NextRequest) {
       phone,
       branch,
       source: "WEBSITE",
+      campaignName: utmCampaign,
       isDuplicate,
       assignedToId: null,
       rawData: body as Prisma.InputJsonValue,
@@ -87,6 +96,18 @@ export async function POST(req: NextRequest) {
   if (message) {
     await db.leadNote.create({
       data: { leadId: lead.id, authorId: null, content: `Website enquiry message: ${message}` },
+    })
+  }
+
+  const attribution = [
+    page ? `Page: ${page}` : null,
+    utmSource ? `UTM source: ${utmSource}` : null,
+    utmMedium ? `UTM medium: ${utmMedium}` : null,
+    utmCampaign ? `UTM campaign: ${utmCampaign}` : null,
+  ].filter(Boolean).join(" · ")
+  if (attribution) {
+    await db.leadNote.create({
+      data: { leadId: lead.id, authorId: null, content: `Attribution: ${attribution}` },
     })
   }
 

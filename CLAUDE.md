@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev       # start dev server at localhost:3000
 npm run build     # production build
 npm run lint      # ESLint
+npm test          # vitest — lead-routing unit tests (src/lib/lead-filter.test.ts)
 npx prisma migrate dev   # run DB migrations
 npx prisma studio        # browse DB in browser
 npx prisma generate      # regenerate client after schema changes (also runs on postinstall)
@@ -24,6 +25,7 @@ META_VERIFY_TOKEN         # Token for Meta webhook verification handshake
 META_APP_SECRET           # Used to verify HMAC-SHA256 signatures on incoming webhook payloads
 META_PAGE_ACCESS_TOKEN    # Facebook Graph API token for fetching lead details
 WEBSITE_FORM_SECRET       # Shared secret the website's contact form (or its backend) sends as x-website-secret
+CRON_SECRET               # Vercel cron auth for /api/cron/check-routing (Vercel sends it as a Bearer token)
 ```
 
 ## Architecture
@@ -40,7 +42,7 @@ WEBSITE_FORM_SECRET       # Shared secret the website's contact form (or its bac
 
 ### Data Model
 
-Three roles: `SUPER_ADMIN > ADMIN > SALESPERSON`. Each `User` has a `claimLimit` (default 5).
+Four roles: `SUPER_ADMIN > ADMIN > TEAM_LEADER > SALESPERSON`. Each `User` has a `claimLimit` (default 5). A `TEAM_LEADER` manages salespeople under an ADMIN — their salespeople's *effective admin* is the leader's manager (see `getEffectiveAdmin`); team leaders can claim leads like salespeople but also see their direct reports' leads.
 
 `Lead` lifecycle: `NEW → CONTACTED → QUALIFIED → PROPOSAL → CLOSED_WON / CLOSED_LOST`
 
@@ -58,14 +60,15 @@ Leads arrive unassigned (`assignedToId: null`). They become "available" for sale
 
 ### Role-Based Access
 
-| Feature | SALESPERSON | ADMIN | SUPER_ADMIN |
-|---|---|---|---|
-| View own leads | ✓ | ✓ | ✓ |
-| Claim available leads | ✓ | — | — |
-| Assign leads to others | — | ✓ | ✓ |
-| Manage team (users) | — | ✓ | ✓ |
-| Overview stats | — | — | ✓ |
-| Export CSV | — | — | ✓ |
+| Feature | SALESPERSON | TEAM_LEADER | ADMIN | SUPER_ADMIN |
+|---|---|---|---|---|
+| View own leads | ✓ | ✓ | ✓ | ✓ |
+| Claim available leads | ✓ | ✓ | — | — |
+| View direct reports' leads | — | ✓ | ✓ | ✓ |
+| Assign leads to others | — | — | ✓ | ✓ |
+| Manage team (users) | — | — | ✓ | ✓ |
+| Overview stats | — | — | — | ✓ |
+| Export CSV | — | — | — | ✓ |
 
 **Claim rate limiting**: Salespeople can claim at most `claimLimit` leads per rolling 15-minute window. The API returns HTTP 429 with a countdown when the limit is hit.
 
@@ -117,10 +120,12 @@ These rules come from the owner and are the source of truth. When changing routi
 1. **State routing is strict**: members of a `StateRoute` see and claim ONLY unassigned leads whose `branch` (Malaysian state) is in their route. A Penang team member must never see a Selangor lead. New leads for a state distribute round-robin (`lastAssignedIndex`).
 2. **Ad routing**: `AdRoute` maps an `adName` to admin teams (`teamIds`). A salesperson's visibility comes from their *effective admin* (manager, or manager's manager — see `getEffectiveAdmin` in `src/lib/available-leads.ts`); that admin's `coveredStates` and `isDefaultTeam` decide what the team sees.
 3. **Default team is the catch-all**: unrouted ads, no-source/no-state leads, and leads whose assigned teams don't cover the lead's state fall to the default team — and only to it, when one exists.
-4. **The available-leads counter must equal the claimable list**: count and list must go through the same filter (`filterLeads`). A badge showing leads the user can't actually claim is a bug — this has regressed multiple times.
+4. **The available-leads counter must equal the claimable list**: count and list must go through the same filter (`filterLeads` in `src/lib/lead-filter.ts` — pure logic, unit-tested). A badge showing leads the user can't actually claim is a bug — this has regressed multiple times.
 5. **Claim limit**: at most `claimLimit` (default 5) claims per rolling 15-minute window → HTTP 429 with countdown. Reassigning leads to teammates must not bypass the limit.
 6. **Roles**: SUPER_ADMIN sees all unassigned leads and all users' claimed leads (not just salespeople's). Salespeople claim; admins assign; only SUPER_ADMIN gets overview stats and CSV export.
 
 ## Verification Required
 
-A bug is not "fixed" until verified end-to-end: exercise the affected flow (query the DB, hit the endpoint, load the page) — don't just typecheck. After routing/claim/counter changes, run `/check-routing`. After every deploy, confirm the deployment is Ready and report the live URL. One-off debug scripts go in `scripts/` and load env like `scripts/check-routing.ts` does.
+A bug is not "fixed" until verified end-to-end: exercise the affected flow (query the DB, hit the endpoint, load the page) — don't just typecheck. After routing/claim/counter changes, run `npm test` (pure-logic tests) and `/check-routing` (live DB). After every deploy, confirm the deployment is Ready and report the live URL. One-off debug scripts go in `scripts/` and load env like `scripts/check-routing.ts` does.
+
+A nightly Vercel cron (`vercel.json` → `GET /api/cron/check-routing`, 6am MYT) runs the same invariants against production and push-notifies SUPER_ADMINs on violations. It authenticates via the `CRON_SECRET` env var; a logged-in SUPER_ADMIN can also open the URL to run it manually.

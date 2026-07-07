@@ -10,6 +10,7 @@ export type IndividualRow = {
   won: number
   rate: number
   avgResponseMs: number | null
+  notContacted: number
 }
 
 export type TeamRow = {
@@ -28,14 +29,46 @@ interface Props {
 
 export default function LeaderboardTabs({ individuals, teams }: Props) {
   const [tab, setTab] = useState<"individual" | "team">("individual")
+  const [sortBy, setSortBy] = useState<"won" | "response">("won")
 
   const maxIndividualLeads = Math.max(...individuals.map((r) => r.totalLeads), 1)
   const maxTeamLeads = Math.max(...teams.map((r) => r.totalLeads), 1)
+
+  const sortedIndividuals = sortBy === "won"
+    ? individuals
+    : [...individuals].sort((a, b) => {
+        // Fastest response first; people with no response data go last
+        if (a.avgResponseMs === null && b.avgResponseMs === null) return b.won - a.won
+        if (a.avgResponseMs === null) return 1
+        if (b.avgResponseMs === null) return -1
+        return a.avgResponseMs - b.avgResponseMs
+      })
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
         <h2 className="font-semibold text-gray-900">Leaderboard</h2>
+        <div className="flex items-center gap-2">
+        {tab === "individual" && (
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => setSortBy("won")}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
+                sortBy === "won" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              By Won
+            </button>
+            <button
+              onClick={() => setSortBy("response")}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
+                sortBy === "response" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Fastest Response
+            </button>
+          </div>
+        )}
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           <button
             onClick={() => setTab("individual")}
@@ -54,6 +87,7 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
             By Team
           </button>
         </div>
+        </div>
       </div>
 
       {tab === "individual" ? (
@@ -66,15 +100,16 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide min-w-[160px]">Conversion</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Response</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Not Contacted</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {individuals.length === 0 && (
+            {sortedIndividuals.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-400">No data yet.</td>
+                <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-400">No data yet.</td>
               </tr>
             )}
-            {individuals.map((row, i) => (
+            {sortedIndividuals.map((row, i) => (
               <tr key={row.id} className="hover:bg-gray-50/70 transition">
                 <td className="px-6 py-4">
                   <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${
@@ -121,6 +156,15 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
                     </span>
                   ) : (
                     <span className="text-xs text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-6 py-4">
+                  {row.notContacted > 0 ? (
+                    <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">
+                      {row.notContacted}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-emerald-600 font-medium">—</span>
                   )}
                 </td>
               </tr>
