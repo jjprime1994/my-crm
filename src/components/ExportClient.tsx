@@ -289,7 +289,7 @@ export default function ExportClient({ sources, branches, managers, counts }: Pr
               )}
             </div>
             <p className="text-xs text-gray-400 mt-0.5">
-              Columns: Name · Email · Phone · Status · Ad · Campaign · State · Platform · Assigned To · Duplicate · Follow-up · Created · Updated
+              Columns: Name · Email · Phone · Status · Ad · Campaign · State · Platform · Assigned To · Duplicate · Follow-up · Created · Updated · Stage dates (Contacted/Qualified/Proposal/Won/Lost) · Full Status Journey
             </p>
           </div>
           <button

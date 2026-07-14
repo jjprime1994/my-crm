@@ -43,33 +43,69 @@ export async function GET(req: NextRequest) {
 
   const leads = await db.lead.findMany({
     where,
-    include: { assignedTo: { select: { name: true } } },
+    include: {
+      assignedTo: { select: { name: true } },
+      statusHistory: {
+        orderBy: { createdAt: "asc" },
+        include: { changedBy: { select: { name: true } } },
+      },
+    },
     orderBy: { createdAt: "desc" },
     take: 50000,
   })
+
+  const fmtDate = (d: Date | string) =>
+    new Date(d).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
+
+  const JOURNEY_STAGES: LeadStatus[] = ["CONTACTED", "QUALIFIED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
 
   const headers = [
     "First Name", "Last Name", "Email", "Phone",
     "Status", "Ad / Form", "Campaign", "State", "Platform",
     "Assigned To", "Duplicate", "Follow-up Date", "Created Date", "Last Updated",
+    "Date Contacted", "Date Qualified", "Date Proposal", "Date Closed Won", "Date Closed Lost",
+    "Status Journey",
   ]
 
-  const rows = leads.map((l) => [
-    l.firstName ?? "",
-    l.lastName ?? "",
-    l.email ?? "",
-    l.phone ?? "",
-    l.status,
-    l.adName ?? "",
-    l.campaignName ?? "",
-    l.branch ?? "",
-    l.source ?? "META",
-    l.assignedTo?.name ?? "Unassigned",
-    l.isDuplicate ? "Yes" : "No",
-    l.followUpAt ? new Date(l.followUpAt).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }) : "",
-    new Date(l.createdAt).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }),
-    new Date(l.updatedAt).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }),
-  ])
+  const rows = leads.map((l) => {
+    // Earliest time the lead first reached each stage
+    const reachedAt: Partial<Record<LeadStatus, Date>> = {}
+    for (const h of l.statusHistory) {
+      if (!reachedAt[h.to]) reachedAt[h.to] = h.createdAt
+    }
+
+    // Collapse consecutive duplicate transitions (can happen if the history backfill re-ran)
+    const dedupedHistory = l.statusHistory.filter(
+      (h, i) => i === 0 || h.from !== l.statusHistory[i - 1].from || h.to !== l.statusHistory[i - 1].to
+    )
+
+    const journey = dedupedHistory
+      .map((h) =>
+        h.from
+          ? `${h.from} → ${h.to} (${fmtDate(h.createdAt)}${h.changedBy?.name ? ` by ${h.changedBy.name}` : ""})`
+          : `Created as ${h.to} (${fmtDate(h.createdAt)})`
+      )
+      .join("; ")
+
+    return [
+      l.firstName ?? "",
+      l.lastName ?? "",
+      l.email ?? "",
+      l.phone ?? "",
+      l.status,
+      l.adName ?? "",
+      l.campaignName ?? "",
+      l.branch ?? "",
+      l.source ?? "META",
+      l.assignedTo?.name ?? "Unassigned",
+      l.isDuplicate ? "Yes" : "No",
+      l.followUpAt ? fmtDate(l.followUpAt) : "",
+      fmtDate(l.createdAt),
+      fmtDate(l.updatedAt),
+      ...JOURNEY_STAGES.map((s) => (reachedAt[s] ? fmtDate(reachedAt[s]!) : "")),
+      journey,
+    ]
+  })
 
   const sanitize = (cell: string) => {
     const s = String(cell)
