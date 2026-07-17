@@ -20,7 +20,7 @@ for (const line of readFileSync(resolve(process.cwd(), envFile), "utf8").split("
 async function main() {
   const { db } = await import("../src/lib/db")
   const { getEffectiveAdmin } = await import("../src/lib/available-leads")
-  const { filterLeads } = await import("../src/lib/lead-filter")
+  const { filterLeads, buildIndividualGrants } = await import("../src/lib/lead-filter")
 
   const [leads, users, stateRoutes, adRoutes, managers] = await Promise.all([
     db.lead.findMany({
@@ -74,10 +74,15 @@ async function main() {
     if (assignee.role === "SUPER_ADMIN") continue // super admin can hold anything
 
     const myStates = statesOf(assignee.id)
+    const myGrants = buildIndividualGrants(adRoutes.filter((r) => r.userIds.includes(assignee.id)), assignee.id)
+    const grantedStates = lead.adName ? myGrants.get(lead.adName) : undefined
+    const individuallyRouted = grantedStates !== undefined &&
+      (grantedStates.length === 0 || (lead.branch !== null && grantedStates.includes(lead.branch)))
 
     if (myStates.length > 0) {
-      // Rule 1: StateRoute members hold ONLY their states' leads
-      if (!lead.branch || !myStates.includes(lead.branch)) {
+      // Rule 1: StateRoute members hold ONLY their states' leads, unless the ad is
+      // individually routed to them directly (e.g. a language-specific override).
+      if (!individuallyRouted && (!lead.branch || !myStates.includes(lead.branch))) {
         findings.push({
           lead, assignee: assignee.name,
           problem: `${assignee.name} is a ${myStates.join("/")} state-route member but holds a "${lead.branch ?? "no state"}" lead`,
@@ -102,7 +107,7 @@ async function main() {
 
     // Rule 2/3: would this lead have been visible to the assignee's team at all?
     const admin = adminCache.get(assignee.id) ?? null
-    const visible = filterLeads([lead], admin, routeIndex, routedAdNames, managerStates, hasDefaultTeam)
+    const visible = filterLeads([lead], admin, routeIndex, routedAdNames, managerStates, hasDefaultTeam, myGrants)
     if (visible.length === 0) {
       findings.push({
         lead, assignee: assignee.name,

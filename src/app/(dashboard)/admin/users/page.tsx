@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import { isAdmin, isSuperAdmin, isManagerLevel, isTeamLeader } from "@/lib/roles"
 import UserManagementClient from "@/components/UserManagementClient"
+import TeamAdAccessClient from "@/components/TeamAdAccessClient"
 import { getViewAsRole } from "@/lib/viewas"
 
 export default async function UsersPage() {
@@ -31,7 +32,7 @@ export default async function UsersPage() {
     where = { OR: [{ id: session!.user.id }, { managerId: session!.user.id }] }
   }
 
-  const [users, managers] = await Promise.all([
+  const [users, managers, myCoveredStates, activeAdRoutes, allSalesRoster] = await Promise.all([
     db.user.findMany({
       where,
       select: {
@@ -50,16 +51,45 @@ export default async function UsersPage() {
     superAdmin
       ? db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN", "TEAM_LEADER"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
+    manager || superAdmin
+      ? db.user.findUnique({ where: { id: session!.user.id }, select: { coveredStates: true } })
+      : Promise.resolve(null),
+    manager || superAdmin
+      ? db.adRoute.findMany({ where: { archived: false }, select: { adName: true, adId: true, userIds: true, userStates: true }, orderBy: { adName: "asc" } })
+      : Promise.resolve([]),
+    // Super admin isn't scoped by `where` above (they already load everyone), but the
+    // panel needs the full salesperson/team-leader roster regardless of team.
+    superAdmin
+      ? db.user.findMany({ where: { role: { in: ["SALESPERSON", "TEAM_LEADER"] } }, select: { id: true, name: true, role: true }, orderBy: { name: "asc" } })
+      : Promise.resolve([]),
   ])
 
   return (
-    <UserManagementClient
-      users={users}
-      currentUserId={session!.user.id}
-      isSuperAdmin={superAdmin}
-      isTeamLeader={teamLeader}
-      isManager={manager}
-      managers={managers}
-    />
+    <div className="space-y-6">
+      <UserManagementClient
+        users={users}
+        currentUserId={session!.user.id}
+        isSuperAdmin={superAdmin}
+        isTeamLeader={teamLeader}
+        isManager={manager}
+        managers={managers}
+      />
+      {(manager || superAdmin) && (
+        <TeamAdAccessClient
+          ads={activeAdRoutes.map((r) => ({
+            adName: r.adName,
+            adId: r.adId,
+            userIds: r.userIds,
+            userStates: (r.userStates as Record<string, string[]>) ?? {},
+          }))}
+          teamMembers={
+            superAdmin
+              ? allSalesRoster
+              : users.filter((u) => u.id !== session!.user.id && (u.role === "SALESPERSON" || u.role === "TEAM_LEADER"))
+          }
+          myCoveredStates={myCoveredStates?.coveredStates ?? []}
+        />
+      )}
+    </div>
   )
 }

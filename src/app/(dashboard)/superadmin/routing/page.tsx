@@ -20,7 +20,7 @@ export default async function RoutingPage() {
     db.adRoute.findMany().catch(() => []),
     db.user.findMany({
       where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
-      select: { id: true, name: true, coveredStates: true, isDefaultTeam: true },
+      select: { id: true, name: true, coveredStates: true, isDefaultTeam: true, teamName: true },
       orderBy: { name: "asc" },
     }).catch(() => []),
     db.user.findFirst({ where: { isDefaultTeam: true }, select: { id: true } }).catch(() => null),
@@ -45,6 +45,8 @@ export default async function RoutingPage() {
       adId: route?.adId ?? lead?.adId ?? null,
       adName,
       teamIds: route?.teamIds ?? [],
+      userIds: route?.userIds ?? [],
+      userStates: (route?.userStates as Record<string, string[]>) ?? {},
       archived: route?.archived ?? false,
     }
   })

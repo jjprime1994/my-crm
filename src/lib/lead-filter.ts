@@ -3,9 +3,30 @@
 
 export type AdminInfo = { id: string; coveredStates: string[]; isDefaultTeam: boolean } | null
 
+// Maps adName -> allowed states for an individually-granted user. An empty array means
+// unrestricted (all states) — e.g. a dedicated language specialist covering the whole
+// country. A non-empty array scopes the grant to only those states — e.g. a
+// language-specific salesperson who should only see that ad's leads from their own state.
+export type IndividualGrants = Map<string, string[]>
+
 type Lead = {
   adName?: string | null
   branch?: string | null
+}
+
+// Builds an IndividualGrants map for one user from a set of AdRoute rows already
+// filtered to routes where that user is in `userIds`. `userStates` is a Prisma Json
+// column: { [userId]: string[] } — an empty/missing array means unrestricted.
+export function buildIndividualGrants(
+  routes: { adName: string; userStates: unknown }[],
+  userId: string,
+): IndividualGrants {
+  const grants: IndividualGrants = new Map()
+  for (const route of routes) {
+    const states = (route.userStates as Record<string, string[]> | null)?.[userId] ?? []
+    grants.set(route.adName, states)
+  }
+  return grants
 }
 
 export function filterLeads<T extends Lead>(
@@ -15,12 +36,22 @@ export function filterLeads<T extends Lead>(
   routedAdNames: Set<string>,
   managerStates: Record<string, string[]>,
   hasDefaultTeam: boolean,
+  individualGrants: IndividualGrants = new Map(),
 ): T[] {
   return allLeads.filter((lead) => {
-    if (!effectiveAdmin) return false
-
     const adName = lead.adName ?? null
     const branch = lead.branch ?? null
+
+    // Individual override: this specific person is granted the ad's leads directly
+    // (e.g. a language-specific salesperson), regardless of their team's state coverage.
+    // If the grant is state-scoped, it only applies to leads from those state(s).
+    if (adName && individualGrants.has(adName)) {
+      const allowedStates = individualGrants.get(adName)!
+      if (allowedStates.length === 0 || (branch && allowedStates.includes(branch))) return true
+    }
+
+    if (!effectiveAdmin) return false
+
     const adIsRouted = adName ? routedAdNames.has(adName) : false
 
     const assignedTeams = adIsRouted && adName ? (routeIndex[adName] ?? []) : []
@@ -91,15 +122,19 @@ export function buildAdNameFilter(
   effectiveAdmin: AdminInfo,
   allRoutes: { adName: string; teamIds: string[] }[],
   hasDefaultTeam: boolean,
+  individualGrants: IndividualGrants = new Map(),
 ): { OR?: object[] } {
   if (!effectiveAdmin || effectiveAdmin.isDefaultTeam) return {}
 
-  const myAdNames = allRoutes.filter((r) => r.teamIds.includes(effectiveAdmin.id)).map((r) => r.adName)
+  const myAdNames = new Set([
+    ...allRoutes.filter((r) => r.teamIds.includes(effectiveAdmin.id)).map((r) => r.adName),
+    ...individualGrants.keys(),
+  ])
   const allRoutedAdNames = allRoutes.map((r) => r.adName)
 
   const or: object[] = [
     { adName: null }, // no-source leads, state-filtered later in JS
-    ...(myAdNames.length > 0 ? [{ adName: { in: myAdNames } }] : []),
+    ...(myAdNames.size > 0 ? [{ adName: { in: Array.from(myAdNames) } }] : []),
     // Unrouted leads: only include when there's no default team (otherwise default team handles them)
     ...(!hasDefaultTeam && allRoutedAdNames.length > 0 ? [{ adName: { notIn: allRoutedAdNames } }] : []),
   ]

@@ -17,12 +17,14 @@ async function main() {
 // Import after env is set so db.ts sees DATABASE_URL.
 const { db } = await import("../src/lib/db")
 const { getAvailableLeads, getAvailableLeadsCount } = await import("../src/lib/available-leads")
+const { buildIndividualGrants } = await import("../src/lib/lead-filter")
 
 const violations: string[] = []
 
-const [users, stateRoutes] = await Promise.all([
+const [users, stateRoutes, adRoutes] = await Promise.all([
   db.user.findMany({ select: { id: true, name: true, role: true, claimLimit: true } }),
   db.stateRoute.findMany({ select: { state: true, userIds: true } }),
+  db.adRoute.findMany({ where: { archived: false }, select: { adName: true, userIds: true, userStates: true } }),
 ])
 
 for (const user of users) {
@@ -38,10 +40,16 @@ for (const user of users) {
     violations.push(`${user.name}: counter shows ${count} but the claimable list has ${list.length}`)
   }
 
-  // Invariant 1: StateRoute members see only their states' leads
+  // Invariant 1: StateRoute members see only their states' leads, unless the lead's ad
+  // is individually routed to them directly (e.g. a language-specific ad override).
   const myStates = new Set(stateRoutes.filter((r) => r.userIds.includes(user.id)).map((r) => r.state))
   if (myStates.size > 0) {
+    const myGrants = buildIndividualGrants(adRoutes.filter((r) => r.userIds.includes(user.id)), user.id)
     for (const lead of list) {
+      if (lead.adName && myGrants.has(lead.adName)) {
+        const allowed = myGrants.get(lead.adName)!
+        if (allowed.length === 0 || (lead.branch && allowed.includes(lead.branch))) continue
+      }
       if (!lead.branch || !myStates.has(lead.branch)) {
         violations.push(
           `${user.name} (states: ${[...myStates].join(", ")}) can see lead ${lead.id} from "${lead.branch ?? "no state"}"`

@@ -71,6 +71,15 @@ if (!globalForPrisma.dbInitialized) {
     db.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isDefaultTeam" BOOLEAN NOT NULL DEFAULT false`
   )
   .then(() =>
+    db.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "teamName" TEXT`
+  )
+  .then(() =>
+    db.$executeRaw`ALTER TABLE "AdRoute" ADD COLUMN IF NOT EXISTS "userIds" TEXT[] NOT NULL DEFAULT '{}'`
+  )
+  .then(() =>
+    db.$executeRaw`ALTER TABLE "AdRoute" ADD COLUMN IF NOT EXISTS "userStates" JSONB NOT NULL DEFAULT '{}'`
+  )
+  .then(() =>
     db.$executeRaw`
       CREATE TABLE IF NOT EXISTS "AdRoute" (
         "id"        TEXT         NOT NULL,

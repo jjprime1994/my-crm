@@ -30,6 +30,8 @@ export async function GET() {
     adId: ad.adId,
     adName: ad.adName!,
     teamIds: routeMap[ad.adName!]?.teamIds ?? [],
+    userIds: routeMap[ad.adName!]?.userIds ?? [],
+    userStates: routeMap[ad.adName!]?.userStates ?? {},
     routeId: routeMap[ad.adName!]?.id ?? null,
   }))
 
@@ -41,14 +43,16 @@ export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session || !isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
 
-  const { adName, adId, teamIds, archived } = await req.json()
+  const { adName, adId, teamIds, userIds, userStates, archived } = await req.json()
   if (!adName) return new NextResponse("adName required", { status: 400 })
 
   const route = await db.adRoute.upsert({
     where: { adName },
-    create: { id: crypto.randomUUID(), adName, adId: adId ?? null, teamIds: teamIds ?? [], archived: archived ?? false },
+    create: { id: crypto.randomUUID(), adName, adId: adId ?? null, teamIds: teamIds ?? [], userIds: userIds ?? [], userStates: userStates ?? {}, archived: archived ?? false },
     update: {
       ...(teamIds !== undefined && { teamIds }),
+      ...(userIds !== undefined && { userIds }),
+      ...(userStates !== undefined && { userStates }),
       ...(adId !== undefined && { adId }),
       ...(archived !== undefined && { archived }),
     },

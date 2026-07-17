@@ -17,6 +17,7 @@ model User {
   newLeadThreshold  Int                 @default(0)
   coveredStates     String[]            @default([])
   isDefaultTeam     Boolean             @default(false)
+  teamName          String?
   autoAssign        Boolean             @default(false)
   managerId         String?
   manager           User?               @relation("TeamMembers", fields: [managerId], references: [id])
@@ -89,6 +90,8 @@ model AdRoute {
   adId      String?
   adName    String   @unique
   teamIds   String[]
+  userIds   String[] @default([])
+  userStates Json    @default("{}")
   archived  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

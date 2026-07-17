@@ -91,6 +91,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
     data.coveredStates = Array.isArray(body.coveredStates) ? body.coveredStates : []
   }
+  if ("teamName" in body) {
+    if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+    const trimmed = typeof body.teamName === "string" ? body.teamName.trim() : ""
+    data.teamName = trimmed.length > 0 ? trimmed : null
+  }
 
   const user = await db.user.update({
     where: { id },

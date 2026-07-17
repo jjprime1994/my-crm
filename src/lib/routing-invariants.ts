@@ -1,6 +1,6 @@
 import { db } from "@/lib/db"
 import { getAvailableLeads, getAvailableLeadsCount, getEffectiveAdmin } from "@/lib/available-leads"
-import { filterLeads, type AdminInfo } from "@/lib/lead-filter"
+import { filterLeads, buildIndividualGrants, type AdminInfo } from "@/lib/lead-filter"
 
 // Assignments made before this are grandfathered — the owner reviewed the
 // pre-existing violations on 2026-07-07 and chose to leave them in place.
@@ -13,9 +13,10 @@ const ASSIGNMENT_AUDIT_SINCE = new Date("2026-07-07T16:00:00Z")
 export async function checkRoutingInvariants(): Promise<string[]> {
   const violations: string[] = []
 
-  const [users, stateRoutes] = await Promise.all([
+  const [users, stateRoutes, adRoutes] = await Promise.all([
     db.user.findMany({ select: { id: true, name: true, role: true, claimLimit: true } }),
     db.stateRoute.findMany({ select: { state: true, userIds: true } }),
+    db.adRoute.findMany({ where: { archived: false }, select: { adName: true, userIds: true, userStates: true } }),
   ])
 
   const checkable = users.filter((u) => u.role !== "SUPER_ADMIN")
@@ -35,10 +36,16 @@ export async function checkRoutingInvariants(): Promise<string[]> {
           violations.push(`${user.name}: counter shows ${count} but the claimable list has ${list.length}`)
         }
 
-        // Invariant: StateRoute members see only their states' leads
+        // Invariant: StateRoute members see only their states' leads, unless the lead's ad
+        // is individually routed to them directly (e.g. a language-specific ad override).
         const myStates = new Set(stateRoutes.filter((r) => r.userIds.includes(user.id)).map((r) => r.state))
         if (myStates.size > 0) {
+          const myGrants = buildIndividualGrants(adRoutes.filter((r) => r.userIds.includes(user.id)), user.id)
           for (const lead of list) {
+            if (lead.adName && myGrants.has(lead.adName)) {
+              const allowed = myGrants.get(lead.adName)!
+              if (allowed.length === 0 || (lead.branch && allowed.includes(lead.branch))) continue
+            }
             if (!lead.branch || !myStates.has(lead.branch)) {
               violations.push(
                 `${user.name} (states: ${[...myStates].join(", ")}) can see lead ${lead.id} from "${lead.branch ?? "no state"}"`
@@ -84,7 +91,7 @@ async function checkAssignedLeads(
   const violations: string[] = []
 
   const [adRoutes, managers, leads] = await Promise.all([
-    db.adRoute.findMany({ where: { archived: false }, select: { adName: true, teamIds: true } }),
+    db.adRoute.findMany({ where: { archived: false }, select: { adName: true, teamIds: true, userIds: true, userStates: true } }),
     db.user.findMany({
       where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
       select: { id: true, coveredStates: true, isDefaultTeam: true },
@@ -116,9 +123,13 @@ async function checkAssignedLeads(
 
     const leadName = [lead.firstName, lead.lastName].filter(Boolean).join(" ") || lead.id
     const myStates = stateRoutes.filter((r) => r.userIds.includes(assignee.id)).map((r) => r.state)
+    const individualGrants = buildIndividualGrants(adRoutes.filter((r) => r.userIds.includes(assignee.id)), assignee.id)
+    const grantedStates = lead.adName ? individualGrants.get(lead.adName) : undefined
+    const individuallyRouted = grantedStates !== undefined &&
+      (grantedStates.length === 0 || (lead.branch !== null && grantedStates.includes(lead.branch)))
 
     if (myStates.length > 0) {
-      if (!lead.branch || !myStates.includes(lead.branch)) {
+      if (!individuallyRouted && (!lead.branch || !myStates.includes(lead.branch))) {
         violations.push(
           `${assignee.name} (${myStates.join("/")} state route) holds "${lead.branch ?? "no state"}" lead ${leadName}`
         )
@@ -130,7 +141,7 @@ async function checkAssignedLeads(
       adminCache.set(assignee.id, await getEffectiveAdmin(assignee.id, assignee.role).catch(() => null))
     }
     const admin = adminCache.get(assignee.id) ?? null
-    const visible = filterLeads([lead], admin, routeIndex, routedAdNames, managerStates, hasDefaultTeam)
+    const visible = filterLeads([lead], admin, routeIndex, routedAdNames, managerStates, hasDefaultTeam, individualGrants)
     if (visible.length === 0) {
       violations.push(
         `${assignee.name} holds lead ${leadName} their team's pool would not show (ad "${lead.adName ?? "none"}", state ${lead.branch ?? "none"})`
