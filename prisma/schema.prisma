@@ -19,6 +19,7 @@ model User {
   isDefaultTeam     Boolean             @default(false)
   teamName          String?
   autoAssign        Boolean             @default(false)
+  disabled          Boolean             @default(false)
   managerId         String?
   manager           User?               @relation("TeamMembers", fields: [managerId], references: [id])
   teamMembers       User[]              @relation("TeamMembers")

@@ -11,7 +11,7 @@ const DEFAULT_TEAM_OWNER_ID = "cmp2ckqkr000004l27jkpfzmq"
 export async function assignToDefaultTeam(): Promise<string | null> {
   // Direct reports (team leaders + any direct salespeople)
   const directReports = await db.user.findMany({
-    where: { managerId: DEFAULT_TEAM_OWNER_ID, role: { in: ["TEAM_LEADER", "SALESPERSON"] } },
+    where: { managerId: DEFAULT_TEAM_OWNER_ID, role: { in: ["TEAM_LEADER", "SALESPERSON"] }, disabled: false },
     select: { id: true, role: true },
   })
 
@@ -21,7 +21,7 @@ export async function assignToDefaultTeam(): Promise<string | null> {
   // Salespeople under team leaders
   const subSalespeople = leaderIds.length > 0
     ? await db.user.findMany({
-        where: { managerId: { in: leaderIds }, role: "SALESPERSON" },
+        where: { managerId: { in: leaderIds }, role: "SALESPERSON", disabled: false },
         select: { id: true },
       })
     : []

@@ -44,6 +44,7 @@ export default async function UsersPage() {
         newLeadThreshold: true,
         managerId: true,
         createdAt: true,
+        disabled: true,
         _count: { select: { leads: true } },
       },
       orderBy: { createdAt: "desc" },

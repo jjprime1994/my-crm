@@ -9,27 +9,34 @@ const ROLE_RANK: Record<string, number> = { SUPER_ADMIN: 4, ADMIN: 3, TEAM_LEADE
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session || !isManagerLevel(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+  if (!session || !isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
   const { id } = await params
   if (id === session.user.id) return new NextResponse("Cannot delete yourself", { status: 400 })
 
   const target = await db.user.findUnique({ where: { id }, select: { managerId: true, role: true } })
   if (!target) return new NextResponse("Not found", { status: 404 })
 
-  // Cannot delete a user of equal or higher rank (prevents ADMIN deleting SUPER_ADMIN)
+  // Cannot delete a user of equal or higher rank (prevents deleting another SUPER_ADMIN)
   if ((ROLE_RANK[target.role] ?? 0) >= (ROLE_RANK[session.user.role] ?? 0)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 
-  // Team leaders can only delete their own direct reports
-  if (isTeamLeader(session.user.role)) {
-    if (target.managerId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
+  // assignedToId is ON DELETE SET NULL, so deleting a user silently dumps all their
+  // active leads back into the Available Leads pool — block that instead of doing it quietly.
+  const activeLeadCount = await db.lead.count({
+    where: { assignedToId: id, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
+  })
+  if (activeLeadCount > 0) {
+    return new NextResponse(
+      `Cannot delete — this user has ${activeLeadCount} active lead${activeLeadCount !== 1 ? "s" : ""} assigned. Reassign them first.`,
+      { status: 409 }
+    )
   }
 
   try {
     await db.user.delete({ where: { id } })
   } catch {
-    return new NextResponse("Cannot delete user — they still have associated data. Reassign their leads first.", { status: 409 })
+    return new NextResponse("Cannot delete user — they still have associated data.", { status: 409 })
   }
   return new NextResponse(null, { status: 204 })
 }
@@ -96,11 +103,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const trimmed = typeof body.teamName === "string" ? body.teamName.trim() : ""
     data.teamName = trimmed.length > 0 ? trimmed : null
   }
+  if ("disabled" in body) {
+    if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+    data.disabled = !!body.disabled
+  }
 
   const user = await db.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, claimLimit: true, newLeadThreshold: true, role: true },
+    select: { id: true, name: true, claimLimit: true, newLeadThreshold: true, role: true, disabled: true },
   })
   return NextResponse.json(user)
 }

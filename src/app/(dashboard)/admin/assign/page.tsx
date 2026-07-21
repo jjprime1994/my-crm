@@ -22,7 +22,7 @@ export default async function AssignPage() {
       take: 500,
     }),
     db.user.findMany({
-      where: { role: { in: ["ADMIN", "TEAM_LEADER", "SALESPERSON"] } },
+      where: { role: { in: ["ADMIN", "TEAM_LEADER", "SALESPERSON"] }, disabled: false },
       select: {
         id: true, name: true, role: true,
         _count: { select: { leads: true } },

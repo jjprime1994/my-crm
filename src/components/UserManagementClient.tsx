@@ -11,6 +11,7 @@ type User = {
   newLeadThreshold: number
   managerId: string | null
   createdAt: Date | string
+  disabled: boolean
   _count: { leads: number }
 }
 
@@ -125,9 +126,23 @@ export default function UserManagementClient({ users: initial, currentUserId, is
   }
 
   async function deleteUser(id: string) {
-    if (!confirm("Remove this user? Their leads will become unassigned.")) return
-    await fetch(`/api/users/${id}`, { method: "DELETE" })
+    if (!confirm("Permanently delete this user? This cannot be undone.")) return
+    const res = await fetch(`/api/users/${id}`, { method: "DELETE" })
+    if (!res.ok) {
+      const message = await res.text()
+      alert(message || "Failed to delete user.")
+      return
+    }
     setUsers(users.filter((u) => u.id !== id))
+  }
+
+  async function toggleDisabled(id: string, disabled: boolean) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ disabled }),
+    })
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, disabled } : u)))
   }
 
   async function saveClaimLimit(id: string, value: number) {
@@ -405,10 +420,27 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
                 </button>
-                {user.id !== currentUserId && (
+                {isSuperAdmin && user.id !== currentUserId && (
+                  <button
+                    onClick={() => toggleDisabled(user.id, !user.disabled)}
+                    title={user.disabled ? "Re-enable login" : "Disable login"}
+                    className={`p-1.5 rounded-xl transition ${user.disabled ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50" : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"}`}
+                  >
+                    {user.disabled ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    )}
+                  </button>
+                )}
+                {isSuperAdmin && user.id !== currentUserId && (
                   <button
                     onClick={() => deleteUser(user.id)}
-                    title="Remove user"
+                    title="Delete user"
                     className="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -420,7 +452,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
             </div>
 
             {/* Role row */}
-            <div>
+            <div className="flex items-center gap-2 flex-wrap">
               {isSuperAdmin ? (
                 <select
                   value={user.role}
@@ -435,6 +467,11 @@ export default function UserManagementClient({ users: initial, currentUserId, is
               ) : (
                 <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeClass(user.role)}`}>
                   {roleLabel(user.role)}
+                </span>
+              )}
+              {user.disabled && (
+                <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                  Disabled
                 </span>
               )}
             </div>
@@ -624,6 +661,11 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                       {roleLabel(user.role)}
                     </span>
                   )}
+                  {user.disabled && (
+                    <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200 ml-1.5">
+                      Disabled
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-4">
                   <span className="text-sm font-semibold text-gray-900">{user._count.leads}</span>
@@ -779,10 +821,27 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         </svg>
                       </button>
                     )}
-                    {user.id !== currentUserId && resettingPassword !== user.id && (
+                    {isSuperAdmin && user.id !== currentUserId && resettingPassword !== user.id && (
+                      <button
+                        onClick={() => toggleDisabled(user.id, !user.disabled)}
+                        title={user.disabled ? "Re-enable login" : "Disable login"}
+                        className={`p-1.5 rounded-lg transition ${user.disabled ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50" : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"}`}
+                      >
+                        {user.disabled ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                    {isSuperAdmin && user.id !== currentUserId && resettingPassword !== user.id && (
                       <button
                         onClick={() => deleteUser(user.id)}
-                        title="Remove user"
+                        title="Delete user"
                         className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

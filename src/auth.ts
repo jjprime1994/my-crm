@@ -47,6 +47,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: String(credentials.email) },
         })
         if (!user) { recordFailure(email); return null }
+        if (user.disabled) return null
         const valid = await bcrypt.compare(String(credentials.password), user.password)
         if (!valid) { recordFailure(email); return null }
         clearFailures(email)
