@@ -1,4 +1,4 @@
-import { auth } from "@/auth"
+import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
 import { getViewAsRole, getCurrentViewAs } from "@/lib/viewas"
 import DashboardShell from "@/components/DashboardShell"
@@ -8,6 +8,13 @@ import { getAvailableLeadsCount } from "@/lib/available-leads"
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect("/login")
+
+  // A disabled user's JWT can still be valid (no live session store to invalidate on disable),
+  // so catch it here on every dashboard page load and force a real sign-out.
+  const sessionUser = await db.user.findUnique({ where: { id: session.user.id }, select: { disabled: true } })
+  if (!sessionUser || sessionUser.disabled) {
+    await signOut({ redirectTo: "/login" })
+  }
 
   const actualRole = session.user.role ?? "SALESPERSON"
   const isSuperAdmin = actualRole === "SUPER_ADMIN"

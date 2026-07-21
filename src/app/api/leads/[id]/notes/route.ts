@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isManagerLevel } from "@/lib/roles"
+import { isUserDisabled } from "@/lib/session-guard"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
+  if (await isUserDisabled(session.user.id)) return new NextResponse("Account disabled", { status: 403 })
 
   const { id } = await params
   const admin = isManagerLevel(session.user.role)

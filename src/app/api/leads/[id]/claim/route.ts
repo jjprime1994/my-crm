@@ -12,6 +12,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const user = await db.user.findUnique({ where: { id: session.user.id } })
   if (!user) return new NextResponse("User not found", { status: 404 })
+  if (user.disabled) return new NextResponse("Account disabled", { status: 403 })
 
   const isSuperAdmin = session.user.role === "SUPER_ADMIN"
 
