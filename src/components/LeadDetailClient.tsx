@@ -374,7 +374,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
               </div>
             </div>
 
-            {!isAdmin && !lead.branch && (
+            {!lead.branch && lead.assignedTo && (
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <button
                   onClick={releaseToPool}
@@ -385,7 +385,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 </button>
                 <p className="text-xs text-gray-400 mt-1.5">
                   {branch
-                    ? `This will unassign the lead from you and put it in the ${branch} team's Available Leads pool.`
+                    ? `This will unassign the lead from ${lead.assignedTo.id === currentUser.id ? "you" : lead.assignedTo.name} and put it in the ${branch} team's Available Leads pool.`
                     : "Select the state the customer confirmed, then release this lead to that team's pool."}
                 </p>
               </div>

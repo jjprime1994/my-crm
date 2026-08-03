@@ -64,20 +64,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     data.branch = branch
   }
 
-  // Admins can (re)assign to anyone. A salesperson can only release their own lead
-  // back to the pool (assignedToId -> null) — e.g. after correcting the state so the
-  // right state team can claim it. They cannot assign it to someone else directly.
-  let selfRelease = false
+  // Admins can (re)assign to anyone, including releasing any lead back to the pool.
+  // A non-admin can only release their own lead (assignedToId -> null) — e.g. after
+  // correcting the state so the right state team can claim it — not assign it to
+  // someone else directly.
   if ("assignedToId" in body) {
     if (admin) {
       data.assignedToId = assignedToId
     } else if (assignedToId === null && existing.assignedToId === session.user.id) {
       data.assignedToId = null
-      selfRelease = true
     } else {
       return new NextResponse("Forbidden", { status: 403 })
     }
   }
+  const released = "assignedToId" in body && data.assignedToId === null
 
   const lead = await db.lead.update({ where: { id }, data, include: { assignedTo: { select: { name: true } } } })
 
@@ -108,7 +108,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         leadId: id,
         assignedToId: data.assignedToId ?? null,
         assignedById: session.user.id,
-        source: selfRelease ? "RELEASED_TO_POOL" : "SINGLE_ASSIGN",
+        source: released ? "RELEASED_TO_POOL" : "SINGLE_ASSIGN",
       },
     }).catch((e) => console.error("Failed to write assignment log:", e))
 
