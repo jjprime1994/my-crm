@@ -7,6 +7,7 @@ import { isManagerLevel } from "@/lib/roles"
 import { isUserDisabled } from "@/lib/session-guard"
 import { LeadStatus } from "@/generated/prisma/client"
 import { sendPushToUser } from "@/lib/push"
+import { MALAYSIA_STATES } from "@/lib/branch"
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -46,8 +47,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!admin && existing.assignedToId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
 
   const body = await req.json()
-  const { status, assignedToId, followUpAt } = body
-  const data: { status?: LeadStatus; assignedToId?: string | null; followUpAt?: Date | null } = {}
+  const { status, assignedToId, followUpAt, branch } = body
+  const data: { status?: LeadStatus; assignedToId?: string | null; followUpAt?: Date | null; branch?: string | null } = {}
 
   const VALID_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
   if (status) {
@@ -56,9 +57,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   if ("followUpAt" in body) data.followUpAt = followUpAt ? new Date(followUpAt) : null
 
+  if ("branch" in body) {
+    if (branch !== null && !(MALAYSIA_STATES as readonly string[]).includes(branch)) {
+      return new NextResponse("Invalid state", { status: 400 })
+    }
+    data.branch = branch
+  }
+
+  // Admins can (re)assign to anyone. A salesperson can only release their own lead
+  // back to the pool (assignedToId -> null) — e.g. after correcting the state so the
+  // right state team can claim it. They cannot assign it to someone else directly.
+  let selfRelease = false
   if ("assignedToId" in body) {
-    if (!admin) return new NextResponse("Forbidden", { status: 403 })
-    data.assignedToId = assignedToId
+    if (admin) {
+      data.assignedToId = assignedToId
+    } else if (assignedToId === null && existing.assignedToId === session.user.id) {
+      data.assignedToId = null
+      selfRelease = true
+    } else {
+      return new NextResponse("Forbidden", { status: 403 })
+    }
   }
 
   const lead = await db.lead.update({ where: { id }, data, include: { assignedTo: { select: { name: true } } } })
@@ -90,7 +108,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         leadId: id,
         assignedToId: data.assignedToId ?? null,
         assignedById: session.user.id,
-        source: "SINGLE_ASSIGN",
+        source: selfRelease ? "RELEASED_TO_POOL" : "SINGLE_ASSIGN",
       },
     }).catch((e) => console.error("Failed to write assignment log:", e))
 

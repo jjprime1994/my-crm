@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { calcResponseTime } from "@/lib/responseTime"
 import { useToast } from "@/components/Toast"
+import { MALAYSIA_STATES } from "@/lib/branch"
 
 type Note = {
   id: string
@@ -112,6 +113,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
 
   const [status, setStatus] = useState(lead.status)
   const [assignedToId, setAssignedToId] = useState(lead.assignedTo?.id ?? "")
+  const [branch, setBranch] = useState(lead.branch ?? "")
   const [followUpAt, setFollowUpAt] = useState(
     lead.followUpAt ? new Date(lead.followUpAt).toISOString().slice(0, 10) : ""
   )
@@ -120,12 +122,13 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
   const [notes, setNotes] = useState<Note[]>(lead.notes)
   const [saving, setSaving] = useState(false)
   const [postingNote, setPostingNote] = useState(false)
+  const [releasing, setReleasing] = useState(false)
 
   const statusChanged = status !== lead.status
 
   async function saveChanges() {
     setSaving(true)
-    const body: Record<string, unknown> = { status, followUpAt: followUpAt || null }
+    const body: Record<string, unknown> = { status, followUpAt: followUpAt || null, branch: branch || null }
     if (isAdmin) body.assignedToId = assignedToId || null
 
     const patchRes = fetch(`/api/leads/${lead.id}`, {
@@ -157,6 +160,23 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
     router.refresh()
   }
 
+  async function releaseToPool() {
+    if (!branch) return
+    setReleasing(true)
+    const res = await fetch(`/api/leads/${lead.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ branch, assignedToId: null }),
+    })
+    setReleasing(false)
+    if (!res.ok) {
+      toast("Failed to release lead", "error")
+      return
+    }
+    toast(`Released to the ${branch} team's pool`)
+    router.push("/leads")
+  }
+
   async function logContact(method: string) {
     await fetch(`/api/leads/${lead.id}/notes`, {
       method: "POST",
@@ -186,7 +206,8 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
   }
 
   const originalFollowUp = lead.followUpAt ? new Date(lead.followUpAt).toISOString().slice(0, 10) : ""
-  const changed = statusChanged || followUpAt !== originalFollowUp || (isAdmin && assignedToId !== (lead.assignedTo?.id ?? ""))
+  const branchChanged = branch !== (lead.branch ?? "")
+  const changed = statusChanged || followUpAt !== originalFollowUp || branchChanged || (isAdmin && assignedToId !== (lead.assignedTo?.id ?? ""))
   const canSave = changed && (!statusChanged || statusNote.trim().length > 0)
 
   function addDays(n: number) {
@@ -316,7 +337,6 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
               {[
                 { label: "Email", value: lead.email },
                 { label: "Phone", value: lead.phone },
-                { label: "State", value: lead.branch },
                 { label: "Ad", value: lead.adName },
                 { label: "Campaign", value: lead.campaignName },
                 { label: "Form ID", value: lead.formId, mono: true },
@@ -330,6 +350,19 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 </div>
               ))}
               <div>
+                <p className="text-xs text-gray-400 font-medium mb-0.5">State</p>
+                <select
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
+                >
+                  <option value="">— Not set —</option>
+                  {MALAYSIA_STATES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <p className="text-xs text-gray-400 font-medium mb-0.5">Platform</p>
                 {lead.source === "TIKTOK" ? (
                   <span className="inline-flex text-xs font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 ring-1 ring-pink-100">TikTok</span>
@@ -340,6 +373,23 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 )}
               </div>
             </div>
+
+            {!isAdmin && !lead.branch && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={releaseToPool}
+                  disabled={releasing || !branch}
+                  className="w-full bg-violet-50 hover:bg-violet-100 text-violet-700 text-sm font-semibold py-2.5 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {releasing ? "Releasing…" : "Verify state & release to that team"}
+                </button>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  {branch
+                    ? `This will unassign the lead from you and put it in the ${branch} team's Available Leads pool.`
+                    : "Select the state the customer confirmed, then release this lead to that team's pool."}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Form Responses */}
@@ -546,7 +596,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                       <span className="block text-gray-400">
                         {new Date(log.createdAt).toLocaleString("en-MY", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                         {" · "}
-                        {log.source === "BULK_ASSIGN" ? "Bulk assign" : log.source === "SINGLE_ASSIGN" ? "Manual assign" : log.source}
+                        {log.source === "BULK_ASSIGN" ? "Bulk assign" : log.source === "SINGLE_ASSIGN" ? "Manual assign" : log.source === "RELEASED_TO_POOL" ? "Released to pool (state verified)" : log.source}
                       </span>
                     </li>
                   ))}
