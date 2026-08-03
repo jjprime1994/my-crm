@@ -17,6 +17,16 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.16.0",
+    date: "2026-08-03",
+    title: "Fix & Release Blank-State Leads",
+    items: [
+      "Leads that came in with no state (the ad's form didn't ask for it) can now be corrected right from the lead page — pick the state the customer confirmed, then hit 'Verify state & release to that team' to send it back to the pool for the right state team to claim",
+      "Available both to the salesperson working the lead and to managers/team leaders reviewing it — no need to go through an admin to reroute a blank-state lead",
+      "Only shows up for leads that came in genuinely blank — leads that already had a state aren't affected",
+    ],
+  },
+  {
     version: "1.15.0",
     date: "2026-07-06",
     title: "Website Enquiries & Platform Breakdown",
