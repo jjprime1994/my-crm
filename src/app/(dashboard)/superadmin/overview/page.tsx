@@ -11,6 +11,7 @@ import StateViolationsButton from "@/components/StateViolationsButton"
 import RepairBlankLeadsButton from "@/components/RepairBlankLeadsButton"
 import MetaTokenRefreshTool from "@/components/MetaTokenRefreshTool"
 import RoutingAuditTool from "@/components/RoutingAuditTool"
+import { getCampaignPerformance } from "@/lib/campaign-stats"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -24,9 +25,6 @@ const STATUS_DOT: Record<LeadStatus, string> = {
   NEW: "bg-blue-500", CONTACTED: "bg-amber-500", QUALIFIED: "bg-violet-500",
   PROPOSAL: "bg-orange-500", CLOSED_WON: "bg-emerald-500", CLOSED_LOST: "bg-rose-500",
 }
-
-// Campaigns where CPL is hidden because not all leads flow through the CRM
-const CPL_EXCLUDED_CAMPAIGNS = new Set(["Location Ads"])
 
 const PERIODS = [
   { label: "7d", days: 7 },
@@ -50,7 +48,7 @@ export default async function SuperAdminOverviewPage({
   const since = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
   const dateFilter = since ? { createdAt: { gte: since } } : {}
 
-  const [total, byStatus, byPlatform, salespersonStats, managerStats, sourceStats, recentLeads, campaignLeads, mgmtStats] = await Promise.all([
+  const [total, byStatus, byPlatform, salespersonStats, managerStats, sourceStats, recentLeads, campaignPerformance, mgmtStats] = await Promise.all([
     db.lead.count({ where: dateFilter }),
     db.lead.groupBy({ by: ["status"], _count: true, where: dateFilter }),
     db.lead.groupBy({ by: ["source"], _count: true, where: dateFilter }),
@@ -103,10 +101,7 @@ export default async function SuperAdminOverviewPage({
       take: 10,
       include: { assignedTo: { select: { name: true } } },
     }),
-    db.lead.findMany({
-      where: { ...dateFilter, campaignName: { not: null } },
-      select: { campaignName: true, status: true, assignedToId: true },
-    }),
+    getCampaignPerformance(since),
     db.user.findMany({
       where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
       select: {
@@ -137,98 +132,7 @@ export default async function SuperAdminOverviewPage({
     .map((s) => ({ name: s.campaignName!, count: s._count }))
   const sourcedCount = sourceRows.reduce((sum, s) => sum + s.count, 0)
 
-  const campaignMap = new Map<string, { total: number; claimed: number; won: number; lost: number }>()
-  for (const lead of campaignLeads) {
-    const name = lead.campaignName!
-    if (!campaignMap.has(name)) campaignMap.set(name, { total: 0, claimed: 0, won: 0, lost: 0 })
-    const entry = campaignMap.get(name)!
-    entry.total++
-    if (lead.assignedToId) entry.claimed++
-    if (lead.status === "CLOSED_WON") entry.won++
-    if (lead.status === "CLOSED_LOST") entry.lost++
-  }
-  const campaigns = Array.from(campaignMap.entries())
-    .map(([name, s]) => ({
-      name,
-      total: s.total,
-      claimed: s.claimed,
-      unclaimed: s.total - s.claimed,
-      won: s.won,
-      lost: s.lost,
-      conversion: s.total > 0 ? Math.round((s.won / s.total) * 100) : 0,
-    }))
-    .sort((a, b) => b.total - a.total)
-
-  // Meta Ads API — spend, budget, CPL per campaign
-  type MetaCampaignData = {
-    spendToday: number
-    spendPeriod: number
-    dailyBudget: number | null
-    status: string
-  }
-  const metaData = new Map<string, MetaCampaignData>()
-  const metaToken = process.env.META_PAGE_ACCESS_TOKEN
-  const metaAccountId = process.env.META_AD_ACCOUNT_ID
-    ? `act_${process.env.META_AD_ACCOUNT_ID.replace(/^act_/, "")}`
-    : undefined
-  let metaError: string | null = null
-
-  if (metaToken && metaAccountId) {
-    try {
-      const fmtDate = (d: Date) => d.toISOString().split("T")[0]
-      const periodParam = since
-        ? `time_range=${encodeURIComponent(JSON.stringify({ since: fmtDate(since), until: fmtDate(new Date()) }))}`
-        : `date_preset=maximum`
-      const base = `https://graph.facebook.com/v19.0`
-      const fields = `campaign_name,spend`
-
-      const [campsRes, todayRes, periodRes] = await Promise.all([
-        fetch(`${base}/${metaAccountId}/campaigns?fields=name,daily_budget,lifetime_budget,status&access_token=${metaToken}`, { next: { revalidate: 300 } }),
-        fetch(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&date_preset=today&access_token=${metaToken}`, { next: { revalidate: 300 } }),
-        fetch(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&${periodParam}&access_token=${metaToken}`, { next: { revalidate: 300 } }),
-      ])
-      const [campsJson, todayJson, periodJson] = await Promise.all([campsRes.json(), todayRes.json(), periodRes.json()])
-
-      const firstError = campsJson.error ?? todayJson.error ?? periodJson.error
-      if (firstError) {
-        const e = firstError
-        metaError = `${e.message} [type=${e.type}, code=${e.code}, subcode=${e.error_subcode ?? "none"}, trace=${e.fbtrace_id}]`
-      } else {
-        const budgetMap = new Map<string, { dailyBudget: number | null; status: string }>()
-        for (const c of campsJson.data ?? []) {
-          budgetMap.set(c.name, {
-            dailyBudget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
-            status: c.status ?? "UNKNOWN",
-          })
-        }
-        const todaySpend = new Map<string, number>()
-        for (const ins of todayJson.data ?? []) todaySpend.set(ins.campaign_name, Number(ins.spend ?? 0))
-
-        for (const ins of periodJson.data ?? []) {
-          const b = budgetMap.get(ins.campaign_name) ?? { dailyBudget: null, status: "UNKNOWN" }
-          metaData.set(ins.campaign_name, {
-            spendToday: todaySpend.get(ins.campaign_name) ?? 0,
-            spendPeriod: Number(ins.spend ?? 0),
-            dailyBudget: b.dailyBudget,
-            status: b.status,
-          })
-        }
-        // Add campaigns that ran but had no spend this period
-        for (const [name, b] of budgetMap.entries()) {
-          if (!metaData.has(name)) {
-            metaData.set(name, {
-              spendToday: todaySpend.get(name) ?? 0,
-              spendPeriod: 0,
-              dailyBudget: b.dailyBudget,
-              status: b.status,
-            })
-          }
-        }
-      }
-    } catch {
-      metaError = "Could not reach Meta API"
-    }
-  }
+  const { campaigns, metaError, metaConfigured } = campaignPerformance
 
   const rm = (v: number | null) => v == null ? "—" : `RM ${v.toFixed(2)}`
 
@@ -641,16 +545,29 @@ export default async function SuperAdminOverviewPage({
               <h2 className="font-semibold text-gray-900">Campaign Performance</h2>
               <p className="text-xs text-gray-400 mt-0.5">{campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}</p>
             </div>
-            {metaError && (
-              <span className="text-xs text-rose-500 bg-rose-50 px-3 py-1 rounded-lg border border-rose-100">
-                Meta API: {metaError}
-              </span>
-            )}
-            {!metaToken && (
-              <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
-                Meta token not configured — ad data unavailable
-              </span>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {metaError && (
+                <span className="text-xs text-rose-500 bg-rose-50 px-3 py-1 rounded-lg border border-rose-100">
+                  Meta API: {metaError}
+                </span>
+              )}
+              {!metaConfigured && (
+                <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+                  Meta token not configured — ad data unavailable
+                </span>
+              )}
+              {campaigns.length > 0 && (
+                <a
+                  href={`/api/export/campaigns${period ? `?period=${period}` : ""}`}
+                  className="inline-flex items-center gap-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Export CSV
+                </a>
+              )}
+            </div>
           </div>
           {campaigns.length === 0 ? (
             <div className="text-center py-12 text-sm text-gray-400">No campaign data in this period.</div>
@@ -673,13 +590,12 @@ export default async function SuperAdminOverviewPage({
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {campaigns.map((c) => {
-                  const meta = metaData.get(c.name)
                   const wonPct = c.total > 0 ? Math.round((c.won / c.total) * 100) : 0
                   const lostPct = c.total > 0 ? Math.round((c.lost / c.total) * 100) : 0
                   const activePct = 100 - wonPct - lostPct
-                  const isActive = meta?.status === "ACTIVE"
-                  const budgetUsedPct = meta?.dailyBudget && meta.spendToday > 0
-                    ? Math.min(100, Math.round((meta.spendToday / meta.dailyBudget) * 100))
+                  const isActive = c.status === "ACTIVE"
+                  const budgetUsedPct = c.dailyBudget && c.spendToday && c.spendToday > 0
+                    ? Math.min(100, Math.round((c.spendToday / c.dailyBudget) * 100))
                     : null
                   return (
                     <tr key={c.name} className="hover:bg-gray-50/70 transition">
@@ -687,7 +603,7 @@ export default async function SuperAdminOverviewPage({
                         <span className="font-medium text-gray-800 text-sm truncate block">{c.name}</span>
                       </td>
                       <td className="px-6 py-4">
-                        {meta ? (
+                        {c.status ? (
                           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${isActive ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-gray-100 text-gray-500"}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
                             {isActive ? "Active" : "Paused"}
@@ -695,12 +611,12 @@ export default async function SuperAdminOverviewPage({
                         ) : <span className="text-xs text-gray-300">—</span>}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-gray-700">{meta ? rm(meta.dailyBudget) : "—"}</span>
+                        <span className="text-sm text-gray-700">{rm(c.dailyBudget)}</span>
                       </td>
                       <td className="px-6 py-4">
-                        {meta ? (
+                        {c.spendToday !== null ? (
                           <div>
-                            <span className="text-sm font-medium text-gray-800">{rm(meta.spendToday)}</span>
+                            <span className="text-sm font-medium text-gray-800">{rm(c.spendToday)}</span>
                             {budgetUsedPct !== null && (
                               <div className="mt-1 h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
                                 <div
@@ -713,15 +629,13 @@ export default async function SuperAdminOverviewPage({
                         ) : <span className="text-xs text-gray-300">—</span>}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-gray-700">{meta ? rm(meta.spendPeriod) : "—"}</span>
+                        <span className="text-sm text-gray-700">{rm(c.spendPeriod)}</span>
                       </td>
                       <td className="px-6 py-4">
-                        {CPL_EXCLUDED_CAMPAIGNS.has(c.name) ? (
-                          <span className="text-xs text-gray-300" title="CPL hidden — not all leads tracked in CRM">—</span>
+                        {c.cpl === null ? (
+                          <span className="text-xs text-gray-300" title="CPL hidden — not all leads tracked in CRM, or no spend data">—</span>
                         ) : (
-                          <span className="text-sm font-semibold text-violet-600">
-                            {meta && meta.spendPeriod > 0 && c.total > 0 ? rm(meta.spendPeriod / c.total) : "—"}
-                          </span>
+                          <span className="text-sm font-semibold text-violet-600">{rm(c.cpl)}</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
