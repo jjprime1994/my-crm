@@ -23,18 +23,10 @@ export async function GET(req: NextRequest) {
 
   const { campaigns } = await getCampaignPerformance(since, until)
 
-  const headers = [
-    "Campaign", "Status", "Daily Budget (RM)", "Today Spend (RM)", "Period Spend (RM)", "CPL (RM)",
-    "Leads", "Claimed", "Unclaimed", "Won", "Lost", "Conversion %",
-  ]
+  const headers = ["Campaign", "Leads", "Claimed", "Unclaimed", "Won", "Lost", "Conversion %"]
 
   const rows = campaigns.map((c) => [
     c.name,
-    c.status ?? "",
-    c.dailyBudget !== null ? c.dailyBudget.toFixed(2) : "",
-    c.spendToday !== null ? c.spendToday.toFixed(2) : "",
-    c.spendPeriod !== null ? c.spendPeriod.toFixed(2) : "",
-    c.cpl !== null ? c.cpl.toFixed(2) : "",
     c.total,
     c.claimed,
     c.unclaimed,

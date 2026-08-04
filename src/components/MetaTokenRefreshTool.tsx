@@ -42,11 +42,11 @@ export default function MetaTokenRefreshTool() {
       <div>
         <h3 className="text-sm font-semibold text-gray-900">Refresh Meta Page Token</h3>
         <p className="text-xs text-gray-400 mt-0.5">
-          In{" "}
+          Paste a short-lived token from{" "}
           <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer" className="underline">
             Graph API Explorer
-          </a>
-          , generate a token with BOTH <span className="font-mono">leads_retrieval</span> AND <span className="font-mono">ads_read</span> ticked (ads_read is needed for Campaign Performance — skip it and that tab breaks even though leads keep working), then paste the short-lived token below to exchange it for a permanent page access token.
+          </a>{" "}
+          (generated with <span className="font-mono">leads_retrieval</span> ticked) — this exchanges it for a permanent page access token.
         </p>
       </div>
 

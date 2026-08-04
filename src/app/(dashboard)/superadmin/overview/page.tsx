@@ -142,9 +142,7 @@ export default async function SuperAdminOverviewPage({
     .map((s) => ({ name: s.campaignName!, count: s._count }))
   const sourcedCount = sourceRows.reduce((sum, s) => sum + s.count, 0)
 
-  const { campaigns, metaError, metaConfigured } = campaignPerformance
-
-  const rm = (v: number | null) => v == null ? "—" : `RM ${v.toFixed(2)}`
+  const { campaigns } = campaignPerformance
 
   const individuals = salespersonStats
     .map((s) => {
@@ -601,16 +599,6 @@ export default async function SuperAdminOverviewPage({
               <p className="text-xs text-gray-400 mt-0.5">{campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {metaError && (
-                <span className="text-xs text-rose-500 bg-rose-50 px-3 py-1 rounded-lg border border-rose-100">
-                  Meta API: {metaError}
-                </span>
-              )}
-              {!metaConfigured && (
-                <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
-                  META_PAGE_ACCESS_TOKEN not configured — ad data unavailable
-                </span>
-              )}
               {campaigns.length > 0 && (
                 <a
                   href={`/api/export/campaigns${rangeQueryParams()}`}
@@ -631,11 +619,6 @@ export default async function SuperAdminOverviewPage({
               <thead>
                 <tr className="border-b border-gray-50 bg-gray-50/40">
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Campaign</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Daily Budget</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Today Spend</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Period Spend</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">CPL</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Unclaimed</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
@@ -648,50 +631,10 @@ export default async function SuperAdminOverviewPage({
                   const wonPct = c.total > 0 ? Math.round((c.won / c.total) * 100) : 0
                   const lostPct = c.total > 0 ? Math.round((c.lost / c.total) * 100) : 0
                   const activePct = 100 - wonPct - lostPct
-                  const isActive = c.status === "ACTIVE"
-                  const budgetUsedPct = c.dailyBudget && c.spendToday && c.spendToday > 0
-                    ? Math.min(100, Math.round((c.spendToday / c.dailyBudget) * 100))
-                    : null
                   return (
                     <tr key={c.name} className="hover:bg-gray-50/70 transition">
                       <td className="px-6 py-4 max-w-[180px]">
                         <span className="font-medium text-gray-800 text-sm truncate block">{c.name}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {c.status ? (
-                          <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${isActive ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-gray-100 text-gray-500"}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
-                            {isActive ? "Active" : "Paused"}
-                          </span>
-                        ) : <span className="text-xs text-gray-300">—</span>}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-700">{rm(c.dailyBudget)}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {c.spendToday !== null ? (
-                          <div>
-                            <span className="text-sm font-medium text-gray-800">{rm(c.spendToday)}</span>
-                            {budgetUsedPct !== null && (
-                              <div className="mt-1 h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${budgetUsedPct >= 90 ? "bg-rose-400" : budgetUsedPct >= 70 ? "bg-amber-400" : "bg-blue-400"}`}
-                                  style={{ width: `${budgetUsedPct}%` }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ) : <span className="text-xs text-gray-300">—</span>}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-700">{rm(c.spendPeriod)}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {c.cpl === null ? (
-                          <span className="text-xs text-gray-300" title="CPL hidden — not all leads tracked in CRM, or no spend data">—</span>
-                        ) : (
-                          <span className="text-sm font-semibold text-violet-600">{rm(c.cpl)}</span>
-                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-semibold text-gray-900">{c.total}</span>
