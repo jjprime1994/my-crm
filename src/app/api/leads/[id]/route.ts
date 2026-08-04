@@ -8,6 +8,7 @@ import { isUserDisabled } from "@/lib/session-guard"
 import { LeadStatus } from "@/generated/prisma/client"
 import { sendPushToUser } from "@/lib/push"
 import { MALAYSIA_STATES } from "@/lib/branch"
+import { isLeadClaimableBy } from "@/lib/available-leads"
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -42,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params
   const admin = isManagerLevel(session.user.role)
 
-  const existing = await db.lead.findUnique({ where: { id }, select: { assignedToId: true, status: true } })
+  const existing = await db.lead.findUnique({ where: { id }, select: { assignedToId: true, status: true, adName: true } })
   if (!existing) return new NextResponse("Not found", { status: 404 })
   if (!admin && existing.assignedToId !== session.user.id) return new NextResponse("Forbidden", { status: 403 })
 
@@ -81,12 +82,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const assignmentChanged = "assignedToId" in body && data.assignedToId !== existing.assignedToId
   const released = assignmentChanged && data.assignedToId === null
 
-  // Releasing a lead with a corrected state clears its adName so routing falls back to
-  // pure state-coverage matching (see filterLeads: leads with no adName route by state
-  // only, ignoring which teams the original ad was assigned to). campaignName is kept
-  // for reporting — only adName drives ad-based routing.
-  if (released && data.branch) {
-    data.adName = null
+  // Releasing a lead with a corrected state: if the ad's assigned team(s) are configured
+  // to cover that state but happen to have nobody who'd actually see it (e.g. an admin
+  // with the state in their coveredStates but zero salespeople under them), fall back to
+  // clearing adName so it routes by pure state coverage instead (see filterLeads — leads
+  // with no adName ignore ad-team assignment entirely). Left alone when a real team can
+  // already claim it, so normal ad-routing isn't bypassed for leads that aren't stuck.
+  if (released && data.branch && existing.adName) {
+    const candidates = await db.user.findMany({
+      where: { role: { in: ["SALESPERSON", "TEAM_LEADER"] }, disabled: false },
+      select: { id: true, role: true },
+    })
+    let anyoneCanClaim = false
+    for (const u of candidates) {
+      if (await isLeadClaimableBy(u.id, u.role, { adName: existing.adName, branch: data.branch })) {
+        anyoneCanClaim = true
+        break
+      }
+    }
+    if (!anyoneCanClaim) data.adName = null
   }
 
   const lead = await db.lead.update({ where: { id }, data, include: { assignedTo: { select: { name: true } } } })
