@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const body = await req.json()
   const { status, assignedToId, followUpAt, branch } = body
-  const data: { status?: LeadStatus; assignedToId?: string | null; followUpAt?: Date | null; branch?: string | null } = {}
+  const data: { status?: LeadStatus; assignedToId?: string | null; followUpAt?: Date | null; branch?: string | null; adName?: null } = {}
 
   const VALID_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
   if (status) {
@@ -77,7 +77,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return new NextResponse("Forbidden", { status: 403 })
     }
   }
-  const released = "assignedToId" in body && data.assignedToId === null
+
+  const assignmentChanged = "assignedToId" in body && data.assignedToId !== existing.assignedToId
+  const released = assignmentChanged && data.assignedToId === null
+
+  // Releasing a lead with a corrected state clears its adName so routing falls back to
+  // pure state-coverage matching (see filterLeads: leads with no adName route by state
+  // only, ignoring which teams the original ad was assigned to). campaignName is kept
+  // for reporting — only adName drives ad-based routing.
+  if (released && data.branch) {
+    data.adName = null
+  }
 
   const lead = await db.lead.update({ where: { id }, data, include: { assignedTo: { select: { name: true } } } })
 
@@ -101,7 +111,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   // Record assignment change and notify salesperson
-  const assignmentChanged = "assignedToId" in body && data.assignedToId !== existing.assignedToId
   if (assignmentChanged) {
     await db.leadAssignmentLog.create({
       data: {

@@ -381,12 +381,12 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                   disabled={releasing || !branch}
                   className="w-full bg-violet-50 hover:bg-violet-100 text-violet-700 text-sm font-semibold py-2.5 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {releasing ? "Releasing…" : "Verify state & release to that team"}
+                  {releasing ? "Releasing…" : "Verify state & release to the pool"}
                 </button>
                 <p className="text-xs text-gray-400 mt-1.5">
                   {branch
-                    ? `This will unassign the lead from ${lead.assignedTo.id === currentUser.id ? "you" : lead.assignedTo.name} and put it in the ${branch} team's Available Leads pool.`
-                    : "Select the state the customer confirmed, then release this lead to that team's pool."}
+                    ? `This will unassign the lead from ${lead.assignedTo.id === currentUser.id ? "you" : lead.assignedTo.name} and put it in the ${branch} pool, claimable by anyone covering that state.`
+                    : "Select the state the customer confirmed, then release this lead into that state's general pool."}
                 </p>
               </div>
             )}
