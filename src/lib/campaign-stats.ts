@@ -44,13 +44,13 @@ export async function getCampaignPerformance(since: Date | null, until: Date | n
     if (lead.status === "CLOSED_LOST") entry.lost++
   }
 
-  // Meta Ads API — spend, budget, CPL per campaign. Needs a token with `ads_read` on the
-  // ad account (a System User token, ideally) — a Page access token cannot query /act_.../
-  // endpoints at all, so this is intentionally a separate credential from META_PAGE_ACCESS_TOKEN
-  // (which is used only for the lead-retrieval webhook).
+  // Meta Ads API — spend, budget, CPL per campaign. Needs the same page token as lead
+  // retrieval, but generated with BOTH `leads_retrieval` AND `ads_read` ticked in Graph API
+  // Explorer — a token with only `leads_retrieval` can fetch leads fine but gets
+  // "(#100) Unsupported get request" on /act_.../campaigns and /act_.../insights.
   type MetaCampaignData = { spendToday: number; spendPeriod: number; dailyBudget: number | null; status: string }
   const metaData = new Map<string, MetaCampaignData>()
-  const metaToken = process.env.META_ADS_ACCESS_TOKEN
+  const metaToken = process.env.META_PAGE_ACCESS_TOKEN
   const metaAccountId = process.env.META_AD_ACCOUNT_ID
     ? `act_${process.env.META_AD_ACCOUNT_ID.replace(/^act_/, "")}`
     : undefined

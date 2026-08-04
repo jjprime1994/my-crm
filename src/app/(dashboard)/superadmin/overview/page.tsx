@@ -608,7 +608,7 @@ export default async function SuperAdminOverviewPage({
               )}
               {!metaConfigured && (
                 <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
-                  META_ADS_ACCESS_TOKEN not configured — ad data unavailable
+                  META_PAGE_ACCESS_TOKEN not configured — ad data unavailable
                 </span>
               )}
               {campaigns.length > 0 && (

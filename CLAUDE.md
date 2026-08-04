@@ -23,9 +23,8 @@ DATABASE_URL              # PostgreSQL connection string
 NEXTAUTH_SECRET           # NextAuth JWT secret
 META_VERIFY_TOKEN         # Token for Meta webhook verification handshake
 META_APP_SECRET           # Used to verify HMAC-SHA256 signatures on incoming webhook payloads
-META_PAGE_ACCESS_TOKEN    # Page access token — used ONLY for fetching lead details (leadgen_id lookups). Cannot query ad account data.
+META_PAGE_ACCESS_TOKEN    # Page access token, used for BOTH fetching lead details AND Campaign Performance ad spend/budget/CPL. Must be generated in Graph API Explorer with BOTH `leads_retrieval` AND `ads_read` ticked — a token with only `leads_retrieval` fetches leads fine but Campaign Performance fails with "(#100) Unsupported get request". See the "Refresh Meta Page Token" tool in Superadmin → Overview → Tools.
 META_AD_ACCOUNT_ID        # Facebook Ads Manager account ID, digits only (no "act_" prefix — the code adds it)
-META_ADS_ACCESS_TOKEN     # Separate token with `ads_read` on the ad account (ideally a Business Manager System User token, which doesn't expire) — powers Campaign Performance spend/budget/CPL. A Page token (META_PAGE_ACCESS_TOKEN) does NOT work for this — /act_.../campaigns and /act_.../insights require a genuinely different token type, not just a different permission checkbox.
 WEBSITE_FORM_SECRET       # Shared secret the website's contact form (or its backend) sends as x-website-secret
 CRON_SECRET               # Vercel cron auth for /api/cron/check-routing (Vercel sends it as a Bearer token)
 ```
