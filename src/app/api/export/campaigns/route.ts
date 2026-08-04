@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { isSuperAdmin } from "@/lib/roles"
 import { getCampaignPerformance } from "@/lib/campaign-stats"
+import { LeadStatus } from "@/generated/prisma/client"
+
+const STATUS_LABELS: Record<LeadStatus, string> = {
+  NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
+  PROPOSAL: "Proposal", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
+}
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -23,15 +29,15 @@ export async function GET(req: NextRequest) {
 
   const { campaigns } = await getCampaignPerformance(since, until)
 
-  const headers = ["Campaign", "Leads", "Claimed", "Unclaimed", "Won", "Lost", "Conversion %"]
+  const statuses = Object.values(LeadStatus)
+  const headers = ["Campaign", "Leads", "Claimed", "Unclaimed", ...statuses.map((s) => STATUS_LABELS[s]), "Conversion %"]
 
   const rows = campaigns.map((c) => [
     c.name,
     c.total,
     c.claimed,
     c.unclaimed,
-    c.won,
-    c.lost,
+    ...statuses.map((s) => c.statusCounts[s]),
     c.conversion,
   ])
 

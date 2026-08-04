@@ -1,10 +1,12 @@
 import { db } from "@/lib/db"
+import { LeadStatus } from "@/generated/prisma/client"
 
 export type CampaignPerformanceRow = {
   name: string
   total: number
   claimed: number
   unclaimed: number
+  statusCounts: Record<LeadStatus, number>
   won: number
   lost: number
   conversion: number
@@ -23,15 +25,18 @@ export async function getCampaignPerformance(since: Date | null, until: Date | n
     select: { campaignName: true, status: true, assignedToId: true },
   })
 
-  const campaignMap = new Map<string, { total: number; claimed: number; won: number; lost: number }>()
+  const emptyStatusCounts = (): Record<LeadStatus, number> => ({
+    NEW: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, CLOSED_WON: 0, CLOSED_LOST: 0,
+  })
+
+  const campaignMap = new Map<string, { total: number; claimed: number; statusCounts: Record<LeadStatus, number> }>()
   for (const lead of campaignLeads) {
     const name = lead.campaignName!
-    if (!campaignMap.has(name)) campaignMap.set(name, { total: 0, claimed: 0, won: 0, lost: 0 })
+    if (!campaignMap.has(name)) campaignMap.set(name, { total: 0, claimed: 0, statusCounts: emptyStatusCounts() })
     const entry = campaignMap.get(name)!
     entry.total++
     if (lead.assignedToId) entry.claimed++
-    if (lead.status === "CLOSED_WON") entry.won++
-    if (lead.status === "CLOSED_LOST") entry.lost++
+    entry.statusCounts[lead.status]++
   }
 
   const campaigns: CampaignPerformanceRow[] = Array.from(campaignMap.entries())
@@ -40,9 +45,10 @@ export async function getCampaignPerformance(since: Date | null, until: Date | n
       total: s.total,
       claimed: s.claimed,
       unclaimed: s.total - s.claimed,
-      won: s.won,
-      lost: s.lost,
-      conversion: s.total > 0 ? Math.round((s.won / s.total) * 100) : 0,
+      statusCounts: s.statusCounts,
+      won: s.statusCounts.CLOSED_WON,
+      lost: s.statusCounts.CLOSED_LOST,
+      conversion: s.total > 0 ? Math.round((s.statusCounts.CLOSED_WON / s.total) * 100) : 0,
     }))
     .sort((a, b) => b.total - a.total)
 

@@ -621,17 +621,17 @@ export default async function SuperAdminOverviewPage({
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Campaign</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Unclaimed</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
+                  {Object.values(LeadStatus).map((status) => (
+                    <th key={status} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                      {STATUS_LABELS[status]}
+                    </th>
+                  ))}
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Breakdown</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {campaigns.map((c) => {
-                  const wonPct = c.total > 0 ? Math.round((c.won / c.total) * 100) : 0
-                  const lostPct = c.total > 0 ? Math.round((c.lost / c.total) * 100) : 0
-                  const activePct = 100 - wonPct - lostPct
-                  return (
+                {campaigns.map((c) => (
                     <tr key={c.name} className="hover:bg-gray-50/70 transition">
                       <td className="px-6 py-4 max-w-[180px]">
                         <span className="font-medium text-gray-800 text-sm truncate block">{c.name}</span>
@@ -646,9 +646,13 @@ export default async function SuperAdminOverviewPage({
                           <span className="text-sm text-gray-400">0</span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-semibold text-emerald-600">{c.won}</span>
-                      </td>
+                      {Object.values(LeadStatus).map((status) => (
+                        <td key={status} className="px-6 py-4">
+                          <span className={`text-sm ${c.statusCounts[status] > 0 ? "font-semibold text-gray-800" : "text-gray-300"}`}>
+                            {c.statusCounts[status]}
+                          </span>
+                        </td>
+                      ))}
                       <td className="px-6 py-4">
                         <span className={`text-sm font-bold ${c.conversion >= 20 ? "text-emerald-600" : c.conversion >= 10 ? "text-amber-600" : "text-gray-500"}`}>
                           {c.conversion}%
@@ -656,14 +660,14 @@ export default async function SuperAdminOverviewPage({
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-100 w-24">
-                          {wonPct > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${wonPct}%` }} />}
-                          {activePct > 0 && <div className="bg-blue-400 h-full" style={{ width: `${activePct}%` }} />}
-                          {lostPct > 0 && <div className="bg-rose-400 h-full" style={{ width: `${lostPct}%` }} />}
+                          {Object.values(LeadStatus).map((status) => {
+                            const pct = c.total > 0 ? Math.round((c.statusCounts[status] / c.total) * 100) : 0
+                            return pct > 0 ? <div key={status} className={`h-full ${STATUS_BAR[status]}`} style={{ width: `${pct}%` }} /> : null
+                          })}
                         </div>
                       </td>
                     </tr>
-                  )
-                })}
+                ))}
               </tbody>
             </table>
           )}
