@@ -5,10 +5,16 @@ import { isSuperAdmin } from "@/lib/roles"
 import ExportClient from "@/components/ExportClient"
 import { getViewAsRole } from "@/lib/viewas"
 
-export default async function ExportPage() {
+export default async function ExportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dateFrom?: string; dateTo?: string }>
+}) {
   const session = await auth()
   const role = await getViewAsRole(session?.user.role)
   if (!isSuperAdmin(role)) redirect("/")
+
+  const { dateFrom, dateTo } = await searchParams
 
   const [sources, branches, managers, totalByStatus] = await Promise.all([
     db.lead.findMany({
@@ -39,6 +45,8 @@ export default async function ExportPage() {
       branches={branches.map((b) => b.branch!)}
       managers={managers}
       counts={counts}
+      initialDateFrom={dateFrom ?? ""}
+      initialDateTo={dateTo ?? ""}
     />
   )
 }

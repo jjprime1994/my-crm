@@ -18,12 +18,15 @@ export type CampaignPerformanceRow = {
   conversion: number
 }
 
-export async function getCampaignPerformance(since: Date | null): Promise<{
+export async function getCampaignPerformance(since: Date | null, until: Date | null = null): Promise<{
   campaigns: CampaignPerformanceRow[]
   metaError: string | null
   metaConfigured: boolean
 }> {
-  const dateFilter = since ? { createdAt: { gte: since } } : {}
+  const createdAtFilter: { gte?: Date; lte?: Date } = {}
+  if (since) createdAtFilter.gte = since
+  if (until) createdAtFilter.lte = until
+  const dateFilter = Object.keys(createdAtFilter).length > 0 ? { createdAt: createdAtFilter } : {}
 
   const campaignLeads = await db.lead.findMany({
     where: { ...dateFilter, campaignName: { not: null } },
@@ -72,7 +75,7 @@ export async function getCampaignPerformance(since: Date | null): Promise<{
     try {
       const fmtDate = (d: Date) => d.toISOString().split("T")[0]
       const periodParam = since
-        ? `time_range=${encodeURIComponent(JSON.stringify({ since: fmtDate(since), until: fmtDate(new Date()) }))}`
+        ? `time_range=${encodeURIComponent(JSON.stringify({ since: fmtDate(since), until: fmtDate(until ?? new Date()) }))}`
         : `date_preset=maximum`
       const base = `https://graph.facebook.com/v19.0`
       const fields = `campaign_name,spend`

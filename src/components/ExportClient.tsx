@@ -16,12 +16,14 @@ interface Props {
   branches: string[]
   managers: { id: string; name: string }[]
   counts: Record<string, number>
+  initialDateFrom?: string
+  initialDateTo?: string
 }
 
-export default function ExportClient({ sources, branches, managers, counts }: Props) {
+export default function ExportClient({ sources, branches, managers, counts, initialDateFrom = "", initialDateTo = "" }: Props) {
   const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set())
-  const [dateFrom, setDateFrom] = useState("")
-  const [dateTo, setDateTo] = useState("")
+  const [dateFrom, setDateFrom] = useState(initialDateFrom)
+  const [dateTo, setDateTo] = useState(initialDateTo)
   const [adName, setAdName] = useState("")
   const [platform, setPlatform] = useState("")
   const [branch, setBranch] = useState("")

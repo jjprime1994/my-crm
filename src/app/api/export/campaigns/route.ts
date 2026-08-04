@@ -9,10 +9,19 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 
-  const days = Number(req.nextUrl.searchParams.get("period") ?? 30)
-  const since = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
+  const dateFrom = req.nextUrl.searchParams.get("dateFrom")
+  const dateTo = req.nextUrl.searchParams.get("dateTo")
+  let since: Date | null
+  let until: Date | null = null
+  if (dateFrom || dateTo) {
+    since = dateFrom ? new Date(`${dateFrom}T00:00:00+08:00`) : null
+    until = dateTo ? new Date(`${dateTo}T23:59:59+08:00`) : null
+  } else {
+    const days = Number(req.nextUrl.searchParams.get("period") ?? 30)
+    since = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
+  }
 
-  const { campaigns } = await getCampaignPerformance(since)
+  const { campaigns } = await getCampaignPerformance(since, until)
 
   const headers = [
     "Campaign", "Status", "Daily Budget (RM)", "Today Spend (RM)", "Period Spend (RM)", "CPL (RM)",

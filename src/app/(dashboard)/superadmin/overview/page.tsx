@@ -36,17 +36,27 @@ const PERIODS = [
 export default async function SuperAdminOverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; tab?: string }>
+  searchParams: Promise<{ period?: string; tab?: string; dateFrom?: string; dateTo?: string }>
 }) {
   const session = await auth()
   const role = await getViewAsRole(session?.user.role)
   if (!isSuperAdmin(role)) redirect("/")
 
-  const { period, tab: tabParam } = await searchParams
+  const { period, tab: tabParam, dateFrom, dateTo } = await searchParams
   const tab = tabParam ?? "overview"
+  const isCustomRange = Boolean(dateFrom || dateTo)
   const days = Number(period ?? 30)
-  const since = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
-  const dateFilter = since ? { createdAt: { gte: since } } : {}
+
+  // MYT (UTC+8) day boundaries, matching the timezone convention used elsewhere in the app
+  const since = isCustomRange
+    ? (dateFrom ? new Date(`${dateFrom}T00:00:00+08:00`) : null)
+    : (days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null)
+  const until = isCustomRange && dateTo ? new Date(`${dateTo}T23:59:59+08:00`) : null
+
+  const createdAtFilter: { gte?: Date; lte?: Date } = {}
+  if (since) createdAtFilter.gte = since
+  if (until) createdAtFilter.lte = until
+  const dateFilter = Object.keys(createdAtFilter).length > 0 ? { createdAt: createdAtFilter } : {}
 
   const [total, byStatus, byPlatform, salespersonStats, managerStats, sourceStats, recentLeads, campaignPerformance, mgmtStats] = await Promise.all([
     db.lead.count({ where: dateFilter }),
@@ -101,7 +111,7 @@ export default async function SuperAdminOverviewPage({
       take: 10,
       include: { assignedTo: { select: { name: true } } },
     }),
-    getCampaignPerformance(since),
+    getCampaignPerformance(since, until),
     db.user.findMany({
       where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
       select: {
@@ -263,7 +273,10 @@ export default async function SuperAdminOverviewPage({
     .filter((t) => t.memberCount > 0)
     .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
-  const periodLabel = days === 0 ? "All time" : `Last ${days} days`
+  const fmtShort = (d: Date) => d.toLocaleDateString("en-MY", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kuala_Lumpur" })
+  const periodLabel = isCustomRange
+    ? `${since ? fmtShort(since) : "Start"} – ${until ? fmtShort(until) : "Now"}`
+    : (days === 0 ? "All time" : `Last ${days} days`)
 
   function buildUrl({ newPeriod, newTab }: { newPeriod?: number; newTab?: string } = {}) {
     const p = newPeriod !== undefined ? newPeriod : days
@@ -273,6 +286,18 @@ export default async function SuperAdminOverviewPage({
     else if (p !== 30) params.push(`period=${p}`)
     if (t !== "overview") params.push(`tab=${t}`)
     return params.length ? `?${params.join("&")}` : "?"
+  }
+
+  // Query string carrying whichever range is active (custom dates or a preset period),
+  // expressed as explicit dateFrom/dateTo so the export links match what's shown on screen.
+  function rangeQueryParams(): string {
+    const toMYTDateStr = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    const from = isCustomRange ? dateFrom : (since ? toMYTDateStr(since) : undefined)
+    const to = isCustomRange ? dateTo : undefined // presets have no explicit end date — means "up to now"
+    const parts: string[] = []
+    if (from) parts.push(`dateFrom=${from}`)
+    if (to) parts.push(`dateTo=${to}`)
+    return parts.length ? `?${parts.join("&")}` : ""
   }
 
   const TABS = [
@@ -295,7 +320,7 @@ export default async function SuperAdminOverviewPage({
           {/* Period selector */}
           <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5">
             {PERIODS.map(({ label, days: d }) => {
-              const active = (days === d) || (d === 30 && !period)
+              const active = !isCustomRange && ((days === d) || (d === 30 && !period))
               return (
                 <Link
                   key={label}
@@ -309,8 +334,38 @@ export default async function SuperAdminOverviewPage({
               )
             })}
           </div>
+
+          {/* Custom date range */}
+          <form className="flex items-center gap-1.5 bg-gray-100 rounded-xl px-2 py-1">
+            <input type="hidden" name="tab" value={tab} />
+            <input
+              type="date"
+              name="dateFrom"
+              defaultValue={dateFrom ?? ""}
+              className="text-xs bg-transparent focus:outline-none text-gray-700 w-[112px]"
+            />
+            <span className="text-xs text-gray-400">–</span>
+            <input
+              type="date"
+              name="dateTo"
+              defaultValue={dateTo ?? ""}
+              className="text-xs bg-transparent focus:outline-none text-gray-700 w-[112px]"
+            />
+            <button
+              type="submit"
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition shrink-0"
+            >
+              Go
+            </button>
+          </form>
+          {isCustomRange && (
+            <Link href={buildUrl()} className="text-xs text-gray-400 hover:text-gray-600 underline">
+              Clear
+            </Link>
+          )}
+
           <Link
-            href={`/superadmin/export${period ? `?period=${period}` : ""}`}
+            href={`/superadmin/export${rangeQueryParams()}`}
             className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-sm shadow-violet-200"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -558,7 +613,7 @@ export default async function SuperAdminOverviewPage({
               )}
               {campaigns.length > 0 && (
                 <a
-                  href={`/api/export/campaigns${period ? `?period=${period}` : ""}`}
+                  href={`/api/export/campaigns${rangeQueryParams()}`}
                   className="inline-flex items-center gap-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
