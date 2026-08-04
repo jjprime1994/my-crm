@@ -17,6 +17,17 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.17.0",
+    date: "2026-08-04",
+    title: "Smarter Release-to-Pool & Custom Date Ranges",
+    items: [
+      "Releasing a corrected-state lead now checks whether anyone on the ad's originally assigned team can actually claim it — if that team has nobody covering the corrected state, the lead automatically falls back to the general pool for that state instead of getting stuck",
+      "One-time cleanup: fixed 194 leads that were stuck unclaimed by the same 'team covers the state on paper but has nobody staffed' gap — they're now visible in the right people's Available Leads",
+      "Business Overview now has a custom date-to-date range picker alongside the 7d/30d/90d/All time presets — applies across every tab and both CSV exports",
+      "Campaign Performance now shows the full pipeline breakdown per campaign (New, Contacted, Qualified, Proposal, Won, Lost) instead of just Won/Lost",
+    ],
+  },
+  {
     version: "1.16.0",
     date: "2026-08-03",
     title: "Fix & Release Blank-State Leads",
