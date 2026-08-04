@@ -50,6 +50,21 @@ export async function getCampaignPerformance(since: Date | null): Promise<{
     : undefined
   let metaError: string | null = null
 
+  // Meta paginates results (~25 per page by default) — without following `paging.next`,
+  // any campaigns past the first page silently get no budget/spend data.
+  async function fetchAllPages(url: string): Promise<{ data: Record<string, unknown>[]; error?: { message: string; type: string; code: number; error_subcode?: number; fbtrace_id: string } }> {
+    const data: Record<string, unknown>[] = []
+    let next: string | undefined = url
+    while (next) {
+      const res: Response = await fetch(next, { next: { revalidate: 300 } })
+      const json = await res.json()
+      if (json.error) return { data, error: json.error }
+      data.push(...(json.data ?? []))
+      next = json.paging?.next
+    }
+    return { data }
+  }
+
   if (metaToken && metaAccountId) {
     try {
       const fmtDate = (d: Date) => d.toISOString().split("T")[0]
@@ -59,32 +74,32 @@ export async function getCampaignPerformance(since: Date | null): Promise<{
       const base = `https://graph.facebook.com/v19.0`
       const fields = `campaign_name,spend`
 
-      const [campsRes, todayRes, periodRes] = await Promise.all([
-        fetch(`${base}/${metaAccountId}/campaigns?fields=name,daily_budget,lifetime_budget,status&access_token=${metaToken}`, { next: { revalidate: 300 } }),
-        fetch(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&date_preset=today&access_token=${metaToken}`, { next: { revalidate: 300 } }),
-        fetch(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&${periodParam}&access_token=${metaToken}`, { next: { revalidate: 300 } }),
+      const [campsResult, todayResult, periodResult] = await Promise.all([
+        fetchAllPages(`${base}/${metaAccountId}/campaigns?fields=name,daily_budget,lifetime_budget,status&limit=500&access_token=${metaToken}`),
+        fetchAllPages(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&date_preset=today&limit=500&access_token=${metaToken}`),
+        fetchAllPages(`${base}/${metaAccountId}/insights?level=campaign&fields=${fields}&${periodParam}&limit=500&access_token=${metaToken}`),
       ])
-      const [campsJson, todayJson, periodJson] = await Promise.all([campsRes.json(), todayRes.json(), periodRes.json()])
 
-      const firstError = campsJson.error ?? todayJson.error ?? periodJson.error
+      const firstError = campsResult.error ?? todayResult.error ?? periodResult.error
       if (firstError) {
         const e = firstError
         metaError = `${e.message} [type=${e.type}, code=${e.code}, subcode=${e.error_subcode ?? "none"}, trace=${e.fbtrace_id}]`
       } else {
         const budgetMap = new Map<string, { dailyBudget: number | null; status: string }>()
-        for (const c of campsJson.data ?? []) {
-          budgetMap.set(c.name, {
+        for (const c of campsResult.data) {
+          budgetMap.set(c.name as string, {
             dailyBudget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
-            status: c.status ?? "UNKNOWN",
+            status: (c.status as string) ?? "UNKNOWN",
           })
         }
         const todaySpend = new Map<string, number>()
-        for (const ins of todayJson.data ?? []) todaySpend.set(ins.campaign_name, Number(ins.spend ?? 0))
+        for (const ins of todayResult.data) todaySpend.set(ins.campaign_name as string, Number(ins.spend ?? 0))
 
-        for (const ins of periodJson.data ?? []) {
-          const b = budgetMap.get(ins.campaign_name) ?? { dailyBudget: null, status: "UNKNOWN" }
-          metaData.set(ins.campaign_name, {
-            spendToday: todaySpend.get(ins.campaign_name) ?? 0,
+        for (const ins of periodResult.data) {
+          const campaignName = ins.campaign_name as string
+          const b = budgetMap.get(campaignName) ?? { dailyBudget: null, status: "UNKNOWN" }
+          metaData.set(campaignName, {
+            spendToday: todaySpend.get(campaignName) ?? 0,
             spendPeriod: Number(ins.spend ?? 0),
             dailyBudget: b.dailyBudget,
             status: b.status,
