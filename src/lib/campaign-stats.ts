@@ -41,10 +41,13 @@ export async function getCampaignPerformance(since: Date | null): Promise<{
     if (lead.status === "CLOSED_LOST") entry.lost++
   }
 
-  // Meta Ads API — spend, budget, CPL per campaign
+  // Meta Ads API — spend, budget, CPL per campaign. Needs a token with `ads_read` on the
+  // ad account (a System User token, ideally) — a Page access token cannot query /act_.../
+  // endpoints at all, so this is intentionally a separate credential from META_PAGE_ACCESS_TOKEN
+  // (which is used only for the lead-retrieval webhook).
   type MetaCampaignData = { spendToday: number; spendPeriod: number; dailyBudget: number | null; status: string }
   const metaData = new Map<string, MetaCampaignData>()
-  const metaToken = process.env.META_PAGE_ACCESS_TOKEN
+  const metaToken = process.env.META_ADS_ACCESS_TOKEN
   const metaAccountId = process.env.META_AD_ACCOUNT_ID
     ? `act_${process.env.META_AD_ACCOUNT_ID.replace(/^act_/, "")}`
     : undefined
