@@ -60,10 +60,10 @@ export default async function LeadsPage({
     isAdmin
       ? db.user.findMany({
           where: isSuperAdmin
-            ? { role: "SALESPERSON" }
+            ? { role: { in: ["SALESPERSON", "TEAM_LEADER", "ADMIN"] } }
             : isManager
               ? {
-                  role: "SALESPERSON",
+                  role: { in: ["SALESPERSON", "TEAM_LEADER"] },
                   OR: [
                     { managerId: session!.user.id },
                     { manager: { managerId: session!.user.id } },
