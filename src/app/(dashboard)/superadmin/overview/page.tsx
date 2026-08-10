@@ -5,6 +5,7 @@ import { isSuperAdmin } from "@/lib/roles"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import LeaderboardTabs from "@/components/LeaderboardTabs"
+import TeamFilterSelect from "@/components/TeamFilterSelect"
 import AnimatedBar from "@/components/AnimatedBar"
 import { getViewAsRole } from "@/lib/viewas"
 import StateViolationsButton from "@/components/StateViolationsButton"
@@ -12,6 +13,7 @@ import RepairBlankLeadsButton from "@/components/RepairBlankLeadsButton"
 import MetaTokenRefreshTool from "@/components/MetaTokenRefreshTool"
 import RoutingAuditTool from "@/components/RoutingAuditTool"
 import { getCampaignPerformance } from "@/lib/campaign-stats"
+import { formatAvgResponseTime } from "@/lib/responseTime"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -36,13 +38,14 @@ const PERIODS = [
 export default async function SuperAdminOverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; tab?: string; dateFrom?: string; dateTo?: string }>
+  searchParams: Promise<{ period?: string; tab?: string; dateFrom?: string; dateTo?: string; teams?: string }>
 }) {
   const session = await auth()
   const role = await getViewAsRole(session?.user.role)
   if (!isSuperAdmin(role)) redirect("/")
 
-  const { period, tab: tabParam, dateFrom, dateTo } = await searchParams
+  const { period, tab: tabParam, dateFrom, dateTo, teams: teamsParam } = await searchParams
+  const selectedTeamIds = teamsParam ? new Set(teamsParam.split(",").filter(Boolean)) : null
   const tab = tabParam ?? "overview"
   const isCustomRange = Boolean(dateFrom || dateTo)
   const days = Number(period ?? 30)
@@ -221,7 +224,7 @@ export default async function SuperAdminOverviewPage({
       topGroup.directMembers.push(m)
     }
   }
-  const teamBreakdownGroups = Array.from(topTeamMap.entries())
+  const allTeamBreakdownGroups = Array.from(topTeamMap.entries())
     .map(([id, g]) => ({
       managerId: id,
       managerName: g.managerName,
@@ -237,6 +240,13 @@ export default async function SuperAdminOverviewPage({
         .sort((a, b) => a.leaderName.localeCompare(b.leaderName)),
     }))
     .sort((a, b) => a.managerName.localeCompare(b.managerName))
+
+  const teamFilterOptions = allTeamBreakdownGroups.map((g) => ({ id: g.managerId, name: g.managerName }))
+  const teamBreakdownGroups = selectedTeamIds
+    ? allTeamBreakdownGroups.filter((g) => selectedTeamIds.has(g.managerId))
+    : allTeamBreakdownGroups
+  const teamBreakdownMemberCount = teamBreakdownGroups.reduce((sum, g) =>
+    sum + g.directMembers.length + g.subTeams.reduce((s, st) => s + st.members.length, 0), 0)
 
   const roleBadge = (role: string) =>
     role === "SUPER_ADMIN" ? "Super Admin" : role === "ADMIN" ? "Manager" : "Team Leader"
@@ -296,6 +306,13 @@ export default async function SuperAdminOverviewPage({
     if (from) parts.push(`dateFrom=${from}`)
     if (to) parts.push(`dateTo=${to}`)
     return parts.length ? `?${parts.join("&")}` : ""
+  }
+
+  function teamReportExportHref(): string {
+    const base = rangeQueryParams()
+    if (!selectedTeamIds) return `/api/export/team-report${base}`
+    const teamsQS = `${base ? "&" : "?"}teams=${Array.from(selectedTeamIds).join(",")}`
+    return `/api/export/team-report${base}${teamsQS}`
   }
 
   const TABS = [
@@ -687,12 +704,29 @@ export default async function SuperAdminOverviewPage({
       })()}
 
       {/* ── Teams tab ── */}
-      {tab === "teams" && teamBreakdownGroups.length > 0 && (
+      {tab === "teams" && allTeamBreakdownGroups.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{individuals.length} salesperson{individuals.length !== 1 ? "s" : ""} across {teamBreakdownGroups.length} team{teamBreakdownGroups.length !== 1 ? "s" : ""}</p>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 flex-wrap gap-3">
+            <div>
+              <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{teamBreakdownMemberCount} salesperson{teamBreakdownMemberCount !== 1 ? "s" : ""} across {teamBreakdownGroups.length} team{teamBreakdownGroups.length !== 1 ? "s" : ""}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <TeamFilterSelect teams={teamFilterOptions} />
+              <a
+                href={teamReportExportHref()}
+                className="inline-flex items-center gap-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export CSV
+              </a>
+            </div>
           </div>
+          {teamBreakdownGroups.length === 0 ? (
+            <div className="text-center py-12 text-sm text-gray-400">No teams match this filter.</div>
+          ) : (
           <div className="divide-y divide-gray-100">
             {teamBreakdownGroups.map(({ managerId, managerName, managerRow, directMembers, subTeams }) => {
               const hasManagerLeads = managerRow && managerRow.totalLeads > 0
@@ -750,6 +784,8 @@ export default async function SuperAdminOverviewPage({
                                     <span>{headerRow.assigned} assigned</span>
                                     <span className="text-emerald-600 font-semibold">{headerRow.won} won</span>
                                     <span className={`font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
+                                    <span>{formatAvgResponseTime(headerRow.avgResponseMs)} avg</span>
+                                    {headerRow.notContacted > 0 && <span className="text-rose-500 font-medium">{headerRow.notContacted} not contacted</span>}
                                     {headerRow.stale > 0 && <span className="text-rose-500 font-medium">{headerRow.stale} stale</span>}
                                   </div>
                                 </div>
@@ -772,6 +808,8 @@ export default async function SuperAdminOverviewPage({
                                     <span>{m.assigned} assigned</span>
                                     <span className="text-emerald-600 font-semibold">{m.won} won</span>
                                     <span className={`font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
+                                    <span>{formatAvgResponseTime(m.avgResponseMs)} avg</span>
+                                    {m.notContacted > 0 && <span className="text-rose-500 font-medium">{m.notContacted} not contacted</span>}
                                     {m.stale > 0 && <span className="text-rose-500 font-medium">{m.stale} stale</span>}
                                   </div>
                                 </div>
@@ -796,6 +834,8 @@ export default async function SuperAdminOverviewPage({
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Response</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Not Contacted</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Stale</th>
                               </tr>
                             </thead>
@@ -819,6 +859,26 @@ export default async function SuperAdminOverviewPage({
                                   <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{headerRow.won}</td>
                                   <td className="px-6 py-4">
                                     <span className={`text-sm font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {headerRow.avgResponseMs !== null ? (
+                                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                        headerRow.avgResponseMs < 60 * 60 * 1000 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                                        : headerRow.avgResponseMs < 4 * 60 * 60 * 1000 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                                        : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
+                                      }`}>
+                                        {formatAvgResponseTime(headerRow.avgResponseMs)}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-gray-300">—</span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {headerRow.notContacted > 0 ? (
+                                      <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{headerRow.notContacted}</span>
+                                    ) : (
+                                      <span className="text-xs text-emerald-600 font-medium">—</span>
+                                    )}
                                   </td>
                                   <td className="px-6 py-4">
                                     {headerRow.stale > 0
@@ -852,6 +912,26 @@ export default async function SuperAdminOverviewPage({
                                     <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
                                   </td>
                                   <td className="px-6 py-4">
+                                    {m.avgResponseMs !== null ? (
+                                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                        m.avgResponseMs < 60 * 60 * 1000 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                                        : m.avgResponseMs < 4 * 60 * 60 * 1000 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                                        : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
+                                      }`}>
+                                        {formatAvgResponseTime(m.avgResponseMs)}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-gray-300">—</span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {m.notContacted > 0 ? (
+                                      <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{m.notContacted}</span>
+                                    ) : (
+                                      <span className="text-xs text-emerald-600 font-medium">—</span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4">
                                     {m.stale > 0 ? (
                                       <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{m.stale}</span>
                                     ) : (
@@ -871,6 +951,7 @@ export default async function SuperAdminOverviewPage({
               )
             })}
           </div>
+          )}
         </div>
       )}
 
