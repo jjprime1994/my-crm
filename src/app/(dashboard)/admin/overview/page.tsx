@@ -5,6 +5,7 @@ import { isAdmin, isManagerLevel } from "@/lib/roles"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import { getViewAsRole } from "@/lib/viewas"
+import ManagerTeamBreakdownClient from "@/components/ManagerTeamBreakdownClient"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -77,7 +78,7 @@ export default async function ManagerOverviewPage({
         manager: { select: { id: true, name: true } },
         leads: {
           where: dateFilter,
-          select: { status: true, updatedAt: true, claimedAt: true },
+          select: { status: true, updatedAt: true, claimedAt: true, firstContactedAt: true },
         },
       },
       orderBy: { name: "asc" },
@@ -112,10 +113,10 @@ export default async function ManagerOverviewPage({
           },
           select: {
             id: true, name: true, role: true, managerId: true,
-            leads: { where: dateFilter, select: { status: true, claimedAt: true, updatedAt: true } },
+            leads: { where: dateFilter, select: { status: true, claimedAt: true, updatedAt: true, firstContactedAt: true } },
           },
         })
-      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: string; claimedAt: Date | null; updatedAt: Date }[] }[]),
+      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: string; claimedAt: Date | null; updatedAt: Date; firstContactedAt: Date | null }[] }[]),
   ])
 
   const statusMap = Object.fromEntries(byStatus.map((s) => [s.status, s._count]))
@@ -124,6 +125,20 @@ export default async function ManagerOverviewPage({
   const lost = statusMap["CLOSED_LOST"] ?? 0
   const active = total - won - lost
   const conversionRate = total > 0 ? Math.round((won / total) * 100) : 0
+
+  function responseMetrics(leads: { claimedAt: Date | null; firstContactedAt: Date | null; status: string }[]) {
+    const responseTimes = leads
+      .filter((l) => l.claimedAt && l.firstContactedAt)
+      .map((l) => new Date(l.firstContactedAt!).getTime() - new Date(l.claimedAt!).getTime())
+      .filter((ms) => ms >= 0)
+    const avgResponseMs = responseTimes.length > 0
+      ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+      : null
+    const notContacted = leads.filter((l) =>
+      l.claimedAt && !l.firstContactedAt && l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST"
+    ).length
+    return { avgResponseMs, notContacted }
+  }
 
   const members = teamMembers.map((m) => {
     const totalLeads = m.leads.length
@@ -145,6 +160,7 @@ export default async function ManagerOverviewPage({
       won: wonCount,
       stale: staleCount,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
+      ...responseMetrics(m.leads),
     }
   }).sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
@@ -162,12 +178,10 @@ export default async function ManagerOverviewPage({
       totalLeads, claimed: claimedCount, assigned: totalLeads - claimedCount,
       won: wonCount, stale: staleCount,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
+      ...responseMetrics(u.leads),
     }]
   }))
   const adminRow = leaderRowMap.get(session!.user.id) ?? null
-
-  const roleBadge = (r: string) =>
-    r === "SUPER_ADMIN" ? "Super Admin" : r === "ADMIN" ? "Manager" : "Team Leader"
 
   // Group: direct reports to current user vs reports under a team leader
   const directMembers = members.filter((m) => m.managerId === session!.user.id)
@@ -187,12 +201,24 @@ export default async function ManagerOverviewPage({
     members: st.members,
   }))
 
-  const periodLabel = days === 0 ? "All time" : `Last ${days} days`
+  const teamSections = [
+    ...((adminRow && adminRow.totalLeads > 0) || directMembers.length > 0
+      ? [{
+          id: "__direct__",
+          label: subTeams.length > 0 ? "Direct Reports" : "",
+          headerRow: adminRow?.totalLeads ? adminRow : null,
+          members: directMembers,
+        }]
+      : []),
+    ...subTeams.map((st) => ({
+      id: st.leaderId,
+      label: `${st.leaderName}'s Team`,
+      headerRow: st.leaderRow && st.leaderRow.totalLeads > 0 ? st.leaderRow : null,
+      members: st.members,
+    })),
+  ]
 
-  function initials(name: string) {
-    const p = name.trim().split(" ")
-    return (p[0][0] + (p[1]?.[0] ?? "")).toUpperCase()
-  }
+  const periodLabel = days === 0 ? "All time" : `Last ${days} days`
 
   function buildUrl({ newPeriod, newTab }: { newPeriod?: number; newTab?: string } = {}) {
     const p = newPeriod !== undefined ? newPeriod : days
@@ -335,171 +361,16 @@ export default async function ManagerOverviewPage({
 
       {/* ── Teams tab ── */}
       {tab === "teams" && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{members.length} salesperson{members.length !== 1 ? "s" : ""}</p>
-          </div>
-          {members.length === 0 && !adminRow ? (
-            <div className="text-center py-12 text-sm text-gray-400">No team members yet.</div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {[
-                ...(adminRow && adminRow.totalLeads > 0 || directMembers.length > 0
-                  ? [{ label: subTeams.length > 0 ? "Direct Reports" : "", headerRow: adminRow?.totalLeads ? adminRow : null, group: directMembers }]
-                  : []),
-                ...subTeams.map((st) => ({
-                  label: `${st.leaderName}'s Team`,
-                  headerRow: st.leaderRow && st.leaderRow.totalLeads > 0 ? st.leaderRow : null,
-                  group: st.members,
-                })),
-              ].map(({ label, headerRow, group }) => {
-                const count = group.length + (headerRow ? 1 : 0)
-                return (
-                <div key={label || "direct"}>
-                  {label && (
-                    <div className="px-6 py-2 bg-gray-50/60">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {count} member{count !== 1 ? "s" : ""}</p>
-                    </div>
-                  )}
-
-                  {/* Mobile cards */}
-                  <ul className="sm:hidden divide-y divide-gray-50">
-                    {headerRow && (
-                      <li className="px-5 py-4 bg-blue-50/30">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center shrink-0">
-                            <span className="text-xs font-bold text-blue-800">{initials(headerRow.name)}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-gray-900 truncate">{headerRow.name}</p>
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{roleBadge(headerRow.role)}</span>
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
-                              <span>{headerRow.claimed} claimed</span>
-                              <span>{headerRow.assigned} assigned</span>
-                              <span className="text-emerald-600 font-semibold">{headerRow.won} won</span>
-                              <span className={`font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
-                              {headerRow.stale > 0 && <span className="text-rose-500 font-medium">{headerRow.stale} stale</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    )}
-                    {group.map((m, i) => (
-                      <li key={m.id} className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                            <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
-                              {i === 0 && m.won > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">Top</span>}
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
-                              <span>{m.claimed} claimed</span>
-                              <span>{m.assigned} assigned</span>
-                              <span className="text-emerald-600 font-semibold">{m.won} won</span>
-                              <span className={`font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
-                              {m.stale > 0 && <span className="text-rose-500 font-medium">{m.stale} stale</span>}
-                            </div>
-                          </div>
-                          <div className="shrink-0 w-16">
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              {m.totalLeads > 0 && <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${m.rate}%` }} />}
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* Desktop table */}
-                  <div className="hidden sm:block overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead>
-                        <tr className="border-b border-gray-50 bg-gray-50/20">
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned</th>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
-                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Stale</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {headerRow && (
-                          <tr className="bg-blue-50/20 hover:bg-blue-50/40 transition">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center shrink-0">
-                                  <span className="text-xs font-bold text-blue-800">{initials(headerRow.name)}</span>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">{headerRow.name}</p>
-                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{roleBadge(headerRow.role)}</span>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4"><span className="text-sm font-semibold text-blue-600">{headerRow.claimed}</span></td>
-                            <td className="px-6 py-4"><span className="text-sm text-gray-500">{headerRow.assigned}</span></td>
-                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">{headerRow.totalLeads}</td>
-                            <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{headerRow.won}</td>
-                            <td className="px-6 py-4">
-                              <span className={`text-sm font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              {headerRow.stale > 0
-                                ? <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{headerRow.stale}</span>
-                                : <span className="text-xs text-emerald-600 font-medium">—</span>}
-                            </td>
-                          </tr>
-                        )}
-                        {group.map((m, i) => (
-                          <tr key={m.id} className="hover:bg-gray-50/70 transition">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                                  <span className="text-xs font-bold text-blue-600">{initials(m.name)}</span>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">{m.name}</p>
-                                  {i === 0 && m.won > 0 && <p className="text-[10px] text-amber-600 font-semibold">Top performer</p>}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="text-sm font-semibold text-blue-600">{m.claimed}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="text-sm text-gray-500">{m.assigned}</span>
-                            </td>
-                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">{m.totalLeads}</td>
-                            <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>
-                            <td className="px-6 py-4">
-                              <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              {m.stale > 0 ? (
-                                <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200">{m.stale}</span>
-                              ) : (
-                                <span className="text-xs text-emerald-600 font-medium">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                )
-              })}
+        members.length === 0 && !adminRow ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50">
+              <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
             </div>
-          )}
-        </div>
+            <div className="text-center py-12 text-sm text-gray-400">No team members yet.</div>
+          </div>
+        ) : (
+          <ManagerTeamBreakdownClient sections={teamSections} />
+        )
       )}
 
     </div>
