@@ -1,32 +1,20 @@
 "use client"
 
-import { useRouter, useSearchParams } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 
 interface Props {
   teams: { id: string; name: string }[]
+  selected: Set<string>
+  onChange: (next: Set<string>) => void
 }
 
-export default function TeamFilterSelect({ teams }: Props) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const selected = new Set((searchParams.get("teams") ?? "").split(",").filter(Boolean))
-
+export default function TeamFilterSelect({ teams, selected, onChange }: Props) {
   function toggle(id: string, checked: boolean) {
     const next = new Set(selected)
     if (checked) next.add(id)
     else next.delete(id)
-    const params = new URLSearchParams(searchParams.toString())
-    if (next.size > 0) params.set("teams", Array.from(next).join(","))
-    else params.delete("teams")
-    router.push(`?${params.toString()}`)
-  }
-
-  function clear() {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete("teams")
-    router.push(`?${params.toString()}`)
+    onChange(next)
   }
 
   const label = selected.size === 0 ? "All teams" : `${selected.size} team${selected.size !== 1 ? "s" : ""}`
@@ -46,7 +34,7 @@ export default function TeamFilterSelect({ teams }: Props) {
         <div className="flex items-center justify-between px-1 pb-1">
           <span className="text-xs font-semibold text-gray-500">Filter by team</span>
           {selected.size > 0 && (
-            <button onClick={clear} className="text-xs text-violet-600 hover:text-violet-700 font-medium">
+            <button onClick={() => onChange(new Set())} className="text-xs text-violet-600 hover:text-violet-700 font-medium">
               Clear
             </button>
           )}
