@@ -17,6 +17,25 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.19.0",
+    date: "2026-08-10",
+    title: "Team Reports & Leaderboard Upgrades",
+    items: [
+      "Business Overview's Teams tab now shows each person's average response time and how many of their claimed leads haven't been contacted yet, alongside claimed/won/conversion",
+      "New 'Filter by team' control on the Teams tab — check any combination of teams to narrow the breakdown, then export just those teams to CSV",
+      "Team filtering is now instant — checking a team no longer reloads the page",
+      "Managers and Team Leaders now see the same average response time and not-contacted numbers on their own Team Overview page, plus the instant team filter (CSV export remains Super Admin-only)",
+    ],
+  },
+  {
+    version: "1.18.0",
+    date: "2026-08-05",
+    title: "Team Leaders & Managers in Lead Filters",
+    items: [
+      "The 'All salespeople' filter on the Leads page now includes Team Leaders and Managers, not just Salespeople, so you can filter down to leads assigned to them too",
+    ],
+  },
+  {
     version: "1.17.0",
     date: "2026-08-04",
     title: "Smarter Release-to-Pool & Custom Date Ranges",
