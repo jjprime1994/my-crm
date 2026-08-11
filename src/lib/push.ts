@@ -18,6 +18,8 @@ export async function sendPushToUser(userId: string, payload: { title: string; b
         // Remove expired/invalid subscriptions
         if (err.statusCode === 410 || err.statusCode === 404) {
           await db.pushSubscription.delete({ where: { id: sub.id } })
+        } else {
+          console.error(`Push send failed for user ${userId} (status ${err.statusCode ?? "?"}):`, err.body ?? err.message ?? err)
         }
       })
     )

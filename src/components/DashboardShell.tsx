@@ -4,6 +4,7 @@ import { useState } from "react"
 import Sidebar from "@/components/Sidebar"
 import ViewAsBanner from "@/components/ViewAsBanner"
 import NotificationBell from "@/components/NotificationBell"
+import NotificationPromptBanner from "@/components/NotificationPromptBanner"
 import { ToastProvider } from "@/components/Toast"
 
 interface Props {
@@ -61,6 +62,8 @@ export default function DashboardShell({ user, viewingAs, isSuperAdmin, counts, 
           <div className="flex-1" />
           <NotificationBell />
         </header>
+
+        <NotificationPromptBanner />
 
         <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950 px-4 py-5 lg:px-8 lg:py-7">
           {children}
