@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 
-  const { leadIds, assignedToId } = await req.json()
+  const { leadIds, assignedToId, reason } = await req.json()
 
   if (!Array.isArray(leadIds) || leadIds.length === 0) {
     return new NextResponse("No leads specified", { status: 400 })
@@ -43,13 +43,20 @@ export async function POST(req: NextRequest) {
       select: { firstName: true, lastName: true },
     })
     const count = leads.length
-    const title = count === 1
-      ? `New lead assigned to you`
-      : `${count} leads assigned to you`
     const firstName = leads[0]?.firstName ?? "A lead"
-    const body = count === 1
-      ? `${firstName}${leads[0]?.lastName ? " " + leads[0].lastName : ""} has been assigned to you`
-      : `${firstName} and ${count - 1} other${count - 1 !== 1 ? "s" : ""} have been assigned to you`
+    const fullName = `${firstName}${leads[0]?.lastName ? " " + leads[0].lastName : ""}`
+    const isDuplicate = reason === "duplicate"
+
+    const title = isDuplicate
+      ? (count === 1 ? "Duplicate lead routed to you" : `${count} duplicate leads routed to you`)
+      : (count === 1 ? "New lead assigned to you" : `${count} leads assigned to you`)
+    const body = isDuplicate
+      ? (count === 1
+          ? `${fullName} reached out again — you already have this contact`
+          : `${firstName} and ${count - 1} other${count - 1 !== 1 ? "s" : ""} reached out again — you already have these contacts`)
+      : (count === 1
+          ? `${fullName} has been assigned to you`
+          : `${firstName} and ${count - 1} other${count - 1 !== 1 ? "s" : ""} have been assigned to you`)
     await sendPushToUser(assignedToId, { title, body, url: "/leads" })
   }
 

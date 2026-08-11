@@ -153,7 +153,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
         fetch("/api/leads/assign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ leadIds, assignedToId }),
+          body: JSON.stringify({ leadIds, assignedToId, reason: "duplicate" }),
         })
       )
     )
