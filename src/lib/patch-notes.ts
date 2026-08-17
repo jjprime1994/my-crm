@@ -17,6 +17,18 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.20.0",
+    date: "2026-08-17",
+    title: "Appointment Made Rename & Stage Breakdowns",
+    items: [
+      "Renamed the 'Proposal' pipeline stage to 'Appointment Made' everywhere it appears — status filters, dashboards, exports, and the FAQ",
+      "Business Overview's Teams tab and the Team Report CSV export now show each person's lead count per stage (New, Contacted, Qualified, Appointment Made, Won, Lost), not just claimed/won",
+      "Fixed the Lead Sources widget on Business Overview silently capping at the top 10 campaigns — all campaigns now show",
+      "Added a tooltip on the Stale column explaining it means a lead hasn't been updated in more than 48 hours",
+      "Widened the Leads, Follow-ups, Assign Leads, Manage Team, Available Leads, and Team Breakdown pages so their tables no longer scroll unnecessarily on larger screens",
+    ],
+  },
+  {
     version: "1.19.0",
     date: "2026-08-10",
     title: "Team Reports & Leaderboard Upgrades",
