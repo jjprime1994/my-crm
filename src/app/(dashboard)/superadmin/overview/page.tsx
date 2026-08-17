@@ -310,7 +310,7 @@ export default async function SuperAdminOverviewPage({
   ]
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-[1600px]">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs font-semibold text-violet-600 uppercase tracking-widest mb-1">Super Admin</p>
