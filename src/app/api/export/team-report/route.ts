@@ -3,9 +3,15 @@ import { auth } from "@/auth"
 import { isSuperAdmin } from "@/lib/roles"
 import { getTeamReport } from "@/lib/team-report"
 import { formatAvgResponseTime } from "@/lib/responseTime"
+import { LeadStatus } from "@/generated/prisma/client"
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin", ADMIN: "Manager", TEAM_LEADER: "Team Leader", SALESPERSON: "Salesperson",
+}
+
+const STAGE_LABELS: Record<LeadStatus, string> = {
+  NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
+  PROPOSAL: "Appointment Made", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
 }
 
 export async function GET(req: NextRequest) {
@@ -34,13 +40,14 @@ export async function GET(req: NextRequest) {
     rows = rows.filter((r) => selectedTeamIds.has(r.teamId))
   }
 
-  const headers = ["Team", "Member", "Role", "Leads Taken", "Leads Won", "Avg Response Time", "Not Contacted"]
+  const stages = Object.values(LeadStatus)
+  const headers = ["Team", "Member", "Role", "Leads Taken", ...stages.map((s) => STAGE_LABELS[s]), "Avg Response Time", "Not Contacted"]
   const csvRows = rows.map((r) => [
     r.team,
     r.name,
     ROLE_LABELS[r.role],
     r.claimed,
-    r.won,
+    ...stages.map((s) => r.statusCounts[s]),
     formatAvgResponseTime(r.avgResponseMs),
     r.notContacted,
   ])

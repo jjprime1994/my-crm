@@ -6,7 +6,7 @@ const STATUS_OPTIONS = [
   { value: "NEW", label: "New", color: "text-blue-700 bg-blue-50 border-blue-200" },
   { value: "CONTACTED", label: "Contacted", color: "text-amber-700 bg-amber-50 border-amber-200" },
   { value: "QUALIFIED", label: "Qualified", color: "text-violet-700 bg-violet-50 border-violet-200" },
-  { value: "PROPOSAL", label: "Proposal", color: "text-orange-700 bg-orange-50 border-orange-200" },
+  { value: "PROPOSAL", label: "Appointment Made", color: "text-orange-700 bg-orange-50 border-orange-200" },
   { value: "CLOSED_WON", label: "Won", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
   { value: "CLOSED_LOST", label: "Lost", color: "text-rose-700 bg-rose-50 border-rose-200" },
 ]
@@ -291,7 +291,7 @@ export default function ExportClient({ sources, branches, managers, counts, init
               )}
             </div>
             <p className="text-xs text-gray-400 mt-0.5">
-              Columns: Name · Email · Phone · Status · Ad · Campaign · State · Platform · Assigned To · Duplicate · Follow-up · Created · Updated · Stage dates (Contacted/Qualified/Proposal/Won/Lost) · Full Status Journey
+              Columns: Name · Email · Phone · Status · Ad · Campaign · State · Platform · Assigned To · Duplicate · Follow-up · Created · Updated · Stage dates (Contacted/Qualified/Appointment Made/Won/Lost) · Full Status Journey
             </p>
           </div>
           <button

@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     "First Name", "Last Name", "Email", "Phone",
     "Status", "Ad / Form", "Campaign", "State", "Platform",
     "Assigned To", "Duplicate", "Follow-up Date", "Created Date", "Last Updated",
-    "Date Contacted", "Date Qualified", "Date Proposal", "Date Closed Won", "Date Closed Lost",
+    "Date Contacted", "Date Qualified", "Date Appointment Made", "Date Closed Won", "Date Closed Lost",
     "Status Journey",
   ]
 

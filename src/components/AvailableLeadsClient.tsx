@@ -23,7 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
   NEW: "New",
   CONTACTED: "Contacted",
   QUALIFIED: "Qualified",
-  PROPOSAL: "Proposal",
+  PROPOSAL: "Appointment Made",
   CLOSED_WON: "Won",
   CLOSED_LOST: "Lost",
 }

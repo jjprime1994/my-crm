@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { LeadStatus } from "@/generated/prisma/client"
 
 export type TeamReportRow = {
   id: string
@@ -12,12 +13,17 @@ export type TeamReportRow = {
   rate: number
   avgResponseMs: number | null
   notContacted: number
+  statusCounts: Record<LeadStatus, number>
 }
 
-type LeadForMetrics = { status: string; claimedAt: Date | null; firstContactedAt: Date | null }
+type LeadForMetrics = { status: LeadStatus; claimedAt: Date | null; firstContactedAt: Date | null }
 
 function computeMetrics(leads: LeadForMetrics[]) {
-  const won = leads.filter((l) => l.status === "CLOSED_WON").length
+  const statusCounts: Record<LeadStatus, number> = {
+    NEW: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, CLOSED_WON: 0, CLOSED_LOST: 0,
+  }
+  for (const l of leads) statusCounts[l.status]++
+  const won = statusCounts.CLOSED_WON
   const totalLeads = leads.length
   const claimed = leads.filter((l) => l.claimedAt).length
   const responseTimes = leads
@@ -30,7 +36,7 @@ function computeMetrics(leads: LeadForMetrics[]) {
   const notContacted = leads.filter((l) =>
     l.claimedAt && !l.firstContactedAt && l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST"
   ).length
-  return { won, totalLeads, claimed, avgResponseMs, notContacted, rate: totalLeads > 0 ? Math.round((won / totalLeads) * 100) : 0 }
+  return { won, totalLeads, claimed, avgResponseMs, notContacted, statusCounts, rate: totalLeads > 0 ? Math.round((won / totalLeads) * 100) : 0 }
 }
 
 // Flat, per-member rows carrying a "team" label (the top-level manager's name),

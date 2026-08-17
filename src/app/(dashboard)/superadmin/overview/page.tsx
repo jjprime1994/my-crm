@@ -17,7 +17,7 @@ import { initials } from "@/lib/format"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
-  PROPOSAL: "Proposal", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
+  PROPOSAL: "Appointment Made", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
 }
 const STATUS_BAR: Record<LeadStatus, string> = {
   NEW: "bg-blue-500", CONTACTED: "bg-amber-500", QUALIFIED: "bg-violet-500",

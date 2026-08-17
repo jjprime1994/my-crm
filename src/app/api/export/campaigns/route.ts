@@ -6,7 +6,7 @@ import { LeadStatus } from "@/generated/prisma/client"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
-  PROPOSAL: "Proposal", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
+  PROPOSAL: "Appointment Made", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
 }
 
 export async function GET(req: NextRequest) {

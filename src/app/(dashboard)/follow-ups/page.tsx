@@ -25,7 +25,7 @@ const STATUS_LABELS: Record<string, string> = {
   NEW: "New",
   CONTACTED: "Contacted",
   QUALIFIED: "Qualified",
-  PROPOSAL: "Proposal",
+  PROPOSAL: "Appointment Made",
 }
 
 function daysAgo(date: Date) {

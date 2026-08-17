@@ -79,7 +79,7 @@ const STATUS_OPTIONS = [
   { value: "NEW", label: "New" },
   { value: "CONTACTED", label: "Contacted" },
   { value: "QUALIFIED", label: "Qualified" },
-  { value: "PROPOSAL", label: "Proposal" },
+  { value: "PROPOSAL", label: "Appointment Made" },
   { value: "CLOSED_WON", label: "Won" },
   { value: "CLOSED_LOST", label: "Lost" },
 ]

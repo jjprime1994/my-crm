@@ -34,7 +34,7 @@ function SourceBadge({ source }: { source?: string | null }) {
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
-  PROPOSAL: "Proposal", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
+  PROPOSAL: "Appointment Made", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
 }
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
