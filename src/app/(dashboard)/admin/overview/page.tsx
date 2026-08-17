@@ -20,6 +20,14 @@ const STATUS_DOT: Record<LeadStatus, string> = {
   PROPOSAL: "bg-orange-500", CLOSED_WON: "bg-emerald-500", CLOSED_LOST: "bg-rose-500",
 }
 
+function statusCountsOf(leads: { status: LeadStatus }[]): Record<LeadStatus, number> {
+  const counts: Record<LeadStatus, number> = {
+    NEW: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, CLOSED_WON: 0, CLOSED_LOST: 0,
+  }
+  for (const l of leads) counts[l.status]++
+  return counts
+}
+
 const PERIODS = [
   { label: "7d", days: 7 },
   { label: "30d", days: 30 },
@@ -116,7 +124,7 @@ export default async function ManagerOverviewPage({
             leads: { where: dateFilter, select: { status: true, claimedAt: true, updatedAt: true, firstContactedAt: true } },
           },
         })
-      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: string; claimedAt: Date | null; updatedAt: Date; firstContactedAt: Date | null }[] }[]),
+      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: LeadStatus; claimedAt: Date | null; updatedAt: Date; firstContactedAt: Date | null }[] }[]),
   ])
 
   const statusMap = Object.fromEntries(byStatus.map((s) => [s.status, s._count]))
@@ -160,6 +168,7 @@ export default async function ManagerOverviewPage({
       won: wonCount,
       stale: staleCount,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
+      statusCounts: statusCountsOf(m.leads),
       ...responseMetrics(m.leads),
     }
   }).sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
@@ -178,6 +187,7 @@ export default async function ManagerOverviewPage({
       totalLeads, claimed: claimedCount, assigned: totalLeads - claimedCount,
       won: wonCount, stale: staleCount,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
+      statusCounts: statusCountsOf(u.leads),
       ...responseMetrics(u.leads),
     }]
   }))

@@ -35,6 +35,14 @@ const PERIODS = [
   { label: "All time", days: 0 },
 ]
 
+function statusCountsOf(leads: { status: LeadStatus }[]): Record<LeadStatus, number> {
+  const counts: Record<LeadStatus, number> = {
+    NEW: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, CLOSED_WON: 0, CLOSED_LOST: 0,
+  }
+  for (const l of leads) counts[l.status]++
+  return counts
+}
+
 export default async function SuperAdminOverviewPage({
   searchParams,
 }: {
@@ -172,6 +180,7 @@ export default async function SuperAdminOverviewPage({
         topManagerName: s.manager?.manager?.name ?? null,
         totalLeads, won: wonCount, claimed: claimedCount, assigned: totalLeads - claimedCount,
         stale: staleCount, rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0, avgResponseMs,
+        statusCounts: statusCountsOf(s.leads),
       }
     })
     .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
@@ -200,6 +209,7 @@ export default async function SuperAdminOverviewPage({
       totalLeads, claimed: claimedCount, assigned: totalLeads - claimedCount,
       won: wonCount, stale: staleCount, avgResponseMs,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
+      statusCounts: statusCountsOf(u.leads),
     }]
   }))
 

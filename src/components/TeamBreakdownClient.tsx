@@ -4,6 +4,13 @@ import { useEffect, useState } from "react"
 import TeamFilterSelect from "@/components/TeamFilterSelect"
 import { formatAvgResponseTime } from "@/lib/responseTime"
 import { initials, roleBadge } from "@/lib/format"
+import type { LeadStatus } from "@/generated/prisma/client"
+
+const STAGES: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
+const STAGE_LABELS: Record<LeadStatus, string> = {
+  NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
+  PROPOSAL: "Appointment Made", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
+}
 
 export type TeamMemberRow = {
   id: string
@@ -16,6 +23,7 @@ export type TeamMemberRow = {
   avgResponseMs: number | null
   notContacted: number
   stale: number
+  statusCounts: Record<LeadStatus, number>
 }
 
 export type TeamHeaderRow = TeamMemberRow & { role: string }
@@ -194,7 +202,9 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams }: Props)
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned</th>
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
+                              {STAGES.map((s) => (
+                                <th key={s} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">{STAGE_LABELS[s]}</th>
+                              ))}
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Response</th>
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Not Contacted</th>
@@ -218,7 +228,11 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams }: Props)
                                 <td className="px-6 py-4"><span className="text-sm font-semibold text-blue-600">{headerRow.claimed}</span></td>
                                 <td className="px-6 py-4"><span className="text-sm text-gray-500">{headerRow.assigned}</span></td>
                                 <td className="px-6 py-4 text-sm font-semibold text-gray-900">{headerRow.totalLeads}</td>
-                                <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{headerRow.won}</td>
+                                {STAGES.map((s) => (
+                                  <td key={s} className="px-6 py-4">
+                                    <span className={`text-sm ${headerRow.statusCounts[s] > 0 ? "font-semibold text-gray-800" : "text-gray-300"}`}>{headerRow.statusCounts[s]}</span>
+                                  </td>
+                                ))}
                                 <td className="px-6 py-4">
                                   <span className={`text-sm font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
                                 </td>
@@ -269,7 +283,11 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams }: Props)
                                   <span className="text-sm text-gray-500">{m.assigned}</span>
                                 </td>
                                 <td className="px-6 py-4 text-sm font-semibold text-gray-900">{m.totalLeads}</td>
-                                <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>
+                                {STAGES.map((s) => (
+                                  <td key={s} className="px-6 py-4">
+                                    <span className={`text-sm ${m.statusCounts[s] > 0 ? "font-semibold text-gray-800" : "text-gray-300"}`}>{m.statusCounts[s]}</span>
+                                  </td>
+                                ))}
                                 <td className="px-6 py-4">
                                   <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
                                 </td>
