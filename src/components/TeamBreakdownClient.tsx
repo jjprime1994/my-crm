@@ -198,7 +198,7 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams }: Props)
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Response</th>
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Not Contacted</th>
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Stale</th>
+                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide" title="Active leads that haven't been updated in more than 48 hours">Stale</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">
