@@ -105,7 +105,6 @@ export default async function SuperAdminOverviewPage({
       _count: true,
       where: dateFilter,
       orderBy: { _count: { campaignName: "desc" } },
-      take: 10,
     }),
     db.lead.findMany({
       where: dateFilter,

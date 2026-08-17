@@ -46,7 +46,7 @@ export default function MetaTokenRefreshTool() {
           <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer" className="underline">
             Graph API Explorer
           </a>{" "}
-          (generated with <span className="font-mono">leads_retrieval</span> ticked) — this exchanges it for a permanent page access token.
+          (generated with <span className="font-mono">leads_retrieval</span> AND <span className="font-mono">ads_read</span> ticked — ads_read is required for campaign/ad name lookups, not just lead capture) — this exchanges it for a permanent page access token.
         </p>
       </div>
 
