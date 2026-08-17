@@ -224,7 +224,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
   const activeFilters = [search, roleFilter, managerFilter].filter(Boolean).length
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5 max-w-[1200px]">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Manage Team</h1>

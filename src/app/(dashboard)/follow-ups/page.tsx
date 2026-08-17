@@ -248,7 +248,7 @@ export default async function FollowUpsPage({
       db.lead.findMany({ where, include, orderBy, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
     ])
     return (
-      <div className="space-y-5 max-w-6xl">
+      <div className="space-y-5 max-w-[1300px]">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Follow-ups</h1>
@@ -291,7 +291,7 @@ export default async function FollowUpsPage({
   const total = myTotal + teamTotal
 
   return (
-    <div className="space-y-7 max-w-6xl">
+    <div className="space-y-7 max-w-[1300px]">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Follow-ups</h1>

@@ -188,7 +188,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
   }
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5 max-w-[1400px]">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Assign Leads</h1>

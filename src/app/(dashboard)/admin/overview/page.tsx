@@ -246,7 +246,7 @@ export default async function ManagerOverviewPage({
   ]
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-[1400px]">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">{role === "TEAM_LEADER" ? "Team Leader" : "Manager"}</p>

@@ -125,7 +125,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
   const pct = claimLimit > 0 ? Math.round((recentClaims / claimLimit) * 100) : 0
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5 max-w-[1200px]">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Available Leads</h1>
