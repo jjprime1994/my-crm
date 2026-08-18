@@ -14,6 +14,7 @@ import MetaTokenRefreshTool from "@/components/MetaTokenRefreshTool"
 import RoutingAuditTool from "@/components/RoutingAuditTool"
 import { getCampaignPerformance } from "@/lib/campaign-stats"
 import { initials } from "@/lib/format"
+import { businessMsElapsed } from "@/lib/responseTime"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -186,8 +187,7 @@ export default async function SuperAdminOverviewPage({
       ).length
       const responseTimes = s.leads
         .filter((l) => l.claimedAt && l.firstContactedAt)
-        .map((l) => new Date(l.firstContactedAt!).getTime() - new Date(l.claimedAt!).getTime())
-        .filter((ms) => ms >= 0)
+        .map((l) => businessMsElapsed(l.claimedAt!, l.firstContactedAt!))
       const avgResponseMs = responseTimes.length > 0
         ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
         : null
@@ -219,8 +219,7 @@ export default async function SuperAdminOverviewPage({
     ).length
     const responseTimes = u.leads
       .filter((l) => l.claimedAt && l.firstContactedAt)
-      .map((l) => new Date(l.firstContactedAt!).getTime() - new Date(l.claimedAt!).getTime())
-      .filter((ms) => ms >= 0)
+      .map((l) => businessMsElapsed(l.claimedAt!, l.firstContactedAt!))
     const avgResponseMs = responseTimes.length > 0
       ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
       : null

@@ -6,6 +6,7 @@ import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
 import { getViewAsRole } from "@/lib/viewas"
 import ManagerTeamBreakdownClient from "@/components/ManagerTeamBreakdownClient"
+import { businessMsElapsed } from "@/lib/responseTime"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -156,8 +157,7 @@ export default async function ManagerOverviewPage({
   function responseMetrics(leads: { claimedAt: Date | null; firstContactedAt: Date | null; status: string }[]) {
     const responseTimes = leads
       .filter((l) => l.claimedAt && l.firstContactedAt)
-      .map((l) => new Date(l.firstContactedAt!).getTime() - new Date(l.claimedAt!).getTime())
-      .filter((ms) => ms >= 0)
+      .map((l) => businessMsElapsed(l.claimedAt!, l.firstContactedAt!))
     const avgResponseMs = responseTimes.length > 0
       ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
       : null

@@ -17,6 +17,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.26.0",
+    date: "2026-08-18",
+    title: "Response Time Now Business-Hours Aware",
+    items: [
+      "Average Response Time (stars and the raw time) no longer counts overnight hours — a lead claimed at 1am and contacted at 9am now reads as instant, not 8 hours late",
+      "Business hours are 9am–11pm every day; only the portion of the claim-to-contact gap that falls inside that window counts toward the average",
+    ],
+  },
+  {
     version: "1.25.0",
     date: "2026-08-18",
     title: "Avg Response as Star Ratings",

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
+import { businessMsElapsed } from "@/lib/responseTime"
 
 export type TeamReportRow = {
   id: string
@@ -28,8 +29,7 @@ function computeMetrics(leads: LeadForMetrics[]) {
   const claimed = leads.filter((l) => l.claimedAt).length
   const responseTimes = leads
     .filter((l) => l.claimedAt && l.firstContactedAt)
-    .map((l) => new Date(l.firstContactedAt!).getTime() - new Date(l.claimedAt!).getTime())
-    .filter((ms) => ms >= 0)
+    .map((l) => businessMsElapsed(l.claimedAt!, l.firstContactedAt!))
   const avgResponseMs = responseTimes.length > 0
     ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
     : null
