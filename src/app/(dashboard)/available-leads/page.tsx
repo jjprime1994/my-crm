@@ -14,8 +14,6 @@ export default async function AvailableLeadsPage() {
   const startOfDayInMYT = nowInMYT - (nowInMYT % (24 * 60 * 60 * 1000))
   const startOfDayUTC = new Date(startOfDayInMYT - MYT_OFFSET)
   const nextMidnightUTC = new Date(startOfDayInMYT + 24 * 60 * 60 * 1000 - MYT_OFFSET)
-  const mytHour = Math.floor((nowInMYT % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-  const isOffHours = mytHour < 9 || mytHour >= 23
 
   const [rawLeads, user, recentClaims, newLeadsCount] = await Promise.all([
     getAvailableLeads(session.user.id, session.user.role),
@@ -81,7 +79,6 @@ export default async function AvailableLeadsPage() {
       newLeadsCount={newLeadsCount}
       newLeadThreshold={threshold}
       isUnlimited={isSuperAdmin}
-      isOffHours={isOffHours}
     />
   )
 }

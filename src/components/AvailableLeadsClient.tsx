@@ -65,7 +65,6 @@ interface Props {
   newLeadsCount: number
   newLeadThreshold: number
   isUnlimited?: boolean
-  isOffHours?: boolean
 }
 
 function useCountdown(resetAt: string | null) {
@@ -83,7 +82,7 @@ function useCountdown(resetAt: string | null) {
   return secondsLeft
 }
 
-export default function AvailableLeadsClient({ leads: initial, claimLimit, recentClaims: initialClaims, resetAt, newLeadsCount, newLeadThreshold, isUnlimited = false, isOffHours = false }: Props) {
+export default function AvailableLeadsClient({ leads: initial, claimLimit, recentClaims: initialClaims, resetAt, newLeadsCount, newLeadThreshold, isUnlimited = false }: Props) {
   const router = useRouter()
   const [leads, setLeads] = useState(initial)
   const [recentClaims, setRecentClaims] = useState(initialClaims)
@@ -161,16 +160,14 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
         )}
       </div>
 
-      {isOffHours && (
-        <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-xl px-4 py-3">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <span>
-            It&apos;s outside business hours (9am–11pm) — claiming now won&apos;t count against your average response time until things reopen.
-          </span>
-        </div>
-      )}
+      <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-xl px-4 py-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span>
+          Average response time only counts business hours (9am–11pm) — claiming a lead outside those hours won&apos;t count against you until things reopen.
+        </span>
+      </div>
 
       {error && (
         <div className="flex items-center gap-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3">
