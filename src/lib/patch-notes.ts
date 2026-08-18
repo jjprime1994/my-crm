@@ -17,6 +17,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.25.0",
+    date: "2026-08-18",
+    title: "Avg Response as Star Ratings",
+    items: [
+      "Average Response Time now shows as a 5-star rating (with the exact time still underneath) everywhere it appears — Team Breakdown, the Funnel tab, and the Leaderboard's Fastest Response tab",
+      "★★★★★ under 15 min · ★★★★ 15 min–1 hr · ★★★ 1–4 hr · ★★ 4–24 hr · ★ over 24 hr — weighted toward the first few minutes, since that's where response speed matters most for conversion",
+    ],
+  },
+  {
     version: "1.24.0",
     date: "2026-08-18",
     title: "Simplified Pipeline: Qualified Removed",

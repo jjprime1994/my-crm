@@ -3,7 +3,7 @@
 import { useState } from "react"
 import TeamFilterSelect from "@/components/TeamFilterSelect"
 import FunnelChart from "@/components/FunnelChart"
-import { formatAvgResponseTime } from "@/lib/responseTime"
+import AvgResponseStars from "@/components/AvgResponseStars"
 import { initials, roleBadge } from "@/lib/format"
 import type { TeamHeaderRow, TeamMemberRow } from "@/components/TeamBreakdownClient"
 
@@ -102,7 +102,7 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
                             <span>{headerRow.assigned} assigned</span>
                             <span className="text-emerald-600 font-semibold">{headerRow.won} won</span>
                             <span className={`font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
-                            <span>{formatAvgResponseTime(headerRow.avgResponseMs)} avg</span>
+                            <AvgResponseStars avgResponseMs={headerRow.avgResponseMs} />
                             {headerRow.notContacted > 0 && <span className="text-rose-500 font-medium">{headerRow.notContacted} not contacted</span>}
                             {headerRow.stale > 0 && <span className="text-rose-500 font-medium">{headerRow.stale} stale</span>}
                           </div>
@@ -126,7 +126,7 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
                             <span>{m.assigned} assigned</span>
                             <span className="text-emerald-600 font-semibold">{m.won} won</span>
                             <span className={`font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
-                            <span>{formatAvgResponseTime(m.avgResponseMs)} avg</span>
+                            <AvgResponseStars avgResponseMs={m.avgResponseMs} />
                             {m.notContacted > 0 && <span className="text-rose-500 font-medium">{m.notContacted} not contacted</span>}
                             {m.stale > 0 && <span className="text-rose-500 font-medium">{m.stale} stale</span>}
                           </div>
@@ -187,17 +187,7 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
                             <span className={`text-sm font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
                           </td>
                           <td className="px-6 py-4">
-                            {headerRow.avgResponseMs !== null ? (
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                headerRow.avgResponseMs < 60 * 60 * 1000 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                                : headerRow.avgResponseMs < 4 * 60 * 60 * 1000 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-                                : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
-                              }`}>
-                                {formatAvgResponseTime(headerRow.avgResponseMs)}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-300">—</span>
-                            )}
+                            <AvgResponseStars avgResponseMs={headerRow.avgResponseMs} />
                           </td>
                           <td className="px-6 py-4">
                             {headerRow.notContacted > 0 ? (
@@ -243,17 +233,7 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
                             <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
                           </td>
                           <td className="px-6 py-4">
-                            {m.avgResponseMs !== null ? (
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                m.avgResponseMs < 60 * 60 * 1000 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                                : m.avgResponseMs < 4 * 60 * 60 * 1000 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-                                : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
-                              }`}>
-                                {formatAvgResponseTime(m.avgResponseMs)}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-300">—</span>
-                            )}
+                            <AvgResponseStars avgResponseMs={m.avgResponseMs} />
                           </td>
                           <td className="px-6 py-4">
                             {m.notContacted > 0 ? (

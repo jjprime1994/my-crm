@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { formatAvgResponseTime } from "@/lib/responseTime"
+import AvgResponseStars from "@/components/AvgResponseStars"
 
 export type IndividualRow = {
   id: string
@@ -146,17 +146,7 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  {row.avgResponseMs !== null ? (
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      row.avgResponseMs < 60 * 60 * 1000 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                      : row.avgResponseMs < 4 * 60 * 60 * 1000 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-                      : "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
-                    }`}>
-                      {formatAvgResponseTime(row.avgResponseMs)}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-300">—</span>
-                  )}
+                  <AvgResponseStars avgResponseMs={row.avgResponseMs} />
                 </td>
                 <td className="px-6 py-4">
                   {row.notContacted > 0 ? (
