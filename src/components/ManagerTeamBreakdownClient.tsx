@@ -2,9 +2,19 @@
 
 import { useState } from "react"
 import TeamFilterSelect from "@/components/TeamFilterSelect"
+import FunnelChart from "@/components/FunnelChart"
 import { formatAvgResponseTime } from "@/lib/responseTime"
 import { initials, roleBadge } from "@/lib/format"
 import type { TeamHeaderRow, TeamMemberRow } from "@/components/TeamBreakdownClient"
+
+const STAGE_COLUMNS: { key: keyof TeamMemberRow["statusCounts"]; label: string }[] = [
+  { key: "NEW", label: "New" },
+  { key: "CONTACTED", label: "Contacted" },
+  { key: "QUALIFIED", label: "Qualified" },
+  { key: "PROPOSAL", label: "Appointment Made" },
+  { key: "CLOSED_WON", label: "Won" },
+  { key: "CLOSED_LOST", label: "Lost" },
+]
 
 export type TeamSection = {
   id: string
@@ -15,26 +25,52 @@ export type TeamSection = {
 
 interface Props {
   sections: TeamSection[]
+  title?: string
+  description?: string
+  showFunnelChart?: boolean
+  showStageColumns?: boolean
 }
 
-export default function ManagerTeamBreakdownClient({ sections }: Props) {
+export default function ManagerTeamBreakdownClient({ sections, title = "Team Breakdown", description, showFunnelChart = false, showStageColumns = false }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const options = sections.map((s) => ({ id: s.id, name: s.label || "Direct Reports" }))
   const filteredSections = selected.size === 0 ? sections : sections.filter((s) => selected.has(s.id))
   const memberCount = filteredSections.reduce((sum, s) => sum + s.members.length, 0)
 
+  const funnelData = showFunnelChart
+    ? (() => {
+        const rows = filteredSections.flatMap((s) => [...(s.headerRow ? [s.headerRow] : []), ...s.members])
+        const sum = (k: keyof TeamMemberRow["statusCounts"]) => rows.reduce((n, r) => n + r.statusCounts[k], 0)
+        return {
+          stages: [
+            { label: "New", count: sum("NEW") },
+            { label: "Contacted", count: sum("CONTACTED") },
+            { label: "Qualified", count: sum("QUALIFIED") },
+            { label: "Appointment Made", count: sum("PROPOSAL") },
+          ],
+          won: sum("CLOSED_WON"),
+          lost: sum("CLOSED_LOST"),
+          total: rows.reduce((n, r) => n + r.totalLeads, 0),
+        }
+      })()
+    : null
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 flex-wrap gap-3">
         <div>
-          <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
+          <h2 className="font-semibold text-gray-900">{title}</h2>
           <p className="text-xs text-gray-400 mt-0.5">{memberCount} salesperson{memberCount !== 1 ? "s" : ""}</p>
+          {description && <p className="text-xs text-gray-400 mt-1 max-w-lg">{description}</p>}
         </div>
         {options.length > 1 && (
           <TeamFilterSelect teams={options} selected={selected} onChange={setSelected} />
         )}
       </div>
+      {funnelData && (
+        <FunnelChart stages={funnelData.stages} won={funnelData.won} lost={funnelData.lost} total={funnelData.total} />
+      )}
       {filteredSections.length === 0 ? (
         <div className="text-center py-12 text-sm text-gray-400">No teams match this filter.</div>
       ) : (
@@ -115,7 +151,10 @@ export default function ManagerTeamBreakdownClient({ sections }: Props) {
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
+                        {showStageColumns && STAGE_COLUMNS.map((c) => (
+                          <th key={c.key} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">{c.label}</th>
+                        ))}
+                        {!showStageColumns && <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>}
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Response</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Not Contacted</th>
@@ -139,7 +178,12 @@ export default function ManagerTeamBreakdownClient({ sections }: Props) {
                           <td className="px-6 py-4"><span className="text-sm font-semibold text-blue-600">{headerRow.claimed}</span></td>
                           <td className="px-6 py-4"><span className="text-sm text-gray-500">{headerRow.assigned}</span></td>
                           <td className="px-6 py-4 text-sm font-semibold text-gray-900">{headerRow.totalLeads}</td>
-                          <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{headerRow.won}</td>
+                          {showStageColumns && STAGE_COLUMNS.map((c) => (
+                            <td key={c.key} className="px-6 py-4">
+                              <span className={`text-sm ${headerRow.statusCounts[c.key] > 0 ? "font-semibold text-gray-800" : "text-gray-300"}`}>{headerRow.statusCounts[c.key]}</span>
+                            </td>
+                          ))}
+                          {!showStageColumns && <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{headerRow.won}</td>}
                           <td className="px-6 py-4">
                             <span className={`text-sm font-bold ${headerRow.rate >= 20 ? "text-emerald-600" : headerRow.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{headerRow.rate}%</span>
                           </td>
@@ -190,7 +234,12 @@ export default function ManagerTeamBreakdownClient({ sections }: Props) {
                             <span className="text-sm text-gray-500">{m.assigned}</span>
                           </td>
                           <td className="px-6 py-4 text-sm font-semibold text-gray-900">{m.totalLeads}</td>
-                          <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>
+                          {showStageColumns && STAGE_COLUMNS.map((c) => (
+                            <td key={c.key} className="px-6 py-4">
+                              <span className={`text-sm ${m.statusCounts[c.key] > 0 ? "font-semibold text-gray-800" : "text-gray-300"}`}>{m.statusCounts[c.key]}</span>
+                            </td>
+                          ))}
+                          {!showStageColumns && <td className="px-6 py-4 text-sm font-semibold text-emerald-600">{m.won}</td>}
                           <td className="px-6 py-4">
                             <span className={`text-sm font-bold ${m.rate >= 20 ? "text-emerald-600" : m.rate >= 10 ? "text-amber-600" : "text-gray-500"}`}>{m.rate}%</span>
                           </td>

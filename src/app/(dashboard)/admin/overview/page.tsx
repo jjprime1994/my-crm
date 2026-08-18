@@ -28,6 +28,21 @@ function statusCountsOf(leads: { status: LeadStatus }[]): Record<LeadStatus, num
   return counts
 }
 
+// Counts a lead under every stage it ever reached (per LeadStatusHistory), not just its
+// current one — mirrors superadmin/overview's everReachedCountsOf. `from` is what recovers
+// a lead's starting stage, since a row only ever logs the stage it moved TO.
+function everReachedCountsOf(leads: { status: LeadStatus; statusHistory: { from: LeadStatus | null; to: LeadStatus }[] }[]): Record<LeadStatus, number> {
+  const counts: Record<LeadStatus, number> = {
+    NEW: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, CLOSED_WON: 0, CLOSED_LOST: 0,
+  }
+  for (const l of leads) {
+    const reached = new Set(l.statusHistory.flatMap((h) => (h.from ? [h.from, h.to] : [h.to])))
+    reached.add(l.status)
+    for (const s of reached) counts[s]++
+  }
+  return counts
+}
+
 const PERIODS = [
   { label: "7d", days: 7 },
   { label: "30d", days: 30 },
@@ -86,7 +101,7 @@ export default async function ManagerOverviewPage({
         manager: { select: { id: true, name: true } },
         leads: {
           where: dateFilter,
-          select: { status: true, updatedAt: true, claimedAt: true, firstContactedAt: true },
+          select: { status: true, updatedAt: true, claimedAt: true, firstContactedAt: true, statusHistory: { select: { from: true, to: true } } },
         },
       },
       orderBy: { name: "asc" },
@@ -121,10 +136,10 @@ export default async function ManagerOverviewPage({
           },
           select: {
             id: true, name: true, role: true, managerId: true,
-            leads: { where: dateFilter, select: { status: true, claimedAt: true, updatedAt: true, firstContactedAt: true } },
+            leads: { where: dateFilter, select: { status: true, claimedAt: true, updatedAt: true, firstContactedAt: true, statusHistory: { select: { from: true, to: true } } } },
           },
         })
-      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: LeadStatus; claimedAt: Date | null; updatedAt: Date; firstContactedAt: Date | null }[] }[]),
+      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: LeadStatus; claimedAt: Date | null; updatedAt: Date; firstContactedAt: Date | null; statusHistory: { from: LeadStatus | null; to: LeadStatus }[] }[] }[]),
   ])
 
   const statusMap = Object.fromEntries(byStatus.map((s) => [s.status, s._count]))
@@ -169,6 +184,7 @@ export default async function ManagerOverviewPage({
       stale: staleCount,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
       statusCounts: statusCountsOf(m.leads),
+      everReachedCounts: everReachedCountsOf(m.leads),
       ...responseMetrics(m.leads),
     }
   }).sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
@@ -188,6 +204,7 @@ export default async function ManagerOverviewPage({
       won: wonCount, stale: staleCount,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
       statusCounts: statusCountsOf(u.leads),
+      everReachedCounts: everReachedCountsOf(u.leads),
       ...responseMetrics(u.leads),
     }]
   }))
@@ -228,6 +245,14 @@ export default async function ManagerOverviewPage({
     })),
   ]
 
+  // Same sections, but with statusCounts swapped for "ever reached" counts, so the Funnel
+  // tab can reuse the exact same table/chart without a parallel data model.
+  const funnelSections = teamSections.map((s) => ({
+    ...s,
+    headerRow: s.headerRow ? { ...s.headerRow, statusCounts: s.headerRow.everReachedCounts } : null,
+    members: s.members.map((m) => ({ ...m, statusCounts: m.everReachedCounts })),
+  }))
+
   const periodLabel = days === 0 ? "All time" : `Last ${days} days`
 
   function buildUrl({ newPeriod, newTab }: { newPeriod?: number; newTab?: string } = {}) {
@@ -243,6 +268,7 @@ export default async function ManagerOverviewPage({
   const TABS = [
     { id: "overview", label: "Overview" },
     { id: "teams", label: "Teams" },
+    { id: "funnel", label: "Funnel" },
   ]
 
   return (
@@ -380,6 +406,26 @@ export default async function ManagerOverviewPage({
           </div>
         ) : (
           <ManagerTeamBreakdownClient sections={teamSections} />
+        )
+      )}
+
+      {/* ── Funnel tab ── */}
+      {tab === "funnel" && (
+        members.length === 0 && !adminRow ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50">
+              <h2 className="font-semibold text-gray-900">Funnel Breakdown</h2>
+            </div>
+            <div className="text-center py-12 text-sm text-gray-400">No team members yet.</div>
+          </div>
+        ) : (
+          <ManagerTeamBreakdownClient
+            sections={funnelSections}
+            title="Funnel Breakdown"
+            description="Counts a lead under every stage it ever reached — even one later marked Lost. For a snapshot of where leads currently sit, see the Teams tab."
+            showFunnelChart
+            showStageColumns
+          />
         )
       )}
 
