@@ -17,6 +17,16 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.22.0",
+    date: "2026-08-18",
+    title: "Funnel Visual, Manager Parity & Auto-Close Stale Leads",
+    items: [
+      "The Funnel tab now shows an actual funnel chart — narrowing bars for New → Contacted → Qualified → Appointment Made with a stage-to-stage retention % on each connector, plus Won/Lost as separate outcome badges",
+      "Managers and Team Leaders now have their own Funnel tab on Team Overview, scoped to their team, matching what Super Admins see on Business Overview",
+      "Leads that sit unclaimed (nobody has claimed them) and untouched for 30+ days are now automatically marked Lost overnight, with a note logged on the lead explaining why — keeps the available pool from filling up with dead leads",
+    ],
+  },
+  {
     version: "1.21.0",
     date: "2026-08-18",
     title: "Funnel Tab",

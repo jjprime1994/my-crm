@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/check-routing",
       "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/api/cron/close-stale-leads",
+      "schedule": "0 21 * * *"
     }
   ]
 }
