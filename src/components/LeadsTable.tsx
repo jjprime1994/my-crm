@@ -66,6 +66,21 @@ const CALL_ICON = (
 export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]; showAssignedTo: boolean }) {
   const router = useRouter()
 
+  // Reaching out from the list is still a real contact attempt — logs the same
+  // "Contacted via" note the lead detail page does, which the API auto-advances
+  // NEW leads to CONTACTED on. Refresh so the row's status badge catches up.
+  async function logContact(leadId: string, method: string) {
+    const res = await fetch(`/api/leads/${leadId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: `Contacted via ${method}` }),
+    })
+    if (res.ok) {
+      const { newStatus } = await res.json()
+      if (newStatus) router.refresh()
+    }
+  }
+
   const empty = (
     <div className="flex flex-col items-center gap-2 text-sm text-gray-400 py-12">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300">
@@ -136,7 +151,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                         href={`https://wa.me/${lead.phone.replace(/\D/g, "").replace(/^0/, "60")}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); logContact(lead.id, "WhatsApp") }}
                         className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition ring-1 ring-emerald-200"
                         title="WhatsApp"
                       >
@@ -211,7 +226,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                         href={`https://wa.me/${lead.phone.replace(/\D/g, "").replace(/^0/, "60")}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); logContact(lead.id, "WhatsApp") }}
                         className="inline-flex items-center justify-center w-5 h-5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition ring-1 ring-emerald-200"
                         title="WhatsApp"
                       >
@@ -219,7 +234,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                       </a>
                       <a
                         href={`tel:${lead.phone}`}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); logContact(lead.id, "phone call") }}
                         className="inline-flex items-center justify-center w-5 h-5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition ring-1 ring-blue-200"
                         title="Call"
                       >

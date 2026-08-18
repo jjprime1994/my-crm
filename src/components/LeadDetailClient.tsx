@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { calcResponseTime } from "@/lib/responseTime"
 import { useToast } from "@/components/Toast"
@@ -126,6 +126,11 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
 
   const statusChanged = status !== lead.status
 
+  // Keep the dropdown in sync after a server-side status change we didn't originate
+  // from this dropdown (e.g. the WhatsApp/Call auto-transition below), so it doesn't
+  // look like an unsaved edit once the refreshed lead prop catches up.
+  useEffect(() => setStatus(lead.status), [lead.status])
+
   async function saveChanges() {
     setSaving(true)
     const body: Record<string, unknown> = { status, followUpAt: followUpAt || null, branch: branch || null }
@@ -144,7 +149,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
         body: JSON.stringify({ content: statusNote.trim() }),
       })
       if (noteRes.ok) {
-        const note = await noteRes.json()
+        const { note } = await noteRes.json()
         setNotes([note, ...notes])
       }
     }
@@ -184,8 +189,13 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
       body: JSON.stringify({ content: `Contacted via ${method}` }),
     }).then(async (res) => {
       if (res.ok) {
-        const note = await res.json()
+        const { note, newStatus } = await res.json()
         setNotes([note, ...notes])
+        if (newStatus) {
+          setStatus(newStatus)
+          toast(`Status auto-updated to Contacted`)
+          router.refresh()
+        }
       }
     })
   }
@@ -198,7 +208,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: noteContent }),
     })
-    const note = await res.json()
+    const { note } = await res.json()
     setNotes([note, ...notes])
     setNoteContent("")
     setPostingNote(false)

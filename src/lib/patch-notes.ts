@@ -17,6 +17,16 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.23.0",
+    date: "2026-08-18",
+    title: "Auto-Advance New Leads on WhatsApp/Call",
+    items: [
+      "Clicking WhatsApp or Call on a brand-new lead now automatically moves its status from New to Contacted — reaching out is a real contact attempt, so it no longer sits miscounted as 'not contacted' after you've actually contacted them",
+      "Applies everywhere those buttons appear: the lead detail page, the Leads table, and Follow-ups",
+      "Email is left alone since it's easy to send without any real engagement",
+    ],
+  },
+  {
     version: "1.22.0",
     date: "2026-08-18",
     title: "Funnel Visual, Manager Parity & Auto-Close Stale Leads",
