@@ -25,6 +25,7 @@ export const PATCH_NOTES: PatchNote[] = [
       "New search box filters the table down to a name as you type",
       "New \"Needs attention\" toggle shows only people with stale or not-contacted leads",
       "Sorting and filtering stay within each team — the team grouping never gets shuffled together",
+      "Fixed: sorting or filtering while scrolled down used to feel like the page randomly jumped — the row you were looking at now stays in view",
     ],
   },
   {

@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useLayoutEffect, useState } from "react"
 import TeamFilterSelect from "@/components/TeamFilterSelect"
 import FunnelChart from "@/components/FunnelChart"
 import AvgResponseStars from "@/components/AvgResponseStars"
 import SortableTh from "@/components/SortableTh"
 import { initials, roleBadge } from "@/lib/format"
+import { useScrollAnchor } from "@/lib/useScrollAnchor"
 import type { LeadStatus } from "@/generated/prisma/client"
 
 // Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made -> Won/Lost)
@@ -92,14 +93,32 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
   const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+  const { capture, restore } = useScrollAnchor()
+
+  // Resorting/filtering can shift a huge amount of content above the user's current scroll
+  // position even though total page height barely changes — capture the row at the top of
+  // the viewport before the change and re-align it after, so the view doesn't feel like it
+  // randomly jumps.
+  useLayoutEffect(() => { restore() })
 
   function handleSort(key: string) {
+    capture()
     if (sortKey === key) {
       setSortDir((d) => (d === "desc" ? "asc" : "desc"))
     } else {
       setSortKey(key)
       setSortDir("desc")
     }
+  }
+
+  function toggleNeedsAttention() {
+    capture()
+    setNeedsAttentionOnly((v) => !v)
+  }
+
+  function handleSearch(value: string) {
+    capture()
+    setSearch(value)
   }
 
   function matchesFilters(row: TeamMemberRow): boolean {
@@ -168,12 +187,12 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search name…"
             className="text-xs bg-gray-100 focus:bg-white focus:ring-1 focus:ring-violet-300 rounded-lg px-3 py-1.5 w-36 focus:w-44 transition-all outline-none"
           />
           <button
-            onClick={() => setNeedsAttentionOnly((v) => !v)}
+            onClick={toggleNeedsAttention}
             className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
               needsAttentionOnly ? "bg-rose-100 text-rose-600 ring-1 ring-rose-200" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
             }`}
@@ -252,7 +271,7 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
                       {/* Mobile cards */}
                       <ul className="sm:hidden divide-y divide-gray-50">
                         {headerRow && (
-                          <li className="px-5 py-4 bg-violet-50/30">
+                          <li className="px-5 py-4 bg-violet-50/30" data-row-id={headerRow.id}>
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-full bg-violet-200 flex items-center justify-center shrink-0">
                                 <span className="text-xs font-bold text-violet-800">{initials(headerRow.name)}</span>
@@ -276,7 +295,7 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
                           </li>
                         )}
                         {group.map((m, i) => (
-                          <li key={m.id} className="px-5 py-4">
+                          <li key={m.id} className="px-5 py-4" data-row-id={m.id}>
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
                                 <span className="text-xs font-bold text-violet-600">{initials(m.name)}</span>
@@ -326,7 +345,7 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
                           </thead>
                           <tbody className="divide-y divide-gray-50">
                             {headerRow && (
-                              <tr className="bg-violet-50/20 hover:bg-violet-50/40 transition">
+                              <tr className="bg-violet-50/20 hover:bg-violet-50/40 transition" data-row-id={headerRow.id}>
                                 <td className="px-6 py-4">
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-violet-200 flex items-center justify-center shrink-0">
@@ -367,7 +386,7 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
                               </tr>
                             )}
                             {group.map((m, i) => (
-                              <tr key={m.id} className="hover:bg-gray-50/70 transition">
+                              <tr key={m.id} className="hover:bg-gray-50/70 transition" data-row-id={m.id}>
                                 <td className="px-6 py-4">
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
