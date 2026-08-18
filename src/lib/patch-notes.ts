@@ -17,6 +17,14 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.28.0",
+    date: "2026-08-18",
+    title: "Your Own Avg Response on the Dashboard",
+    items: [
+      "Everyone's Dashboard now has a \"My Avg Response\" card showing your own average response time as a star rating — previously this was only visible to Super Admins and Managers looking at team reports, so salespeople had no way to see or improve their own number",
+    ],
+  },
+  {
     version: "1.27.0",
     date: "2026-08-18",
     title: "Preview As a Real Person",

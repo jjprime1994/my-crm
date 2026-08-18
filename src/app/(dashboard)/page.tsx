@@ -5,6 +5,8 @@ import Link from "next/link"
 import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import AnimatedBar from "@/components/AnimatedBar"
 import ResetLimitsButton from "@/components/ResetLimitsButton"
+import AvgResponseStars from "@/components/AvgResponseStars"
+import { businessMsElapsed } from "@/lib/responseTime"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
@@ -102,7 +104,7 @@ export default async function DashboardPage() {
       : { role: "SALESPERSON" as const, managerId: effectiveUserId }
     : null
 
-  const [total, byStatus, recent, followUpCount, unassignedCount, teamMembers, wonCounts, todayClaimCounts] = await Promise.all([
+  const [total, byStatus, recent, followUpCount, unassignedCount, teamMembers, wonCounts, todayClaimCounts, myContactedLeads] = await Promise.all([
     db.lead.count({ where }),
     db.lead.groupBy({ by: ["status"], _count: true, where }),
     isSuperAdmin
@@ -142,7 +144,19 @@ export default async function DashboardPage() {
           _count: { id: true },
         })
       : Promise.resolve([]),
+    // Personal response time — always scoped to the viewer's own claimed leads,
+    // regardless of role, so everyone (not just admins looking at their team) can
+    // see and improve their own number.
+    db.lead.findMany({
+      where: { assignedToId: effectiveUserId, claimedAt: { not: null }, firstContactedAt: { not: null } },
+      select: { claimedAt: true, firstContactedAt: true },
+    }),
   ])
+
+  const myResponseTimes = myContactedLeads.map((l) => businessMsElapsed(l.claimedAt!, l.firstContactedAt!))
+  const myAvgResponseMs = myResponseTimes.length > 0
+    ? Math.round(myResponseTimes.reduce((a, b) => a + b, 0) / myResponseTimes.length)
+    : null
 
   const wonByUserId = Object.fromEntries(wonCounts.map((r) => [r.assignedToId, r._count.id]))
   const claimedTodayById = Object.fromEntries(todayClaimCounts.map((r) => [r.claimedById, r._count.id]))
@@ -168,7 +182,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           label="Total Leads"
           value={total}
@@ -214,6 +228,17 @@ export default async function DashboardPage() {
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>}
           />
         )}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-gray-500 font-medium">My Avg Response</p>
+            <div className="mt-2">
+              <AvgResponseStars avgResponseMs={myAvgResponseMs} />
+            </div>
+          </div>
+          <div className="p-2.5 bg-gray-50 rounded-xl text-gray-400 shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+        </div>
       </div>
 
       {/* Pipeline */}
