@@ -17,6 +17,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.21.0",
+    date: "2026-08-18",
+    title: "Funnel Tab",
+    items: [
+      "New 'Funnel' tab on Business Overview, next to Teams — counts a lead under every stage it ever reached (e.g. Appointment Made), even if it was later marked Lost",
+      "The existing Teams tab only shows a lead's current stage, so a won or lost lead disappears from earlier stages there — Funnel answers 'how many appointments did we actually get' regardless of outcome",
+    ],
+  },
+  {
     version: "1.20.0",
     date: "2026-08-17",
     title: "Appointment Made Rename & Stage Breakdowns",
