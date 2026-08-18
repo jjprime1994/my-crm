@@ -1,19 +1,38 @@
-import { PrismaClient } from "../src/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
-import bcrypt from "bcryptjs"
-import * as dotenv from "dotenv"
-dotenv.config()
+// Reset a user's password directly (bcrypt cost 12, matching the app's own reset path
+// in src/app/api/users/[id]/route.ts). Generates a random password if none is given.
+// Usage:  npx tsx scripts/reset-password.ts <userId> [.env.production.local]
 
-const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) } as any)
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
+import crypto from "node:crypto"
 
-async function main() {
-  const hashed = await bcrypt.hash("Groudon3397!", 12)
-  const user = await db.user.update({
-    where: { email: "jjprime1994@gmail.com" },
-    data: { password: hashed },
-    select: { name: true, email: true },
-  })
-  console.log("Password reset for:", user.email)
+const userId = process.argv[2]
+if (!userId) {
+  console.error("Usage: npx tsx scripts/reset-password.ts <userId> [.env.production.local]")
+  process.exit(1)
+}
+const envFile = process.argv[3] ?? ".env.production.local"
+for (const line of readFileSync(resolve(process.cwd(), envFile), "utf8").split("\n")) {
+  const m = line.match(/^([A-Za-z0-9_]+)=(.*)$/)
+  if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "")
 }
 
-main().finally(() => db.$disconnect())
+async function main() {
+  const { db } = await import("../src/lib/db")
+  const bcrypt = (await import("bcryptjs")).default
+
+  const user = await db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true, role: true } })
+  if (!user) {
+    console.error("No user with that id.")
+    process.exit(1)
+  }
+
+  const newPassword = crypto.randomBytes(9).toString("base64url") // 12 chars, url-safe
+  const hashed = await bcrypt.hash(newPassword, 12)
+  await db.user.update({ where: { id: userId }, data: { password: hashed } })
+
+  console.log(`Password reset for ${user.name} (${user.email}, ${user.role}).`)
+  console.log(`New password: ${newPassword}`)
+  process.exit(0)
+}
+main().catch((e) => { console.error(e); process.exit(1) })
