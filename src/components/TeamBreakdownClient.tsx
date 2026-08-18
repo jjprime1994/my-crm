@@ -44,9 +44,12 @@ export type TeamBreakdownGroup = {
 interface Props {
   groups: TeamBreakdownGroup[]
   rangeQueryParams: string
+  title?: string
+  description?: string
+  showExport?: boolean
 }
 
-export default function TeamBreakdownClient({ groups, rangeQueryParams }: Props) {
+export default function TeamBreakdownClient({ groups, rangeQueryParams, title = "Team Breakdown", description, showExport = true }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   // Pick up a `teams` filter from a shared/bookmarked link on first mount,
@@ -78,20 +81,25 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams }: Props)
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 flex-wrap gap-3">
         <div>
-          <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{memberCount} salesperson{memberCount !== 1 ? "s" : ""} across {filteredGroups.length} team{filteredGroups.length !== 1 ? "s" : ""}</p>
+          <h2 className="font-semibold text-gray-900">{title}</h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {memberCount} salesperson{memberCount !== 1 ? "s" : ""} across {filteredGroups.length} team{filteredGroups.length !== 1 ? "s" : ""}
+          </p>
+          {description && <p className="text-xs text-gray-400 mt-1 max-w-lg">{description}</p>}
         </div>
         <div className="flex items-center gap-2">
           <TeamFilterSelect teams={teamOptions} selected={selected} onChange={updateSelected} />
-          <a
-            href={exportHref}
-            className="inline-flex items-center gap-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Export CSV
-          </a>
+          {showExport && (
+            <a
+              href={exportHref}
+              className="inline-flex items-center gap-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export CSV
+            </a>
+          )}
         </div>
       </div>
       {filteredGroups.length === 0 ? (

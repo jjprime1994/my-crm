@@ -43,6 +43,21 @@ function statusCountsOf(leads: { status: LeadStatus }[]): Record<LeadStatus, num
   return counts
 }
 
+// Counts a lead under every stage it ever reached (per LeadStatusHistory), not just its
+// current one — so a lead that hit "Appointment Made" and was later marked Lost still
+// counts under both, unlike statusCountsOf which only sees where it ended up.
+function everReachedCountsOf(leads: { status: LeadStatus; statusHistory: { to: LeadStatus }[] }[]): Record<LeadStatus, number> {
+  const counts: Record<LeadStatus, number> = {
+    NEW: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, CLOSED_WON: 0, CLOSED_LOST: 0,
+  }
+  for (const l of leads) {
+    const reached = new Set(l.statusHistory.map((h) => h.to))
+    reached.add(l.status) // in case a history write ever failed silently
+    for (const s of reached) counts[s]++
+  }
+  return counts
+}
+
 export default async function SuperAdminOverviewPage({
   searchParams,
 }: {
@@ -83,7 +98,7 @@ export default async function SuperAdminOverviewPage({
           },
         },
         _count: { select: { leads: true } },
-        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true } },
+        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { to: true } } } },
       },
       orderBy: { name: "asc" },
     }),
@@ -125,7 +140,7 @@ export default async function SuperAdminOverviewPage({
       where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
       select: {
         id: true, name: true, role: true, managerId: true,
-        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true } },
+        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { to: true } } } },
       },
       orderBy: { name: "asc" },
     }),
@@ -181,6 +196,7 @@ export default async function SuperAdminOverviewPage({
         totalLeads, won: wonCount, claimed: claimedCount, assigned: totalLeads - claimedCount,
         stale: staleCount, rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0, avgResponseMs,
         statusCounts: statusCountsOf(s.leads),
+        everReachedCounts: everReachedCountsOf(s.leads),
       }
     })
     .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
@@ -210,44 +226,57 @@ export default async function SuperAdminOverviewPage({
       won: wonCount, stale: staleCount, avgResponseMs,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
       statusCounts: statusCountsOf(u.leads),
+      everReachedCounts: everReachedCountsOf(u.leads),
     }]
   }))
 
-  // Build hierarchical team breakdown: top-level manager → direct reports + sub-teams by team leader
-  const topTeamMap = new Map<string, {
-    managerName: string
-    directMembers: (typeof individuals)[number][]
-    subTeams: Map<string, { leaderName: string; members: (typeof individuals)[number][] }>
-  }>()
-  for (const m of individuals) {
-    const isUnderLeader = m.managerRole === "TEAM_LEADER"
-    const topId = isUnderLeader ? (m.topManagerId ?? "__none__") : (m.managerId ?? "__none__")
-    const topName = isUnderLeader ? (m.topManagerName ?? "No Manager") : (m.managerName ?? "No Manager")
-    if (!topTeamMap.has(topId)) topTeamMap.set(topId, { managerName: topName, directMembers: [], subTeams: new Map() })
-    const topGroup = topTeamMap.get(topId)!
-    if (isUnderLeader && m.managerId) {
-      if (!topGroup.subTeams.has(m.managerId)) topGroup.subTeams.set(m.managerId, { leaderName: m.managerName ?? "Unknown", members: [] })
-      topGroup.subTeams.get(m.managerId)!.members.push(m)
-    } else {
-      topGroup.directMembers.push(m)
+  // Build hierarchical team breakdown: top-level manager → direct reports + sub-teams by team leader.
+  // Shared between the "current status" Teams tab and the "ever reached" Funnel tab — they differ
+  // only in which statusCounts field each row carries in.
+  function buildTeamGroups(rows: typeof individuals, mgmtMap: typeof mgmtRows) {
+    const topTeamMap = new Map<string, {
+      managerName: string
+      directMembers: typeof rows
+      subTeams: Map<string, { leaderName: string; members: typeof rows }>
+    }>()
+    for (const m of rows) {
+      const isUnderLeader = m.managerRole === "TEAM_LEADER"
+      const topId = isUnderLeader ? (m.topManagerId ?? "__none__") : (m.managerId ?? "__none__")
+      const topName = isUnderLeader ? (m.topManagerName ?? "No Manager") : (m.managerName ?? "No Manager")
+      if (!topTeamMap.has(topId)) topTeamMap.set(topId, { managerName: topName, directMembers: [], subTeams: new Map() })
+      const topGroup = topTeamMap.get(topId)!
+      if (isUnderLeader && m.managerId) {
+        if (!topGroup.subTeams.has(m.managerId)) topGroup.subTeams.set(m.managerId, { leaderName: m.managerName ?? "Unknown", members: [] })
+        topGroup.subTeams.get(m.managerId)!.members.push(m)
+      } else {
+        topGroup.directMembers.push(m)
+      }
     }
+    return Array.from(topTeamMap.entries())
+      .map(([id, g]) => ({
+        managerId: id,
+        managerName: g.managerName,
+        managerRow: mgmtMap.get(id) ?? null,
+        directMembers: [...g.directMembers].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads),
+        subTeams: Array.from(g.subTeams.entries())
+          .map(([leaderId, st]) => ({
+            leaderId,
+            leaderName: st.leaderName,
+            leaderRow: mgmtMap.get(leaderId) ?? null,
+            members: [...st.members].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads),
+          }))
+          .sort((a, b) => a.leaderName.localeCompare(b.leaderName)),
+      }))
+      .sort((a, b) => a.managerName.localeCompare(b.managerName))
   }
-  const teamBreakdownGroups = Array.from(topTeamMap.entries())
-    .map(([id, g]) => ({
-      managerId: id,
-      managerName: g.managerName,
-      managerRow: mgmtRows.get(id) ?? null,
-      directMembers: [...g.directMembers].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads),
-      subTeams: Array.from(g.subTeams.entries())
-        .map(([leaderId, st]) => ({
-          leaderId,
-          leaderName: st.leaderName,
-          leaderRow: mgmtRows.get(leaderId) ?? null,
-          members: [...st.members].sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads),
-        }))
-        .sort((a, b) => a.leaderName.localeCompare(b.leaderName)),
-    }))
-    .sort((a, b) => a.managerName.localeCompare(b.managerName))
+
+  const teamBreakdownGroups = buildTeamGroups(individuals, mgmtRows)
+
+  // Same rows, but with statusCounts swapped for the "ever reached" counts, so the Funnel
+  // tab can reuse the exact same table component without a parallel data model.
+  const funnelIndividuals = individuals.map((m) => ({ ...m, statusCounts: m.everReachedCounts }))
+  const funnelMgmtRows = new Map(Array.from(mgmtRows.entries()).map(([id, m]) => [id, { ...m, statusCounts: m.everReachedCounts }]))
+  const funnelBreakdownGroups = buildTeamGroups(funnelIndividuals, funnelMgmtRows)
 
   const teams = managerStats
     .map((m) => {
@@ -305,6 +334,7 @@ export default async function SuperAdminOverviewPage({
     { id: "overview", label: "Overview" },
     { id: "campaigns", label: "Campaigns" },
     { id: "teams", label: "Teams" },
+    { id: "funnel", label: "Funnel" },
     { id: "leaderboard", label: "Leaderboard" },
     { id: "tools", label: "Tools" },
   ]
@@ -692,6 +722,17 @@ export default async function SuperAdminOverviewPage({
       {/* ── Teams tab ── */}
       {tab === "teams" && teamBreakdownGroups.length > 0 && (
         <TeamBreakdownClient groups={teamBreakdownGroups} rangeQueryParams={rangeQueryParams()} />
+      )}
+
+      {/* ── Funnel tab ── */}
+      {tab === "funnel" && funnelBreakdownGroups.length > 0 && (
+        <TeamBreakdownClient
+          groups={funnelBreakdownGroups}
+          rangeQueryParams={rangeQueryParams()}
+          title="Funnel Breakdown"
+          description="Counts a lead under every stage it ever reached — even one later marked Lost. For a snapshot of where leads currently sit, see the Teams tab."
+          showExport={false}
+        />
       )}
 
       {tab === "tools" && (
