@@ -11,6 +11,7 @@ type Note = {
   content: string
   createdAt: string | Date
   author: { id: string; name: string } | null
+  isSystem: boolean
 }
 
 type StatusHistoryEntry = {
@@ -455,11 +456,17 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 <li key={note.id} className="bg-gray-50 rounded-xl px-4 py-3">
                   <p className="text-sm text-gray-800 leading-relaxed">{note.content}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-blue-600">{(note.author?.name ?? "?")[0].toUpperCase()}</span>
-                    </div>
+                    {note.isSystem ? (
+                      <div className="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-violet-600"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08 4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08 4.24-4.24"/></svg>
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-[9px] font-bold text-blue-600">{(note.author?.name ?? "?")[0].toUpperCase()}</span>
+                      </div>
+                    )}
                     <p className="text-xs text-gray-400">
-                      {note.author?.name ?? "Deleted user"} · {new Date(note.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                      {note.isSystem ? "System" : (note.author?.name ?? "Deleted user")} · {new Date(note.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                     </p>
                   </div>
                 </li>

@@ -26,7 +26,7 @@ export async function closeStaleUnclaimedLeads(): Promise<{ closedCount: number;
       data: { leadId: lead.id, from: lead.status, to: "CLOSED_LOST", changedById: null },
     })
     await db.leadNote.create({
-      data: { leadId: lead.id, authorId: null, content: `Auto-closed as Lost: unclaimed and untouched for ${STALE_DAYS}+ days.` },
+      data: { leadId: lead.id, authorId: null, isSystem: true, content: `Auto-closed as Lost: unclaimed and untouched for ${STALE_DAYS}+ days.` },
     })
     leadIds.push(lead.id)
   }

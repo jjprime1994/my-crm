@@ -122,6 +122,9 @@ if (!globalForPrisma.dbInitialized) {
   .then(() =>
     db.$executeRaw`ALTER TABLE "StateRoute" DROP COLUMN IF EXISTS "userId"`
   )
+  .then(() =>
+    db.$executeRaw`ALTER TABLE "LeadNote" ADD COLUMN IF NOT EXISTS "isSystem" BOOLEAN NOT NULL DEFAULT false`
+  )
   .catch(() => {})
 
 // Backfill firstContactedAt for existing CONTACTED leads — independent so it survives chain failures.

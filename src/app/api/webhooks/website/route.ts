@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
   if (message) {
     await db.leadNote.create({
-      data: { leadId: lead.id, authorId: null, content: `Website enquiry message: ${message}` },
+      data: { leadId: lead.id, authorId: null, isSystem: true, content: `Website enquiry message: ${message}` },
     })
   }
 
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
   ].filter(Boolean).join(" · ")
   if (attribution) {
     await db.leadNote.create({
-      data: { leadId: lead.id, authorId: null, content: `Attribution: ${attribution}` },
+      data: { leadId: lead.id, authorId: null, isSystem: true, content: `Attribution: ${attribution}` },
     })
   }
 

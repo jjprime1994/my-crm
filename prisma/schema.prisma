@@ -123,6 +123,7 @@ model LeadNote {
   leadId    String
   author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
   authorId  String?
+  isSystem  Boolean  @default(false)
   content   String
   createdAt DateTime @default(now())
 }
