@@ -51,7 +51,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { status, assignedToId, followUpAt, branch } = body
   const data: { status?: LeadStatus; assignedToId?: string | null; followUpAt?: Date | null; branch?: string | null; adName?: null } = {}
 
-  const VALID_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
+  // Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made -> Won/Lost)
+  const VALID_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
   if (status) {
     if (!VALID_STATUSES.includes(status)) return new NextResponse("Invalid status", { status: 400 })
     data.status = status as LeadStatus

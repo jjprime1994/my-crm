@@ -7,10 +7,10 @@ import { formatAvgResponseTime } from "@/lib/responseTime"
 import { initials, roleBadge } from "@/lib/format"
 import type { TeamHeaderRow, TeamMemberRow } from "@/components/TeamBreakdownClient"
 
+// Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made -> Won/Lost)
 const STAGE_COLUMNS: { key: keyof TeamMemberRow["statusCounts"]; label: string }[] = [
   { key: "NEW", label: "New" },
   { key: "CONTACTED", label: "Contacted" },
-  { key: "QUALIFIED", label: "Qualified" },
   { key: "PROPOSAL", label: "Appointment Made" },
   { key: "CLOSED_WON", label: "Won" },
   { key: "CLOSED_LOST", label: "Lost" },
@@ -46,7 +46,6 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
           stages: [
             { label: "New", count: sum("NEW") },
             { label: "Contacted", count: sum("CONTACTED") },
-            { label: "Qualified", count: sum("QUALIFIED") },
             { label: "Appointment Made", count: sum("PROPOSAL") },
           ],
           won: sum("CLOSED_WON"),

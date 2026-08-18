@@ -7,7 +7,8 @@ import { formatAvgResponseTime } from "@/lib/responseTime"
 import { initials, roleBadge } from "@/lib/format"
 import type { LeadStatus } from "@/generated/prisma/client"
 
-const STAGES: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
+// Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made -> Won/Lost)
+const STAGES: LeadStatus[] = ["NEW", "CONTACTED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
 const STAGE_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
   PROPOSAL: "Appointment Made", CLOSED_WON: "Won", CLOSED_LOST: "Lost",
@@ -97,7 +98,6 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
           stages: [
             { label: STAGE_LABELS.NEW, count: sum("NEW") },
             { label: STAGE_LABELS.CONTACTED, count: sum("CONTACTED") },
-            { label: STAGE_LABELS.QUALIFIED, count: sum("QUALIFIED") },
             { label: STAGE_LABELS.PROPOSAL, count: sum("PROPOSAL") },
           ],
           won: sum("CLOSED_WON"),

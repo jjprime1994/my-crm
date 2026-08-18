@@ -20,6 +20,10 @@ const STATUS_DOT: Record<LeadStatus, string> = {
   PROPOSAL: "bg-orange-500", CLOSED_WON: "bg-emerald-500", CLOSED_LOST: "bg-rose-500",
 }
 
+// Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made ->
+// Won/Lost) — the maps above stay complete for type safety, this is what actually renders.
+const PIPELINE_STAGES: LeadStatus[] = ["NEW", "CONTACTED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
+
 function statusCountsOf(leads: { status: LeadStatus }[]): Record<LeadStatus, number> {
   const counts: Record<LeadStatus, number> = {
     NEW: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, CLOSED_WON: 0, CLOSED_LOST: 0,
@@ -350,7 +354,7 @@ export default async function ManagerOverviewPage({
             <p className="text-sm text-gray-400 text-center py-6">No leads in this period.</p>
           ) : (
             <div className="space-y-3">
-              {Object.values(LeadStatus).map((status) => {
+              {PIPELINE_STAGES.map((status) => {
                 const count = statusMap[status] ?? 0
                 const pct = total > 0 ? Math.round((count / total) * 100) : 0
                 return (

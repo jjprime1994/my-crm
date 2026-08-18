@@ -16,11 +16,11 @@ function channelLabel(c: string) {
   return c.charAt(0) + c.slice(1).toLowerCase()
 }
 
+// Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made -> Won/Lost)
 const STATUSES = [
   { value: "", label: "All" },
   { value: "NEW", label: "New" },
   { value: "CONTACTED", label: "Contacted" },
-  { value: "QUALIFIED", label: "Qualified" },
   { value: "PROPOSAL", label: "Appointment Made" },
   { value: "CLOSED_WON", label: "Won" },
   { value: "CLOSED_LOST", label: "Lost" },

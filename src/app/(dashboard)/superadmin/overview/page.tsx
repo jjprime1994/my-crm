@@ -28,6 +28,10 @@ const STATUS_DOT: Record<LeadStatus, string> = {
   PROPOSAL: "bg-orange-500", CLOSED_WON: "bg-emerald-500", CLOSED_LOST: "bg-rose-500",
 }
 
+// Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made ->
+// Won/Lost) — the maps above stay complete for type safety, this is what actually renders.
+const PIPELINE_STAGES: LeadStatus[] = ["NEW", "CONTACTED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
+
 const PERIODS = [
   { label: "7d", days: 7 },
   { label: "30d", days: 30 },
@@ -478,7 +482,7 @@ export default async function SuperAdminOverviewPage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h2 className="font-semibold text-gray-900 mb-5">Pipeline Funnel</h2>
           <div className="space-y-3">
-            {Object.values(LeadStatus).map((status) => {
+            {PIPELINE_STAGES.map((status) => {
               const count = statusMap[status] ?? 0
               const pct = total > 0 ? Math.round((count / total) * 100) : 0
               return (
@@ -657,7 +661,7 @@ export default async function SuperAdminOverviewPage({
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Campaign</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Unclaimed</th>
-                  {Object.values(LeadStatus).map((status) => (
+                  {PIPELINE_STAGES.map((status) => (
                     <th key={status} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
                       {STATUS_LABELS[status]}
                     </th>
@@ -682,7 +686,7 @@ export default async function SuperAdminOverviewPage({
                           <span className="text-sm text-gray-400">0</span>
                         )}
                       </td>
-                      {Object.values(LeadStatus).map((status) => (
+                      {PIPELINE_STAGES.map((status) => (
                         <td key={status} className="px-6 py-4">
                           <span className={`text-sm ${c.statusCounts[status] > 0 ? "font-semibold text-gray-800" : "text-gray-300"}`}>
                             {c.statusCounts[status]}
@@ -696,7 +700,7 @@ export default async function SuperAdminOverviewPage({
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-100 w-24">
-                          {Object.values(LeadStatus).map((status) => {
+                          {PIPELINE_STAGES.map((status) => {
                             const pct = c.total > 0 ? Math.round((c.statusCounts[status] / c.total) * 100) : 0
                             return pct > 0 ? <div key={status} className={`h-full ${STATUS_BAR[status]}`} style={{ width: `${pct}%` }} /> : null
                           })}

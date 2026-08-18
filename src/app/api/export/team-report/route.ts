@@ -40,7 +40,8 @@ export async function GET(req: NextRequest) {
     rows = rows.filter((r) => selectedTeamIds.has(r.teamId))
   }
 
-  const stages = Object.values(LeadStatus)
+  // Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made -> Won/Lost)
+  const stages: LeadStatus[] = ["NEW", "CONTACTED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
   const headers = ["Team", "Member", "Role", "Leads Taken", ...stages.map((s) => STAGE_LABELS[s]), "Avg Response Time", "Not Contacted"]
   const csvRows = rows.map((r) => [
     r.team,

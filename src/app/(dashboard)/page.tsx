@@ -42,6 +42,10 @@ const STATUS_BAR: Record<LeadStatus, string> = {
   CLOSED_LOST: "bg-rose-400",
 }
 
+// Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made ->
+// Won/Lost) — the maps above stay complete for type safety, this is what actually renders.
+const PIPELINE_STAGES: LeadStatus[] = ["NEW", "CONTACTED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
+
 function StatCard({ label, value, valueClass = "text-gray-900", sub, icon }: {
   label: string; value: React.ReactNode; valueClass?: string; sub?: React.ReactNode; icon: React.ReactNode
 }) {
@@ -211,8 +215,8 @@ export default async function DashboardPage() {
       {/* Pipeline */}
       <div>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Pipeline Breakdown</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {Object.values(LeadStatus).map((status) => {
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {PIPELINE_STAGES.map((status) => {
             const count = statusMap[status] ?? 0
             const pct = total > 0 ? Math.round((count / total) * 100) : 0
             return (

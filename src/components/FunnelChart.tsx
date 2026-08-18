@@ -2,15 +2,15 @@
 
 import AnimatedBar from "@/components/AnimatedBar"
 
-// Single hue, monotone lightness — reads as "position in a sequence," not four
-// unrelated categories. Won/Lost are exits that can branch off any stage, not
-// a fifth rung on this ladder, so they're shown separately as status badges.
+// Single hue, monotone lightness — reads as "position in a sequence," not unrelated
+// categories. Won/Lost are exits that can branch off any stage, not a rung on this
+// ladder, so they're shown separately as status badges.
 const STAGE_COLORS = ["bg-violet-400", "bg-violet-500", "bg-violet-600", "bg-violet-800"]
 
 export type FunnelStage = { label: string; count: number }
 
 interface Props {
-  stages: FunnelStage[] // in sequence order, e.g. New -> Contacted -> Qualified -> Appointment Made
+  stages: FunnelStage[] // in sequence order, e.g. New -> Contacted -> Appointment Made
   won: number
   lost: number
   total: number

@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
 
   const { campaigns } = await getCampaignPerformance(since, until)
 
-  const statuses = Object.values(LeadStatus)
+  // Qualified was removed from the active pipeline (New -> Contacted -> Appointment Made -> Won/Lost)
+  const statuses: LeadStatus[] = ["NEW", "CONTACTED", "PROPOSAL", "CLOSED_WON", "CLOSED_LOST"]
   const headers = ["Campaign", "Leads", "Claimed", "Unclaimed", ...statuses.map((s) => STATUS_LABELS[s]), "Conversion %"]
 
   const rows = campaigns.map((c) => [

@@ -15,11 +15,11 @@ const faqs: FAQSection[] = [
     items: [
       {
         q: "What is the dashboard and what does it show?",
-        a: "The dashboard gives you a quick overview of your performance. It shows the total leads assigned to you, how many are in each status (New, Contacted, Qualified, Appointment Made, Won, Lost), and any upcoming follow-ups due today.",
+        a: "The dashboard gives you a quick overview of your performance. It shows the total leads assigned to you, how many are in each status (New, Contacted, Appointment Made, Won, Lost), and any upcoming follow-ups due today.",
       },
       {
         q: "What do the different lead statuses mean?",
-        a: "NEW — the lead has just been assigned and you haven't contacted them yet.\n\nCONTACTED — you've reached out to the lead at least once.\n\nQUALIFIED — the lead has shown genuine interest and is a good fit.\n\nAPPOINTMENT MADE — you've booked or held an appointment with the lead.\n\nWON — the deal has been closed successfully.\n\nLOST — the lead is no longer interested or the deal fell through.",
+        a: "NEW — the lead has just been assigned and you haven't contacted them yet.\n\nCONTACTED — you've reached out to the lead at least once.\n\nAPPOINTMENT MADE — you've booked or held an appointment with the lead.\n\nWON — the deal has been closed successfully.\n\nLOST — the lead is no longer interested or the deal fell through.",
       },
     ],
   },

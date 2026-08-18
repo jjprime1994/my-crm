@@ -17,6 +17,16 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.24.0",
+    date: "2026-08-18",
+    title: "Simplified Pipeline: Qualified Removed",
+    items: [
+      "The pipeline is now New → Contacted → Appointment Made → Won/Lost — the Qualified stage was removed everywhere it was selectable (lead status dropdown, Leads filters, Export filters)",
+      "Every lead that was sitting at Qualified was reclassified to Contacted, with a note logged on each lead explaining why",
+      "Older leads that passed through Qualified before this change keep that step in their Status History timeline — nothing historical was rewritten, only hidden from the active pipeline going forward",
+    ],
+  },
+  {
     version: "1.23.0",
     date: "2026-08-18",
     title: "Auto-Advance New Leads on WhatsApp/Call",
