@@ -46,12 +46,15 @@ function statusCountsOf(leads: { status: LeadStatus }[]): Record<LeadStatus, num
 // Counts a lead under every stage it ever reached (per LeadStatusHistory), not just its
 // current one — so a lead that hit "Appointment Made" and was later marked Lost still
 // counts under both, unlike statusCountsOf which only sees where it ended up.
-function everReachedCountsOf(leads: { status: LeadStatus; statusHistory: { to: LeadStatus }[] }[]): Record<LeadStatus, number> {
+function everReachedCountsOf(leads: { status: LeadStatus; statusHistory: { from: LeadStatus | null; to: LeadStatus }[] }[]): Record<LeadStatus, number> {
   const counts: Record<LeadStatus, number> = {
     NEW: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, CLOSED_WON: 0, CLOSED_LOST: 0,
   }
   for (const l of leads) {
-    const reached = new Set(l.statusHistory.map((h) => h.to))
+    // A row only ever logs the stage a lead moved TO, so the very first transition
+    // (e.g. NEW -> CONTACTED) never gets an explicit "entered NEW" row of its own —
+    // `from` is what recovers that starting stage.
+    const reached = new Set(l.statusHistory.flatMap((h) => (h.from ? [h.from, h.to] : [h.to])))
     reached.add(l.status) // in case a history write ever failed silently
     for (const s of reached) counts[s]++
   }
@@ -98,7 +101,7 @@ export default async function SuperAdminOverviewPage({
           },
         },
         _count: { select: { leads: true } },
-        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { to: true } } } },
+        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { from: true, to: true } } } },
       },
       orderBy: { name: "asc" },
     }),
@@ -140,7 +143,7 @@ export default async function SuperAdminOverviewPage({
       where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
       select: {
         id: true, name: true, role: true, managerId: true,
-        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { to: true } } } },
+        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { from: true, to: true } } } },
       },
       orderBy: { name: "asc" },
     }),
