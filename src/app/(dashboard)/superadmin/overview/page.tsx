@@ -735,6 +735,7 @@ export default async function SuperAdminOverviewPage({
           title="Funnel Breakdown"
           description="Counts a lead under every stage it ever reached — even one later marked Lost. For a snapshot of where leads currently sit, see the Teams tab."
           showExport={false}
+          showFunnelChart
         />
       )}
 

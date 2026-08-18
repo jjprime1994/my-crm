@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import TeamFilterSelect from "@/components/TeamFilterSelect"
+import FunnelChart from "@/components/FunnelChart"
 import { formatAvgResponseTime } from "@/lib/responseTime"
 import { initials, roleBadge } from "@/lib/format"
 import type { LeadStatus } from "@/generated/prisma/client"
@@ -47,9 +48,20 @@ interface Props {
   title?: string
   description?: string
   showExport?: boolean
+  showFunnelChart?: boolean
 }
 
-export default function TeamBreakdownClient({ groups, rangeQueryParams, title = "Team Breakdown", description, showExport = true }: Props) {
+// Every row (manager, team leader, member) that counts toward a group's numbers —
+// used both for the member count and to aggregate stage totals across a filter.
+function rowsOf(group: TeamBreakdownGroup): TeamMemberRow[] {
+  return [
+    ...(group.managerRow ? [group.managerRow] : []),
+    ...group.directMembers,
+    ...group.subTeams.flatMap((st) => [...(st.leaderRow ? [st.leaderRow] : []), ...st.members]),
+  ]
+}
+
+export default function TeamBreakdownClient({ groups, rangeQueryParams, title = "Team Breakdown", description, showExport = true, showFunnelChart = false }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   // Pick up a `teams` filter from a shared/bookmarked link on first mount,
@@ -77,6 +89,24 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
     ? `/api/export/team-report${rangeQueryParams}`
     : `/api/export/team-report${rangeQueryParams}${rangeQueryParams ? "&" : "?"}teams=${Array.from(selected).join(",")}`
 
+  const funnelStages = showFunnelChart
+    ? (() => {
+        const rows = filteredGroups.flatMap(rowsOf)
+        const sum = (s: LeadStatus) => rows.reduce((n, r) => n + r.statusCounts[s], 0)
+        return {
+          stages: [
+            { label: STAGE_LABELS.NEW, count: sum("NEW") },
+            { label: STAGE_LABELS.CONTACTED, count: sum("CONTACTED") },
+            { label: STAGE_LABELS.QUALIFIED, count: sum("QUALIFIED") },
+            { label: STAGE_LABELS.PROPOSAL, count: sum("PROPOSAL") },
+          ],
+          won: sum("CLOSED_WON"),
+          lost: sum("CLOSED_LOST"),
+          total: rows.reduce((n, r) => n + r.totalLeads, 0),
+        }
+      })()
+    : null
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 flex-wrap gap-3">
@@ -102,6 +132,9 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
           )}
         </div>
       </div>
+      {funnelStages && (
+        <FunnelChart stages={funnelStages.stages} won={funnelStages.won} lost={funnelStages.lost} total={funnelStages.total} />
+      )}
       {filteredGroups.length === 0 ? (
         <div className="text-center py-12 text-sm text-gray-400">No teams match this filter.</div>
       ) : (
