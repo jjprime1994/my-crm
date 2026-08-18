@@ -2,7 +2,7 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import LeadsFilters from "@/components/LeadsFilters"
-import { getViewAsRole } from "@/lib/viewas"
+import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import LeadsTable, { type LeadRow } from "@/components/LeadsTable"
 import Pagination from "@/components/Pagination"
 
@@ -19,7 +19,11 @@ export default async function LeadsPage({
   searchParams: Promise<{ status?: string; assignedToId?: string; search?: string; source?: string; channel?: string; branch?: string; page?: string; myPage?: string; teamPage?: string; otherPage?: string }>
 }) {
   const session = await auth()
-  const role = await getViewAsRole(session?.user.role)
+  const [role, viewAsUser] = await Promise.all([
+    getViewAsRole(session?.user.role),
+    getViewAsUser(session?.user.role),
+  ])
+  const effectiveUserId = viewAsUser?.id ?? session?.user.id
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
   const isTeamLeaderRole = role === "TEAM_LEADER"
@@ -65,11 +69,11 @@ export default async function LeadsPage({
               ? {
                   role: { in: ["SALESPERSON", "TEAM_LEADER"] },
                   OR: [
-                    { managerId: session!.user.id },
-                    { manager: { managerId: session!.user.id } },
+                    { managerId: effectiveUserId },
+                    { manager: { managerId: effectiveUserId } },
                   ],
                 }
-              : { role: "SALESPERSON", managerId: session!.user.id },
+              : { role: "SALESPERSON", managerId: effectiveUserId },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
@@ -96,14 +100,14 @@ export default async function LeadsPage({
   const channels = channelRows.map((r) => r.source)
 
   if (splitView) {
-    const myWhere = { AND: [{ assignedToId: session!.user.id }, ...commonClauses] }
+    const myWhere = { AND: [{ assignedToId: effectiveUserId }, ...commonClauses] }
     const teamWhere = isManager
-      ? { AND: [{ OR: [{ assignedTo: { managerId: session!.user.id } }, { assignedTo: { manager: { managerId: session!.user.id } } }] }, ...commonClauses] }
-      : { AND: [{ assignedTo: { managerId: session!.user.id } }, ...commonClauses] }
+      ? { AND: [{ OR: [{ assignedTo: { managerId: effectiveUserId } }, { assignedTo: { manager: { managerId: effectiveUserId } } }] }, ...commonClauses] }
+      : { AND: [{ assignedTo: { managerId: effectiveUserId } }, ...commonClauses] }
     const otherWhere = {
       AND: [
-        { NOT: { assignedToId: session!.user.id } },
-        { NOT: { assignedTo: { managerId: session!.user.id } } },
+        { NOT: { assignedToId: effectiveUserId } },
+        { NOT: { assignedTo: { managerId: effectiveUserId } } },
         ...commonClauses,
       ],
     }
@@ -134,10 +138,10 @@ export default async function LeadsPage({
       if (isSuperAdmin && assignedToId === "unassigned") andClauses.push({ assignedToId: null })
       else if (assignedToId) andClauses.push({ assignedToId })
       else if (isSuperAdmin) { /* no scope restriction — super admin sees all */ }
-      else if (isManager) andClauses.push({ OR: [{ assignedToId: session!.user.id }, { assignedTo: { managerId: session!.user.id } }, { assignedTo: { manager: { managerId: session!.user.id } } }] })
-      else andClauses.push({ OR: [{ assignedToId: session!.user.id }, { assignedTo: { managerId: session!.user.id } }] })
+      else if (isManager) andClauses.push({ OR: [{ assignedToId: effectiveUserId }, { assignedTo: { managerId: effectiveUserId } }, { assignedTo: { manager: { managerId: effectiveUserId } } }] })
+      else andClauses.push({ OR: [{ assignedToId: effectiveUserId }, { assignedTo: { managerId: effectiveUserId } }] })
     } else {
-      andClauses.push({ assignedToId: session?.user.id })
+      andClauses.push({ assignedToId: effectiveUserId })
     }
     const where = andClauses.length > 0 ? { AND: andClauses } : {}
     ;[singleTotal, leads] = await Promise.all([

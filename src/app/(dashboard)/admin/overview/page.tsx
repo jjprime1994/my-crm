@@ -4,7 +4,7 @@ import { db } from "@/lib/db"
 import { isAdmin, isManagerLevel } from "@/lib/roles"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
-import { getViewAsRole } from "@/lib/viewas"
+import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import ManagerTeamBreakdownClient from "@/components/ManagerTeamBreakdownClient"
 import { businessMsElapsed } from "@/lib/responseTime"
 
@@ -61,7 +61,11 @@ export default async function ManagerOverviewPage({
   searchParams: Promise<{ period?: string; tab?: string }>
 }) {
   const session = await auth()
-  const role = await getViewAsRole(session?.user.role)
+  const [role, viewAsUser] = await Promise.all([
+    getViewAsRole(session?.user.role),
+    getViewAsUser(session?.user.role),
+  ])
+  const effectiveUserId = viewAsUser?.id ?? session!.user.id
   if (!isManagerLevel(role)) redirect("/")
   if (role === "SUPER_ADMIN") redirect("/superadmin/overview")
 
@@ -80,20 +84,20 @@ export default async function ManagerOverviewPage({
     ? {
         role: "SALESPERSON" as const,
         OR: [
-          { managerId: session!.user.id },
-          { manager: { managerId: session!.user.id } },
+          { managerId: effectiveUserId },
+          { manager: { managerId: effectiveUserId } },
         ],
       }
-    : { role: "SALESPERSON" as const, managerId: session!.user.id }
+    : { role: "SALESPERSON" as const, managerId: effectiveUserId }
 
   const leadsAssignedWhere = isFullManager
     ? {
         OR: [
-          { assignedTo: { managerId: session!.user.id } },
-          { assignedTo: { manager: { managerId: session!.user.id } } },
+          { assignedTo: { managerId: effectiveUserId } },
+          { assignedTo: { manager: { managerId: effectiveUserId } } },
         ],
       }
-    : { assignedTo: { managerId: session!.user.id } }
+    : { assignedTo: { managerId: effectiveUserId } }
 
 
   const [teamMembers, byStatus, overdueCount, leaderStats] = await Promise.all([
@@ -135,8 +139,8 @@ export default async function ManagerOverviewPage({
       ? db.user.findMany({
           where: {
             OR: [
-              { id: session!.user.id },
-              { role: "TEAM_LEADER" as const, managerId: session!.user.id },
+              { id: effectiveUserId },
+              { role: "TEAM_LEADER" as const, managerId: effectiveUserId },
             ],
           },
           select: {
@@ -212,13 +216,13 @@ export default async function ManagerOverviewPage({
       ...responseMetrics(u.leads),
     }]
   }))
-  const adminRow = leaderRowMap.get(session!.user.id) ?? null
+  const adminRow = leaderRowMap.get(effectiveUserId) ?? null
 
   // Group: direct reports to current user vs reports under a team leader
-  const directMembers = members.filter((m) => m.managerId === session!.user.id)
+  const directMembers = members.filter((m) => m.managerId === effectiveUserId)
   const subTeamMap = new Map<string, { leaderName: string; members: typeof members }>()
   for (const m of members) {
-    if (m.managerId !== session!.user.id && m.managerId) {
+    if (m.managerId !== effectiveUserId && m.managerId) {
       if (!subTeamMap.has(m.managerId)) {
         subTeamMap.set(m.managerId, { leaderName: m.managerName ?? "Unknown", members: [] })
       }

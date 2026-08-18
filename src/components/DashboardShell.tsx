@@ -6,16 +6,18 @@ import ViewAsBanner from "@/components/ViewAsBanner"
 import NotificationBell from "@/components/NotificationBell"
 import NotificationPromptBanner from "@/components/NotificationPromptBanner"
 import { ToastProvider } from "@/components/Toast"
+import type { PickableUser } from "@/components/ViewAsSelector"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
-  viewingAs: string | null
+  viewingAs: PickableUser | null
+  viewAsUsers: PickableUser[]
   isSuperAdmin: boolean
   counts: { followUps: number; availableLeads: number }
   children: React.ReactNode
 }
 
-export default function DashboardShell({ user, viewingAs, isSuperAdmin, counts, children }: Props) {
+export default function DashboardShell({ user, viewingAs, viewAsUsers, isSuperAdmin, counts, children }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -33,7 +35,7 @@ export default function DashboardShell({ user, viewingAs, isSuperAdmin, counts, 
       <div className={`fixed inset-y-0 left-0 z-30 transition-transform duration-200 lg:static lg:translate-x-0 lg:z-auto ${
         open ? "translate-x-0" : "-translate-x-full"
       }`}>
-        <Sidebar user={user} onClose={() => setOpen(false)} isSuperAdmin={isSuperAdmin} viewingAs={viewingAs} counts={counts} />
+        <Sidebar user={user} onClose={() => setOpen(false)} isSuperAdmin={isSuperAdmin} viewingAs={viewingAs} viewAsUsers={viewAsUsers} counts={counts} />
       </div>
 
       {/* Main content */}

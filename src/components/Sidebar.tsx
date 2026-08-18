@@ -5,14 +5,15 @@ import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { signOut } from "next-auth/react"
 import { isAdmin, isSuperAdmin, isManagerLevel } from "@/lib/roles"
-import ViewAsSelector from "@/components/ViewAsSelector"
+import ViewAsSelector, { type PickableUser } from "@/components/ViewAsSelector"
 import { PATCH_NOTES, compareVersions } from "@/lib/patch-notes"
 import ThemeToggle from "@/components/ThemeToggle"
 
 interface Props {
   user: { name?: string | null; email?: string | null; role?: string | null }
   isSuperAdmin: boolean
-  viewingAs: string | null
+  viewingAs: PickableUser | null
+  viewAsUsers: PickableUser[]
   counts: { followUps: number; availableLeads: number }
   onClose?: () => void
 }
@@ -110,7 +111,7 @@ const Icons = {
   ),
 }
 
-export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs, counts }: Props) {
+export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs, viewAsUsers, counts }: Props) {
   const pathname = usePathname()
   const admin = isAdmin(user.role)
   const superAdmin = isSuperAdmin(user.role)
@@ -218,7 +219,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
       </nav>
 
       {/* View As selector — super admins only */}
-      {actualSuperAdmin && <ViewAsSelector currentViewAs={viewingAs} />}
+      {actualSuperAdmin && <ViewAsSelector users={viewAsUsers} currentViewAs={viewingAs} />}
 
       {/* Settings + FAQ */}
       <div className="px-3 pb-1 border-t border-slate-800 pt-2">

@@ -2,20 +2,25 @@
 
 import { cookies } from "next/headers"
 import { auth } from "@/auth"
+import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-import { VIEW_AS_ROLES, type ViewAsRole } from "@/lib/viewas"
 
-export async function setViewAs(formData: FormData) {
+export async function setViewAsUser(formData: FormData) {
   const session = await auth()
   if (session?.user.role !== "SUPER_ADMIN") return
 
-  const role = formData.get("role")?.toString()
+  const userId = formData.get("userId")?.toString()
   const store = await cookies()
 
-  if (role && (VIEW_AS_ROLES as readonly string[]).includes(role)) {
-    store.set("viewAs", role as ViewAsRole, { httpOnly: true, sameSite: "lax", path: "/" })
+  if (userId) {
+    const target = await db.user.findUnique({ where: { id: userId }, select: { role: true, disabled: true } })
+    if (target && !target.disabled && target.role !== "SUPER_ADMIN") {
+      store.set("viewAsUserId", userId, { httpOnly: true, sameSite: "lax", path: "/" })
+    } else {
+      store.delete("viewAsUserId")
+    }
   } else {
-    store.delete("viewAs")
+    store.delete("viewAsUserId")
   }
 
   revalidatePath("/", "layout")

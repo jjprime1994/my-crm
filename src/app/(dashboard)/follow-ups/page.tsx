@@ -2,7 +2,7 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
-import { getViewAsRole } from "@/lib/viewas"
+import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import Pagination from "@/components/Pagination"
 import ContactButtons from "@/components/ContactButtons"
 
@@ -212,7 +212,11 @@ export default async function FollowUpsPage({
   searchParams: Promise<{ page?: string; myPage?: string; teamPage?: string }>
 }) {
   const session = await auth()
-  const role = await getViewAsRole(session?.user.role)
+  const [role, viewAsUser] = await Promise.all([
+    getViewAsRole(session?.user.role),
+    getViewAsUser(session?.user.role),
+  ])
+  const effectiveUserId = viewAsUser?.id ?? session?.user.id
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
   const isTeamLeader = role === "TEAM_LEADER"
@@ -235,7 +239,7 @@ export default async function FollowUpsPage({
   const orderBy = { updatedAt: "asc" as const }
 
   if (!isAdminRole) {
-    const where = { AND: [statusFilter, staleness, { assignedToId: session?.user.id }] }
+    const where = { AND: [statusFilter, staleness, { assignedToId: effectiveUserId }] }
     const [total, leads] = await Promise.all([
       db.lead.count({ where }),
       db.lead.findMany({ where, include, orderBy, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
@@ -258,19 +262,19 @@ export default async function FollowUpsPage({
   }
 
   // Admin / Manager / Team Leader: split own vs team
-  const myFilter = { AND: [statusFilter, staleness, { assignedToId: session!.user.id }] }
+  const myFilter = { AND: [statusFilter, staleness, { assignedToId: effectiveUserId }] }
 
   const teamScopeFilter = isSuperAdmin
-    ? { NOT: { assignedToId: session!.user.id } }
+    ? { NOT: { assignedToId: effectiveUserId } }
     : isManager
     ? {
         OR: [
-          { assignedTo: { managerId: session!.user.id } },
-          { assignedTo: { manager: { managerId: session!.user.id } } },
+          { assignedTo: { managerId: effectiveUserId } },
+          { assignedTo: { manager: { managerId: effectiveUserId } } },
         ],
-        NOT: { assignedToId: session!.user.id },
+        NOT: { assignedToId: effectiveUserId },
       }
-    : { assignedTo: { managerId: session!.user.id }, NOT: { assignedToId: session!.user.id } }
+    : { assignedTo: { managerId: effectiveUserId }, NOT: { assignedToId: effectiveUserId } }
 
   const teamFilter = { AND: [statusFilter, staleness, teamScopeFilter] }
 

@@ -1,6 +1,6 @@
 import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
-import { getViewAsRole, getCurrentViewAs } from "@/lib/viewas"
+import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import DashboardShell from "@/components/DashboardShell"
 import { db } from "@/lib/db"
 import { getAvailableLeadsCount } from "@/lib/available-leads"
@@ -22,26 +22,40 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const endOfToday = new Date()
   endOfToday.setHours(23, 59, 59, 999)
 
-  const [effectiveRole, currentViewAs, followUpsCount, availableLeadsCount] = await Promise.all([
+  const [effectiveRole, viewAsUser, viewAsUsers] = await Promise.all([
     getViewAsRole(actualRole),
-    isSuperAdmin ? getCurrentViewAs() : Promise.resolve(null),
+    getViewAsUser(actualRole),
+    isSuperAdmin
+      ? db.user.findMany({
+          where: { role: { not: "SUPER_ADMIN" }, disabled: false },
+          select: { id: true, name: true, role: true },
+          orderBy: { name: "asc" },
+        })
+      : Promise.resolve([]),
+  ])
+
+  // Sidebar badge counts reflect the previewed person's real data, not the super admin's own
+  // (near-empty) leads — that's the whole point of previewing as someone.
+  const effectiveUserId = viewAsUser?.id ?? session.user.id
+
+  const [followUpsCount, availableLeadsCount] = await Promise.all([
     db.lead.count({
       where: {
-        assignedToId: session.user.id,
+        assignedToId: effectiveUserId,
         followUpAt: { lte: endOfToday },
         status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] },
       },
     }).catch(() => 0),
-    getAvailableLeadsCount(session.user.id, actualRole),
+    getAvailableLeadsCount(effectiveUserId, effectiveRole),
   ])
 
   const effectiveUser = { ...session.user, role: effectiveRole }
-  const viewingAs = isSuperAdmin && currentViewAs ? currentViewAs : null
 
   return (
     <DashboardShell
       user={effectiveUser}
-      viewingAs={viewingAs}
+      viewingAs={viewAsUser}
+      viewAsUsers={viewAsUsers}
       isSuperAdmin={isSuperAdmin}
       counts={{ followUps: followUpsCount, availableLeads: availableLeadsCount }}
     >

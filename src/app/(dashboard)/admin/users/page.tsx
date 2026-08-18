@@ -4,11 +4,15 @@ import { db } from "@/lib/db"
 import { isAdmin, isSuperAdmin, isManagerLevel, isTeamLeader } from "@/lib/roles"
 import UserManagementClient from "@/components/UserManagementClient"
 import TeamAdAccessClient from "@/components/TeamAdAccessClient"
-import { getViewAsRole } from "@/lib/viewas"
+import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 
 export default async function UsersPage() {
   const session = await auth()
-  const role = await getViewAsRole(session?.user.role)
+  const [role, viewAsUser] = await Promise.all([
+    getViewAsRole(session?.user.role),
+    getViewAsUser(session?.user.role),
+  ])
+  const effectiveUserId = viewAsUser?.id ?? session!.user.id
   if (!isManagerLevel(role)) redirect("/")
 
   const superAdmin = isSuperAdmin(role)
@@ -22,14 +26,14 @@ export default async function UsersPage() {
     // ADMIN sees themselves, their team leaders, and team leaders' salespeople
     where = {
       OR: [
-        { id: session!.user.id },
-        { managerId: session!.user.id },
-        { manager: { managerId: session!.user.id } },
+        { id: effectiveUserId },
+        { managerId: effectiveUserId },
+        { manager: { managerId: effectiveUserId } },
       ],
     }
   } else {
     // TEAM_LEADER sees themselves and their direct reports
-    where = { OR: [{ id: session!.user.id }, { managerId: session!.user.id }] }
+    where = { OR: [{ id: effectiveUserId }, { managerId: effectiveUserId }] }
   }
 
   const [users, managers, myCoveredStates, activeAdRoutes, allSalesRoster] = await Promise.all([
@@ -53,7 +57,7 @@ export default async function UsersPage() {
       ? db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN", "TEAM_LEADER"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
     manager || superAdmin
-      ? db.user.findUnique({ where: { id: session!.user.id }, select: { coveredStates: true } })
+      ? db.user.findUnique({ where: { id: effectiveUserId }, select: { coveredStates: true } })
       : Promise.resolve(null),
     manager || superAdmin
       ? db.adRoute.findMany({ where: { archived: false }, select: { adName: true, adId: true, userIds: true, userStates: true }, orderBy: { adName: "asc" } })
@@ -69,7 +73,7 @@ export default async function UsersPage() {
     <div className="space-y-6">
       <UserManagementClient
         users={users}
-        currentUserId={session!.user.id}
+        currentUserId={effectiveUserId}
         isSuperAdmin={superAdmin}
         isTeamLeader={teamLeader}
         isManager={manager}
@@ -86,7 +90,7 @@ export default async function UsersPage() {
           teamMembers={
             superAdmin
               ? allSalesRoster
-              : users.filter((u) => u.id !== session!.user.id && (u.role === "SALESPERSON" || u.role === "TEAM_LEADER"))
+              : users.filter((u) => u.id !== effectiveUserId && (u.role === "SALESPERSON" || u.role === "TEAM_LEADER"))
           }
           myCoveredStates={myCoveredStates?.coveredStates ?? []}
         />

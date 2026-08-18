@@ -2,7 +2,7 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import Link from "next/link"
-import { getViewAsRole } from "@/lib/viewas"
+import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import AnimatedBar from "@/components/AnimatedBar"
 import ResetLimitsButton from "@/components/ResetLimitsButton"
 
@@ -63,7 +63,11 @@ function StatCard({ label, value, valueClass = "text-gray-900", sub, icon }: {
 
 export default async function DashboardPage() {
   const session = await auth()
-  const role = await getViewAsRole(session?.user.role)
+  const [role, viewAsUser] = await Promise.all([
+    getViewAsRole(session?.user.role),
+    getViewAsUser(session?.user.role),
+  ])
+  const effectiveUserId = viewAsUser?.id ?? session?.user.id
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isManager = role === "ADMIN"
   const isTeamLeaderRole = role === "TEAM_LEADER"
@@ -71,10 +75,10 @@ export default async function DashboardPage() {
 
   // TEAM_LEADER sees their own leads + team members' leads
   const where = isTeamLeaderRole
-    ? { OR: [{ assignedToId: session?.user.id }, { assignedTo: { managerId: session?.user.id } }] }
+    ? { OR: [{ assignedToId: effectiveUserId }, { assignedTo: { managerId: effectiveUserId } }] }
     : isAdmin
     ? {}
-    : { assignedToId: session?.user.id }
+    : { assignedToId: effectiveUserId }
 
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 
@@ -91,11 +95,11 @@ export default async function DashboardPage() {
       ? {
           role: "SALESPERSON" as const,
           OR: [
-            { managerId: session!.user.id },
-            { manager: { managerId: session!.user.id } },
+            { managerId: effectiveUserId },
+            { manager: { managerId: effectiveUserId } },
           ],
         }
-      : { role: "SALESPERSON" as const, managerId: session!.user.id }
+      : { role: "SALESPERSON" as const, managerId: effectiveUserId }
     : null
 
   const [total, byStatus, recent, followUpCount, unassignedCount, teamMembers, wonCounts, todayClaimCounts] = await Promise.all([

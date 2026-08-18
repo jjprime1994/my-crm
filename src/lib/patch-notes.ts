@@ -17,6 +17,16 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.27.0",
+    date: "2026-08-18",
+    title: "Preview As a Real Person",
+    items: [
+      "\"Preview as\" now impersonates a specific real team member instead of just simulating a role — search by name in the sidebar (grouped by Manager/Team Leader/Salesperson) and every page shows that person's actual leads, team, and claim limits",
+      "Fixes the old version showing an empty dashboard while previewing, since it was scoped to the super admin's own (usually empty) leads regardless of which role was selected",
+      "The preview banner now names who you're previewing, e.g. \"Previewing as Ken Lee (Manager)\"",
+    ],
+  },
+  {
     version: "1.26.0",
     date: "2026-08-18",
     title: "Response Time Now Business-Hours Aware",

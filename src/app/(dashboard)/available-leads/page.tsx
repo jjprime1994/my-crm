@@ -3,10 +3,17 @@ import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import AvailableLeadsClient from "@/components/AvailableLeadsClient"
 import { getAvailableLeads } from "@/lib/available-leads"
+import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 
 export default async function AvailableLeadsPage() {
   const session = await auth()
   if (!session) redirect("/login")
+
+  const [effectiveRole, viewAsUser] = await Promise.all([
+    getViewAsRole(session.user.role),
+    getViewAsUser(session.user.role),
+  ])
+  const effectiveUserId = viewAsUser?.id ?? session.user.id
 
   const MYT_OFFSET = 8 * 60 * 60 * 1000
   const nowMs = Date.now()
@@ -16,16 +23,16 @@ export default async function AvailableLeadsPage() {
   const nextMidnightUTC = new Date(startOfDayInMYT + 24 * 60 * 60 * 1000 - MYT_OFFSET)
 
   const [rawLeads, user, recentClaims, newLeadsCount] = await Promise.all([
-    getAvailableLeads(session.user.id, session.user.role),
+    getAvailableLeads(effectiveUserId, effectiveRole),
     db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: effectiveUserId },
       select: { claimLimit: true, newLeadThreshold: true },
     }),
     db.lead.count({
-      where: { claimedById: session.user.id, claimedAt: { gte: startOfDayUTC } },
+      where: { claimedById: effectiveUserId, claimedAt: { gte: startOfDayUTC } },
     }),
     db.lead.count({
-      where: { assignedToId: session.user.id, status: "NEW" },
+      where: { assignedToId: effectiveUserId, status: "NEW" },
     }),
   ])
 
@@ -68,7 +75,7 @@ export default async function AvailableLeadsPage() {
 
   const resetAt = nextMidnightUTC.toISOString()
   const threshold = user?.newLeadThreshold ?? 0
-  const isSuperAdmin = session.user.role === "SUPER_ADMIN"
+  const isSuperAdmin = effectiveRole === "SUPER_ADMIN"
 
   return (
     <AvailableLeadsClient
