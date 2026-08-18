@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import TeamFilterSelect from "@/components/TeamFilterSelect"
 import FunnelChart from "@/components/FunnelChart"
 import AvgResponseStars from "@/components/AvgResponseStars"
+import SortableTh from "@/components/SortableTh"
 import { initials, roleBadge } from "@/lib/format"
 import type { LeadStatus } from "@/generated/prisma/client"
 
@@ -62,8 +63,54 @@ function rowsOf(group: TeamBreakdownGroup): TeamMemberRow[] {
   ]
 }
 
+// Sorts within each team's member list — never across teams, so the grouping stays intact.
+// No key selected falls back to the original default (most won, then most leads).
+// Exported for ManagerTeamBreakdownClient, which needs identical sort behavior.
+export function compareRows(a: TeamMemberRow, b: TeamMemberRow, key: string | null, dir: 1 | -1): number {
+  if (!key) return b.won - a.won || b.totalLeads - a.totalLeads
+  if (key === "name") return dir * a.name.localeCompare(b.name)
+  if (key === "avgResponseMs") {
+    if (a.avgResponseMs === null && b.avgResponseMs === null) return 0
+    if (a.avgResponseMs === null) return 1
+    if (b.avgResponseMs === null) return -1
+    return dir * (a.avgResponseMs - b.avgResponseMs)
+  }
+  const pick = (r: TeamMemberRow) =>
+    key === "claimed" ? r.claimed
+    : key === "assigned" ? r.assigned
+    : key === "totalLeads" ? r.totalLeads
+    : key === "rate" ? r.rate
+    : key === "notContacted" ? r.notContacted
+    : key === "stale" ? r.stale
+    : r.statusCounts[key as LeadStatus] ?? 0
+  return dir * (pick(a) - pick(b))
+}
+
 export default function TeamBreakdownClient({ groups, rangeQueryParams, title = "Team Breakdown", description, showExport = true, showFunnelChart = false }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [search, setSearch] = useState("")
+  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+
+  function handleSort(key: string) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"))
+    } else {
+      setSortKey(key)
+      setSortDir("desc")
+    }
+  }
+
+  function matchesFilters(row: TeamMemberRow): boolean {
+    if (search.trim() && !row.name.toLowerCase().includes(search.trim().toLowerCase())) return false
+    if (needsAttentionOnly && row.stale === 0 && row.notContacted === 0) return false
+    return true
+  }
+
+  function visibleAndSorted(rows: TeamMemberRow[]): TeamMemberRow[] {
+    return rows.filter(matchesFilters).sort((a, b) => compareRows(a, b, sortKey, sortDir === "asc" ? 1 : -1))
+  }
 
   // Pick up a `teams` filter from a shared/bookmarked link on first mount,
   // without making the server component re-fetch on every checkbox click.
@@ -117,7 +164,22 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
           </p>
           {description && <p className="text-xs text-gray-400 mt-1 max-w-lg">{description}</p>}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name…"
+            className="text-xs bg-gray-100 focus:bg-white focus:ring-1 focus:ring-violet-300 rounded-lg px-3 py-1.5 w-36 focus:w-44 transition-all outline-none"
+          />
+          <button
+            onClick={() => setNeedsAttentionOnly((v) => !v)}
+            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
+              needsAttentionOnly ? "bg-rose-100 text-rose-600 ring-1 ring-rose-200" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            }`}
+          >
+            Needs attention
+          </button>
           <TeamFilterSelect teams={teamOptions} selected={selected} onChange={updateSelected} />
           {showExport && (
             <a
@@ -137,12 +199,14 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
       )}
       {filteredGroups.length === 0 ? (
         <div className="text-center py-12 text-sm text-gray-400">No teams match this filter.</div>
+      ) : !filteredGroups.some((g) => rowsOf(g).some(matchesFilters)) ? (
+        <div className="text-center py-12 text-sm text-gray-400">No members match your search.</div>
       ) : (
         <div className="divide-y divide-gray-100">
           {filteredGroups.map(({ managerId, managerName, managerRow, directMembers, subTeams }) => {
             const hasManagerLeads = managerRow && managerRow.totalLeads > 0
             const totalInTeam = directMembers.length + subTeams.reduce((s, t) => s + t.members.length, 0)
-            const subGroups = [
+            const rawSubGroups = [
               ...(hasManagerLeads || directMembers.length > 0 ? [{
                 label: subTeams.length > 0 ? "Direct Reports" : "",
                 headerRow: hasManagerLeads ? managerRow! : null,
@@ -154,6 +218,14 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
                 group: st.members,
               })),
             ]
+            const subGroups = rawSubGroups
+              .map((sg) => ({
+                label: sg.label,
+                headerRow: sg.headerRow && matchesFilters(sg.headerRow) ? sg.headerRow : null,
+                group: visibleAndSorted(sg.group),
+              }))
+              .filter((sg) => sg.headerRow || sg.group.length > 0)
+            if (subGroups.length === 0) return null
             return (
               <div key={managerId}>
                 {/* Top-level manager header */}
@@ -239,17 +311,17 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
                         <table className="min-w-full">
                           <thead>
                             <tr className="border-b border-gray-50 bg-gray-50/20">
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned</th>
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</th>
+                              <SortableTh label="Member" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                              <SortableTh label="Claimed" sortKey="claimed" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                              <SortableTh label="Assigned" sortKey="assigned" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                              <SortableTh label="Total" sortKey="totalLeads" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
                               {STAGES.map((s) => (
-                                <th key={s} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">{STAGE_LABELS[s]}</th>
+                                <SortableTh key={s} label={STAGE_LABELS[s]} sortKey={s} currentKey={sortKey} direction={sortDir} onSort={handleSort} />
                               ))}
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Response</th>
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Not Contacted</th>
-                              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide" title="Active leads that haven't been updated in more than 48 hours">Stale</th>
+                              <SortableTh label="Conv." sortKey="rate" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                              <SortableTh label="Avg Response" sortKey="avgResponseMs" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                              <SortableTh label="Not Contacted" sortKey="notContacted" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                              <SortableTh label="Stale" sortKey="stale" currentKey={sortKey} direction={sortDir} onSort={handleSort} title="Active leads that haven't been updated in more than 48 hours" />
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">

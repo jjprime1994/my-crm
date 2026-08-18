@@ -17,6 +17,17 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.29.0",
+    date: "2026-08-18",
+    title: "Sortable & Filterable Team Breakdown",
+    items: [
+      "Team Breakdown and Funnel tables (Business Overview and Team Overview) now have clickable column headers — click any column (Total, stage counts, Conv., Avg Response, Not Contacted, Stale, etc.) to sort by it, click again to reverse",
+      "New search box filters the table down to a name as you type",
+      "New \"Needs attention\" toggle shows only people with stale or not-contacted leads",
+      "Sorting and filtering stay within each team — the team grouping never gets shuffled together",
+    ],
+  },
+  {
     version: "1.28.0",
     date: "2026-08-18",
     title: "Your Own Avg Response on the Dashboard",
