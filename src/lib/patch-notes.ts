@@ -17,6 +17,14 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.30.0",
+    date: "2026-08-19",
+    title: "Team Breakdown Sorting Fixed for Real This Time",
+    items: [
+      "Fixed: clicking a column to sort one team's table was re-sorting every team on the page at once, including ones scrolled out of view — that's what still felt like a jump after the first fix. Sorting is now scoped to the team you clicked in and no longer touches the others",
+    ],
+  },
+  {
     version: "1.29.0",
     date: "2026-08-18",
     title: "Sortable & Filterable Team Breakdown",
@@ -24,7 +32,6 @@ export const PATCH_NOTES: PatchNote[] = [
       "Team Breakdown and Funnel tables (Business Overview and Team Overview) now have clickable column headers — click any column (Total, stage counts, Conv., Avg Response, Not Contacted, Stale, etc.) to sort by it, click again to reverse",
       "New search box filters the table down to a name as you type",
       "New \"Needs attention\" toggle shows only people with stale or not-contacted leads",
-      "Sorting and filtering stay within each team — the team grouping never gets shuffled together",
       "Fixed: sorting or filtering while scrolled down used to feel like the page randomly jumped — the row you were looking at now stays in view",
     ],
   },
