@@ -67,7 +67,7 @@ export default function DashboardShell({ user, viewingAs, viewAsUsers, isSuperAd
 
         <NotificationPromptBanner />
 
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950 px-4 py-5 lg:px-8 lg:py-7">
+        <main className="flex-1 overflow-y-auto [overflow-anchor:none] bg-gray-50 dark:bg-slate-950 px-4 py-5 lg:px-8 lg:py-7">
           {children}
         </main>
       </div>
