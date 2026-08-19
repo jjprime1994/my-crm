@@ -89,7 +89,24 @@ export default async function SuperAdminOverviewPage({
   const createdAtFilter: { gte?: Date; lte?: Date } = {}
   if (since) createdAtFilter.gte = since
   if (until) createdAtFilter.lte = until
-  const dateFilter = Object.keys(createdAtFilter).length > 0 ? { createdAt: createdAtFilter } : {}
+  const hasWindow = Object.keys(createdAtFilter).length > 0
+  const dateFilter = hasWindow ? { createdAt: createdAtFilter } : {}
+  // Pull leads created in the period OR claimed in the period, so a lead created before the
+  // window but claimed inside it still counts toward this period's claim-activity stats
+  // (claimed/avgResponseMs/notContacted) — see inRange()/splitPeriod() below.
+  const leadsWhere = hasWindow ? { OR: [dateFilter, { claimedAt: createdAtFilter }] } : {}
+
+  function inRange(date: Date): boolean {
+    if (since && date < since) return false
+    if (until && date > until) return false
+    return true
+  }
+  function splitPeriod<T extends { createdAt: Date; claimedAt: Date | null }>(leads: T[]) {
+    return {
+      createdInPeriod: leads.filter((l) => inRange(l.createdAt)),
+      claimedInPeriod: leads.filter((l): l is T & { claimedAt: Date } => l.claimedAt !== null && inRange(l.claimedAt)),
+    }
+  }
 
   const [total, byStatus, byPlatform, salespersonStats, managerStats, sourceStats, recentLeads, campaignPerformance, mgmtStats] = await Promise.all([
     db.lead.count({ where: dateFilter }),
@@ -106,7 +123,7 @@ export default async function SuperAdminOverviewPage({
           },
         },
         _count: { select: { leads: true } },
-        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { from: true, to: true } } } },
+        leads: { where: leadsWhere, select: { status: true, createdAt: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { from: true, to: true } } } },
       },
       orderBy: { name: "asc" },
     }),
@@ -148,7 +165,7 @@ export default async function SuperAdminOverviewPage({
       where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
       select: {
         id: true, name: true, role: true, managerId: true,
-        leads: { where: dateFilter, select: { status: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { from: true, to: true } } } },
+        leads: { where: leadsWhere, select: { status: true, createdAt: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { from: true, to: true } } } },
       },
       orderBy: { name: "asc" },
     }),
@@ -178,21 +195,22 @@ export default async function SuperAdminOverviewPage({
 
   const individuals = salespersonStats
     .map((s) => {
-      const wonCount = s.leads.filter((l) => l.status === "CLOSED_WON").length
-      const totalLeads = s.leads.length
-      const claimedCount = s.leads.filter((l) => l.claimedAt).length
-      const staleCount = s.leads.filter((l) =>
+      const { createdInPeriod, claimedInPeriod } = splitPeriod(s.leads)
+      const wonCount = createdInPeriod.filter((l) => l.status === "CLOSED_WON").length
+      const totalLeads = createdInPeriod.length
+      const claimedCount = claimedInPeriod.length
+      const staleCount = createdInPeriod.filter((l) =>
         l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST" &&
         (Date.now() - new Date(l.updatedAt).getTime()) > 2 * 86400000
       ).length
-      const responseTimes = s.leads
-        .filter((l) => l.claimedAt && l.firstContactedAt)
-        .map((l) => businessMsElapsed(l.claimedAt!, l.firstContactedAt!))
+      const responseTimes = claimedInPeriod
+        .filter((l) => l.firstContactedAt)
+        .map((l) => businessMsElapsed(l.claimedAt, l.firstContactedAt!))
       const avgResponseMs = responseTimes.length > 0
         ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
         : null
-      const notContacted = s.leads.filter((l) =>
-        l.claimedAt && !l.firstContactedAt && l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST"
+      const notContacted = claimedInPeriod.filter((l) =>
+        !l.firstContactedAt && l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST"
       ).length
       return {
         id: s.id, name: s.name, notContacted,
@@ -200,39 +218,40 @@ export default async function SuperAdminOverviewPage({
         managerRole: s.manager?.role ?? null,
         topManagerId: s.manager?.managerId ?? null,
         topManagerName: s.manager?.manager?.name ?? null,
-        totalLeads, won: wonCount, claimed: claimedCount, assigned: totalLeads - claimedCount,
+        totalLeads, won: wonCount, claimed: claimedCount, assigned: totalLeads - createdInPeriod.filter((l) => l.claimedAt).length,
         stale: staleCount, rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0, avgResponseMs,
-        statusCounts: statusCountsOf(s.leads),
-        everReachedCounts: everReachedCountsOf(s.leads),
+        statusCounts: statusCountsOf(createdInPeriod),
+        everReachedCounts: everReachedCountsOf(createdInPeriod),
       }
     })
     .sort((a, b) => b.won - a.won || b.totalLeads - a.totalLeads)
 
   // Management users' own leads (super admin, admins, team leaders)
   const mgmtRows = new Map(mgmtStats.map((u) => {
-    const wonCount = u.leads.filter((l) => l.status === "CLOSED_WON").length
-    const totalLeads = u.leads.length
-    const claimedCount = u.leads.filter((l) => l.claimedAt).length
-    const staleCount = u.leads.filter((l) =>
+    const { createdInPeriod, claimedInPeriod } = splitPeriod(u.leads)
+    const wonCount = createdInPeriod.filter((l) => l.status === "CLOSED_WON").length
+    const totalLeads = createdInPeriod.length
+    const claimedCount = claimedInPeriod.length
+    const staleCount = createdInPeriod.filter((l) =>
       l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST" &&
       (Date.now() - new Date(l.updatedAt).getTime()) > 2 * 86400000
     ).length
-    const responseTimes = u.leads
-      .filter((l) => l.claimedAt && l.firstContactedAt)
-      .map((l) => businessMsElapsed(l.claimedAt!, l.firstContactedAt!))
+    const responseTimes = claimedInPeriod
+      .filter((l) => l.firstContactedAt)
+      .map((l) => businessMsElapsed(l.claimedAt, l.firstContactedAt!))
     const avgResponseMs = responseTimes.length > 0
       ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
       : null
-    const notContacted = u.leads.filter((l) =>
-      l.claimedAt && !l.firstContactedAt && l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST"
+    const notContacted = claimedInPeriod.filter((l) =>
+      !l.firstContactedAt && l.status !== "CLOSED_WON" && l.status !== "CLOSED_LOST"
     ).length
     return [u.id, {
       id: u.id, name: u.name, role: u.role, notContacted,
-      totalLeads, claimed: claimedCount, assigned: totalLeads - claimedCount,
+      totalLeads, claimed: claimedCount, assigned: totalLeads - createdInPeriod.filter((l) => l.claimedAt).length,
       won: wonCount, stale: staleCount, avgResponseMs,
       rate: totalLeads > 0 ? Math.round((wonCount / totalLeads) * 100) : 0,
-      statusCounts: statusCountsOf(u.leads),
-      everReachedCounts: everReachedCountsOf(u.leads),
+      statusCounts: statusCountsOf(createdInPeriod),
+      everReachedCounts: everReachedCountsOf(createdInPeriod),
     }]
   }))
 
