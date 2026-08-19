@@ -17,6 +17,14 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.31.0",
+    date: "2026-08-19",
+    title: "Auto-Lost Cron Fixed",
+    items: [
+      "Fixed: the 30-day auto-close-unclaimed-leads cron never closed anything, because a one-time state correction on 4 Aug had reset the \"last touched\" clock on ~100 unclaimed leads without anyone actually engaging with them. It now goes by how long a lead has been unclaimed since it arrived, not that clock — about 99 leads that have genuinely been sitting untouched will close as Lost on tonight's run",
+    ],
+  },
+  {
     version: "1.30.0",
     date: "2026-08-19",
     title: "Team Breakdown Sorting Fixed for Real This Time",
