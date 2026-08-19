@@ -91,8 +91,9 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState("")
   const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
-  const [sortKey, setSortKey] = useState<string | null>(null)
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+  // Keyed by sub-group id — sorting one team's table must not reorder every other team on
+  // the page (that reads as an unrelated "jump" for teams the user isn't even looking at).
+  const [sortState, setSortState] = useState<Record<string, { key: string | null; dir: "asc" | "desc" }>>({})
   const { capture, restore } = useScrollAnchor()
 
   // Resorting/filtering can shift a huge amount of content above the user's current scroll
@@ -101,14 +102,17 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
   // randomly jumps.
   useLayoutEffect(() => { restore() })
 
-  function handleSort(key: string) {
+  function getSort(groupId: string) {
+    return sortState[groupId] ?? { key: null, dir: "desc" as const }
+  }
+
+  function handleSort(groupId: string, key: string) {
     capture()
-    if (sortKey === key) {
-      setSortDir((d) => (d === "desc" ? "asc" : "desc"))
-    } else {
-      setSortKey(key)
-      setSortDir("desc")
-    }
+    setSortState((prev) => {
+      const cur = getSort(groupId)
+      const dir = cur.key === key ? (cur.dir === "desc" ? "asc" : "desc") : "desc"
+      return { ...prev, [groupId]: { key, dir } }
+    })
   }
 
   function toggleNeedsAttention() {
@@ -127,8 +131,9 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
     return true
   }
 
-  function visibleAndSorted(rows: TeamMemberRow[]): TeamMemberRow[] {
-    return rows.filter(matchesFilters).sort((a, b) => compareRows(a, b, sortKey, sortDir === "asc" ? 1 : -1))
+  function visibleAndSorted(rows: TeamMemberRow[], groupId: string): TeamMemberRow[] {
+    const { key, dir } = getSort(groupId)
+    return rows.filter(matchesFilters).sort((a, b) => compareRows(a, b, key, dir === "asc" ? 1 : -1))
   }
 
   // Pick up a `teams` filter from a shared/bookmarked link on first mount,
@@ -227,11 +232,13 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
             const totalInTeam = directMembers.length + subTeams.reduce((s, t) => s + t.members.length, 0)
             const rawSubGroups = [
               ...(hasManagerLeads || directMembers.length > 0 ? [{
+                id: `${managerId}:direct`,
                 label: subTeams.length > 0 ? "Direct Reports" : "",
                 headerRow: hasManagerLeads ? managerRow! : null,
                 group: directMembers,
               }] : []),
               ...subTeams.map((st) => ({
+                id: `${managerId}:${st.leaderId}`,
                 label: `${st.leaderName}'s Team`,
                 headerRow: st.leaderRow && st.leaderRow.totalLeads > 0 ? st.leaderRow : null,
                 group: st.members,
@@ -239,9 +246,10 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
             ]
             const subGroups = rawSubGroups
               .map((sg) => ({
+                id: sg.id,
                 label: sg.label,
                 headerRow: sg.headerRow && matchesFilters(sg.headerRow) ? sg.headerRow : null,
-                group: visibleAndSorted(sg.group),
+                group: visibleAndSorted(sg.group, sg.id),
               }))
               .filter((sg) => sg.headerRow || sg.group.length > 0)
             if (subGroups.length === 0) return null
@@ -258,10 +266,12 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
 
                 {/* Sub-groups */}
                 <div className="divide-y divide-gray-50">
-                  {subGroups.map(({ label, headerRow, group }) => {
+                  {subGroups.map(({ id: groupId, label, headerRow, group }) => {
                     const count = group.length + (headerRow ? 1 : 0)
+                    const { key: sortKey, dir: sortDir } = getSort(groupId)
+                    const onSort = (key: string) => handleSort(groupId, key)
                     return (
-                    <div key={label || "direct"}>
+                    <div key={groupId}>
                       {label && (
                         <div className="px-6 py-2 bg-gray-50/60">
                           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {count} member{count !== 1 ? "s" : ""}</p>
@@ -330,17 +340,17 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
                         <table className="min-w-full">
                           <thead>
                             <tr className="border-b border-gray-50 bg-gray-50/20">
-                              <SortableTh label="Member" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                              <SortableTh label="Claimed" sortKey="claimed" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                              <SortableTh label="Assigned" sortKey="assigned" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                              <SortableTh label="Total" sortKey="totalLeads" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                              <SortableTh label="Member" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                              <SortableTh label="Claimed" sortKey="claimed" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                              <SortableTh label="Assigned" sortKey="assigned" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                              <SortableTh label="Total" sortKey="totalLeads" currentKey={sortKey} direction={sortDir} onSort={onSort} />
                               {STAGES.map((s) => (
-                                <SortableTh key={s} label={STAGE_LABELS[s]} sortKey={s} currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                                <SortableTh key={s} label={STAGE_LABELS[s]} sortKey={s} currentKey={sortKey} direction={sortDir} onSort={onSort} />
                               ))}
-                              <SortableTh label="Conv." sortKey="rate" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                              <SortableTh label="Avg Response" sortKey="avgResponseMs" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                              <SortableTh label="Not Contacted" sortKey="notContacted" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                              <SortableTh label="Stale" sortKey="stale" currentKey={sortKey} direction={sortDir} onSort={handleSort} title="Active leads that haven't been updated in more than 48 hours" />
+                              <SortableTh label="Conv." sortKey="rate" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                              <SortableTh label="Avg Response" sortKey="avgResponseMs" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                              <SortableTh label="Not Contacted" sortKey="notContacted" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                              <SortableTh label="Stale" sortKey="stale" currentKey={sortKey} direction={sortDir} onSort={onSort} title="Active leads that haven't been updated in more than 48 hours" />
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">

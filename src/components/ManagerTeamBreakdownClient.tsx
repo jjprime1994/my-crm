@@ -37,22 +37,26 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState("")
   const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
-  const [sortKey, setSortKey] = useState<string | null>(null)
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+  // Keyed by section id — sorting one team's table must not reorder every other team on
+  // the page (that reads as an unrelated "jump" for teams the user isn't even looking at).
+  const [sortState, setSortState] = useState<Record<string, { key: string | null; dir: "asc" | "desc" }>>({})
   const { capture, restore } = useScrollAnchor()
 
   // See TeamBreakdownClient for why this exists — without it, resorting a scrolled-into
   // table feels like it randomly jumps because rows shift above the current viewport.
   useLayoutEffect(() => { restore() })
 
-  function handleSort(key: string) {
+  function getSort(sectionId: string) {
+    return sortState[sectionId] ?? { key: null, dir: "desc" as const }
+  }
+
+  function handleSort(sectionId: string, key: string) {
     capture()
-    if (sortKey === key) {
-      setSortDir((d) => (d === "desc" ? "asc" : "desc"))
-    } else {
-      setSortKey(key)
-      setSortDir("desc")
-    }
+    setSortState((prev) => {
+      const cur = getSort(sectionId)
+      const dir = cur.key === key ? (cur.dir === "desc" ? "asc" : "desc") : "desc"
+      return { ...prev, [sectionId]: { key, dir } }
+    })
   }
 
   function toggleNeedsAttention() {
@@ -71,8 +75,9 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
     return true
   }
 
-  function visibleAndSorted(rows: TeamMemberRow[]): TeamMemberRow[] {
-    return rows.filter(matchesFilters).sort((a, b) => compareRows(a, b, sortKey, sortDir === "asc" ? 1 : -1))
+  function visibleAndSorted(rows: TeamMemberRow[], sectionId: string): TeamMemberRow[] {
+    const { key, dir } = getSort(sectionId)
+    return rows.filter(matchesFilters).sort((a, b) => compareRows(a, b, key, dir === "asc" ? 1 : -1))
   }
 
   const options = sections.map((s) => ({ id: s.id, name: s.label || "Direct Reports" }))
@@ -81,7 +86,7 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
     .map((s) => ({
       ...s,
       headerRow: s.headerRow && matchesFilters(s.headerRow) ? s.headerRow : null,
-      members: visibleAndSorted(s.members),
+      members: visibleAndSorted(s.members, s.id),
     }))
     .filter((s) => s.headerRow || s.members.length > 0)
   const memberCount = filteredSections.reduce((sum, s) => sum + s.members.length, 0)
@@ -143,6 +148,8 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
         <div className="divide-y divide-gray-50">
           {filteredSections.map(({ id, label, headerRow, members }) => {
             const count = members.length + (headerRow ? 1 : 0)
+            const { key: sortKey, dir: sortDir } = getSort(id)
+            const onSort = (key: string) => handleSort(id, key)
             return (
               <div key={id}>
                 {label && (
@@ -213,18 +220,18 @@ export default function ManagerTeamBreakdownClient({ sections, title = "Team Bre
                   <table className="min-w-full">
                     <thead>
                       <tr className="border-b border-gray-50 bg-gray-50/20">
-                        <SortableTh label="Member" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                        <SortableTh label="Claimed" sortKey="claimed" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                        <SortableTh label="Assigned" sortKey="assigned" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                        <SortableTh label="Total" sortKey="totalLeads" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                        <SortableTh label="Member" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                        <SortableTh label="Claimed" sortKey="claimed" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                        <SortableTh label="Assigned" sortKey="assigned" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                        <SortableTh label="Total" sortKey="totalLeads" currentKey={sortKey} direction={sortDir} onSort={onSort} />
                         {showStageColumns && STAGE_COLUMNS.map((c) => (
-                          <SortableTh key={c.key} label={c.label} sortKey={c.key} currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                          <SortableTh key={c.key} label={c.label} sortKey={c.key} currentKey={sortKey} direction={sortDir} onSort={onSort} />
                         ))}
-                        {!showStageColumns && <SortableTh label="Won" sortKey="CLOSED_WON" currentKey={sortKey} direction={sortDir} onSort={handleSort} />}
-                        <SortableTh label="Conv." sortKey="rate" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                        <SortableTh label="Avg Response" sortKey="avgResponseMs" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                        <SortableTh label="Not Contacted" sortKey="notContacted" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-                        <SortableTh label="Stale" sortKey="stale" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+                        {!showStageColumns && <SortableTh label="Won" sortKey="CLOSED_WON" currentKey={sortKey} direction={sortDir} onSort={onSort} />}
+                        <SortableTh label="Conv." sortKey="rate" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                        <SortableTh label="Avg Response" sortKey="avgResponseMs" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                        <SortableTh label="Not Contacted" sortKey="notContacted" currentKey={sortKey} direction={sortDir} onSort={onSort} />
+                        <SortableTh label="Stale" sortKey="stale" currentKey={sortKey} direction={sortDir} onSort={onSort} />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
