@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
-import { closeStaleUnclaimedLeads } from "@/lib/close-stale-leads"
+import { closeStaleUnclaimedLeads, closeStaleClaimedLeads } from "@/lib/close-stale-leads"
 import { sendPushToSuperAdmins } from "@/lib/push"
 
 export const maxDuration = 300
 
-// Nightly sweep that auto-closes unclaimed leads nobody has touched in 30+ days
-// (see vercel.json crons). Same auth pattern as check-routing: Vercel's cron
-// caller sends Authorization: Bearer ${CRON_SECRET}; a logged-in SUPER_ADMIN
+// Nightly sweep that auto-closes leads nobody has touched in 30+ days — both
+// unclaimed ones sitting in the pool, and claimed ones a salesperson has gone
+// quiet on (see vercel.json crons). Same auth pattern as check-routing: Vercel's
+// cron caller sends Authorization: Bearer ${CRON_SECRET}; a logged-in SUPER_ADMIN
 // may also trigger it manually by opening the URL.
 export async function GET(req: NextRequest) {
   const cronOk =
@@ -22,12 +23,18 @@ export async function GET(req: NextRequest) {
   }
 
   const startedAt = Date.now()
-  const { closedCount, leadIds } = await closeStaleUnclaimedLeads()
+  const unclaimed = await closeStaleUnclaimedLeads()
+  const claimed = await closeStaleClaimedLeads()
+  const closedCount = unclaimed.closedCount + claimed.closedCount
 
   if (closedCount > 0) {
+    const parts = [
+      unclaimed.closedCount > 0 ? `${unclaimed.closedCount} unclaimed` : null,
+      claimed.closedCount > 0 ? `${claimed.closedCount} claimed` : null,
+    ].filter(Boolean).join(", ")
     await sendPushToSuperAdmins({
       title: "🧹 Stale leads auto-closed",
-      body: `${closedCount} unclaimed lead${closedCount !== 1 ? "s" : ""} untouched for 30+ days marked Lost.`,
+      body: `${parts} — ${closedCount} lead${closedCount !== 1 ? "s" : ""} untouched for 30+ days marked Lost.`,
       url: "/leads",
     })
   }
@@ -35,7 +42,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     closedCount,
-    leadIds,
+    unclaimedClosedCount: unclaimed.closedCount,
+    claimedClosedCount: claimed.closedCount,
+    leadIds: [...unclaimed.leadIds, ...claimed.leadIds],
     checkedAt: new Date().toISOString(),
     durationMs: Date.now() - startedAt,
   })

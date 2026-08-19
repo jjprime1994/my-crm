@@ -17,6 +17,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.32.0",
+    date: "2026-08-19",
+    title: "Auto-Lost Now Covers Claimed Leads Too",
+    items: [
+      "Claimed leads with no note and no status update for 30 days will now also be auto-marked Lost, same as unclaimed ones already were — a banner on the Leads page explains this. Status can always be changed back later, e.g. to Won, if the deal comes through after all",
+      "To avoid blindsiding everyone with the existing backlog, enforcement starts 26 August — until then it's just the reminder, giving a week to touch any leads that need it",
+    ],
+  },
+  {
     version: "1.31.0",
     date: "2026-08-19",
     title: "Auto-Lost Cron Fixed",

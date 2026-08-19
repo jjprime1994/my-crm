@@ -5,6 +5,9 @@ import LeadsFilters from "@/components/LeadsFilters"
 import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import LeadsTable, { type LeadRow } from "@/components/LeadsTable"
 import Pagination from "@/components/Pagination"
+import { CLAIMED_SWEEP_GRACE_UNTIL } from "@/lib/close-stale-leads"
+
+const graceDateLabel = CLAIMED_SWEEP_GRACE_UNTIL.toLocaleDateString("en-MY", { day: "numeric", month: "long", timeZone: "Asia/Kuala_Lumpur" })
 
 const PAGE_SIZE = 50
 
@@ -181,6 +184,15 @@ export default async function LeadsPage({
           <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
           <p className="text-sm text-gray-500 mt-0.5">{displayTotal} leads total</p>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-xl px-4 py-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span>
+          Claimed leads with no note and no status update for 30 days will be automatically marked Lost, starting {graceDateLabel} — add a note or update the status to keep a lead active. You can always change it back later if it turns into a Won.
+        </span>
       </div>
 
       <LeadsFilters isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} salespeople={salespeople} sources={sources.map(s => s.campaignName!)} channels={channels} branches={branches} />
