@@ -14,6 +14,7 @@ import MetaTokenRefreshTool from "@/components/MetaTokenRefreshTool"
 import RoutingAuditTool from "@/components/RoutingAuditTool"
 import { getCampaignPerformance } from "@/lib/campaign-stats"
 import { getStatePerformance } from "@/lib/state-stats"
+import { reportingVisibleFilter } from "@/lib/user-visibility"
 import { initials } from "@/lib/format"
 import { businessMsElapsed } from "@/lib/responseTime"
 
@@ -114,7 +115,7 @@ export default async function SuperAdminOverviewPage({
     db.lead.groupBy({ by: ["status"], _count: true, where: dateFilter }),
     db.lead.groupBy({ by: ["source"], _count: true, where: dateFilter }),
     db.user.findMany({
-      where: { role: "SALESPERSON" },
+      where: { role: "SALESPERSON", ...reportingVisibleFilter() },
       select: {
         id: true, name: true, managerId: true,
         manager: {
@@ -130,16 +131,18 @@ export default async function SuperAdminOverviewPage({
     }),
     // All top-level managers (ADMIN + SUPER_ADMIN with no parent manager)
     db.user.findMany({
-      where: { managerId: null, role: { in: ["ADMIN", "SUPER_ADMIN"] } },
+      where: { managerId: null, role: { in: ["ADMIN", "SUPER_ADMIN"] }, ...reportingVisibleFilter() },
       select: {
         id: true, name: true,
         leads: { where: dateFilter, select: { status: true } },
         teamMembers: {
+          where: reportingVisibleFilter(),
           select: {
             id: true,
             role: true,
             leads: { where: dateFilter, select: { status: true } },
             teamMembers: {
+              where: reportingVisibleFilter(),
               select: {
                 id: true,
                 leads: { where: dateFilter, select: { status: true } },
@@ -158,7 +161,7 @@ export default async function SuperAdminOverviewPage({
     getCampaignPerformance(since, until),
     getStatePerformance(since, until),
     db.user.findMany({
-      where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
+      where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] }, ...reportingVisibleFilter() },
       select: {
         id: true, name: true, role: true, managerId: true,
         leads: { where: leadsWhere, select: { status: true, createdAt: true, claimedAt: true, firstContactedAt: true, updatedAt: true, statusHistory: { select: { from: true, to: true } } } },

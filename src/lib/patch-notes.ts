@@ -17,6 +17,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.35.0",
+    date: "2026-08-26",
+    title: "Disabled Accounts Split Out in Manage Team",
+    items: [
+      "Manage Team now has a separate \"Disabled Accounts\" section below the main roster, instead of mixing disabled logins in with everyone else — shows how long ago each was disabled, with re-enable and delete actions",
+      "Business/Team Overview reporting (Team Breakdown, Funnel, Leaderboard, and the Team Report export) now drops an account 30 days after it's disabled, so long-gone staff stop cluttering performance numbers. Still fully visible in Manage Team regardless of how long ago",
+    ],
+  },
+  {
     version: "1.34.0",
     date: "2026-08-26",
     title: "New 'States' Tab on Business Overview",

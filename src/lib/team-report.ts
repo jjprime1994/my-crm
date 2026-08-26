@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { LeadStatus } from "@/generated/prisma/client"
 import { businessMsElapsed } from "@/lib/responseTime"
+import { reportingVisibleFilter } from "@/lib/user-visibility"
 
 export type TeamReportRow = {
   id: string
@@ -68,7 +69,7 @@ export async function getTeamReport(since: Date | null, until: Date | null = nul
 
   const [salespersonStats, mgmtStats] = await Promise.all([
     db.user.findMany({
-      where: { role: "SALESPERSON" },
+      where: { role: "SALESPERSON", ...reportingVisibleFilter() },
       select: {
         id: true, name: true,
         manager: {
@@ -82,7 +83,7 @@ export async function getTeamReport(since: Date | null, until: Date | null = nul
       orderBy: { name: "asc" },
     }),
     db.user.findMany({
-      where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
+      where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] }, ...reportingVisibleFilter() },
       select: {
         id: true, name: true, role: true, managerId: true,
         leads: { where: leadsWhere, select: { status: true, createdAt: true, claimedAt: true, firstContactedAt: true } },

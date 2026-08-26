@@ -125,6 +125,15 @@ if (!globalForPrisma.dbInitialized) {
   .then(() =>
     db.$executeRaw`ALTER TABLE "LeadNote" ADD COLUMN IF NOT EXISTS "isSystem" BOOLEAN NOT NULL DEFAULT false`
   )
+  .then(() =>
+    db.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "disabledAt" TIMESTAMP(3)`
+  )
+  .then(() =>
+    // Backfill: anyone already disabled before this column existed gets a fresh 30-day
+    // grace period starting now, rather than vanishing from reporting immediately or
+    // lingering forever with an unknown disable date.
+    db.$executeRaw`UPDATE "User" SET "disabledAt" = NOW() WHERE "disabled" = true AND "disabledAt" IS NULL`
+  )
   .catch(() => {})
 
 // Backfill firstContactedAt for existing CONTACTED leads — independent so it survives chain failures.

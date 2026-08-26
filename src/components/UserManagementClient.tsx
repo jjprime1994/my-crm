@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { REPORTING_GRACE_DAYS } from "@/lib/user-visibility"
 
 type User = {
   id: string
@@ -12,6 +13,7 @@ type User = {
   managerId: string | null
   createdAt: Date | string
   disabled: boolean
+  disabledAt: Date | string | null
   _count: { leads: number }
 }
 
@@ -195,31 +197,38 @@ export default function UserManagementClient({ users: initial, currentUserId, is
     if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, role } : u)))
   }
 
-  const filteredUsers = users
-    .filter((u) => {
-      if (search) {
-        const q = search.toLowerCase()
-        const teamName = managers.find((m) => m.id === u.managerId)?.name ?? ""
-        if (
-          !u.name.toLowerCase().includes(q) &&
-          !u.email.toLowerCase().includes(q) &&
-          !teamName.toLowerCase().includes(q)
-        ) return false
-      }
-      if (roleFilter && u.role !== roleFilter) return false
-      if (managerFilter === "__none__" && u.managerId !== null) return false
-      if (managerFilter && managerFilter !== "__none__" && u.managerId !== managerFilter) return false
-      return true
-    })
-    .sort((a, b) => {
-      if (sortBy === "name_asc") return a.name.localeCompare(b.name)
-      if (sortBy === "name_desc") return b.name.localeCompare(a.name)
-      if (sortBy === "leads_desc") return b._count.leads - a._count.leads
-      if (sortBy === "leads_asc") return a._count.leads - b._count.leads
-      if (sortBy === "joined_desc") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      if (sortBy === "joined_asc") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      return a.name.localeCompare(b.name)
-    })
+  const matchesFilters = (u: User) => {
+    if (search) {
+      const q = search.toLowerCase()
+      const teamName = managers.find((m) => m.id === u.managerId)?.name ?? ""
+      if (
+        !u.name.toLowerCase().includes(q) &&
+        !u.email.toLowerCase().includes(q) &&
+        !teamName.toLowerCase().includes(q)
+      ) return false
+    }
+    if (roleFilter && u.role !== roleFilter) return false
+    if (managerFilter === "__none__" && u.managerId !== null) return false
+    if (managerFilter && managerFilter !== "__none__" && u.managerId !== managerFilter) return false
+    return true
+  }
+
+  const sortUsers = (list: User[]) => [...list].sort((a, b) => {
+    if (sortBy === "name_asc") return a.name.localeCompare(b.name)
+    if (sortBy === "name_desc") return b.name.localeCompare(a.name)
+    if (sortBy === "leads_desc") return b._count.leads - a._count.leads
+    if (sortBy === "leads_asc") return a._count.leads - b._count.leads
+    if (sortBy === "joined_desc") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    if (sortBy === "joined_asc") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    return a.name.localeCompare(b.name)
+  })
+
+  // Disabled accounts get their own section below (see "Disabled Accounts") rather than
+  // being mixed into the main roster — this list is who's actually active on the team.
+  const activeUsers = users.filter((u) => !u.disabled)
+  const disabledAccounts = users.filter((u) => u.disabled)
+  const filteredUsers = sortUsers(activeUsers.filter(matchesFilters))
+  const filteredDisabledAccounts = sortUsers(disabledAccounts.filter(matchesFilters))
 
   const activeFilters = [search, roleFilter, managerFilter].filter(Boolean).length
 
@@ -228,8 +237,10 @@ export default function UserManagementClient({ users: initial, currentUserId, is
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Manage Team</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{users.length} team members</p>
-
+          <p className="text-sm text-gray-500 mt-0.5">
+            {activeUsers.length} team member{activeUsers.length !== 1 ? "s" : ""}
+            {disabledAccounts.length > 0 && <> · {disabledAccounts.length} disabled</>}
+          </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -310,7 +321,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
             Clear ({activeFilters})
           </button>
         )}
-        <p className="w-full text-xs text-gray-400 px-1">{filteredUsers.length} of {users.length} members</p>
+        <p className="w-full text-xs text-gray-400 px-1">{filteredUsers.length} of {activeUsers.length} members</p>
       </div>
 
       {showForm && (
@@ -467,11 +478,6 @@ export default function UserManagementClient({ users: initial, currentUserId, is
               ) : (
                 <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeClass(user.role)}`}>
                   {roleLabel(user.role)}
-                </span>
-              )}
-              {user.disabled && (
-                <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">
-                  Disabled
                 </span>
               )}
             </div>
@@ -659,11 +665,6 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   ) : (
                     <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeClass(user.role)}`}>
                       {roleLabel(user.role)}
-                    </span>
-                  )}
-                  {user.disabled && (
-                    <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200 ml-1.5">
-                      Disabled
                     </span>
                   )}
                 </td>
@@ -856,6 +857,153 @@ export default function UserManagementClient({ users: initial, currentUserId, is
           </tbody>
         </table>
       </div>
+
+      {/* Disabled Accounts — separated from the active roster above so a long-disabled
+          account doesn't clutter the day-to-day team list, but stays reachable for
+          re-enabling, deleting, or just checking who's inactive and since when. */}
+      {disabledAccounts.length > 0 && (
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Disabled Accounts</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {disabledAccounts.length} account{disabledAccounts.length !== 1 ? "s" : ""} — hidden from Business/Team Overview reporting {REPORTING_GRACE_DAYS} days after being disabled
+            </p>
+          </div>
+
+          {filteredDisabledAccounts.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-10 text-sm text-gray-400">No disabled accounts match your filters.</div>
+          ) : (
+            <>
+              {/* Mobile card list */}
+              <div className="sm:hidden space-y-3">
+                {filteredDisabledAccounts.map((user) => {
+                  const daysDisabled = user.disabledAt ? Math.floor((Date.now() - new Date(user.disabledAt).getTime()) / 86400000) : null
+                  const droppedFromReporting = daysDisabled !== null && daysDisabled >= REPORTING_GRACE_DAYS
+                  return (
+                    <div key={user.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3 opacity-80">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${avatarClass(user.role)}`}>
+                          <span className={`text-xs font-bold ${avatarTextClass(user.role)}`}>{initials(user.name)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm truncate">{user.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        </div>
+                        {isSuperAdmin && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => toggleDisabled(user.id, false)}
+                              title="Re-enable login"
+                              className="p-1.5 rounded-xl text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => deleteUser(user.id)}
+                              title="Delete user"
+                              className="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeClass(user.role)}`}>
+                          {roleLabel(user.role)}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          Disabled {daysDisabled === null ? "—" : daysDisabled === 0 ? "today" : `${daysDisabled}d ago`}
+                        </span>
+                        <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${droppedFromReporting ? "bg-gray-100 text-gray-500" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"}`}>
+                          {droppedFromReporting ? "Hidden from reports" : "Still in reports"}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
+                <table className="w-full table-fixed">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50/60">
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Role</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Disabled</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-40">Reporting</th>
+                      <th className="px-4 py-3.5 w-20" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredDisabledAccounts.map((user) => {
+                      const daysDisabled = user.disabledAt ? Math.floor((Date.now() - new Date(user.disabledAt).getTime()) / 86400000) : null
+                      const droppedFromReporting = daysDisabled !== null && daysDisabled >= REPORTING_GRACE_DAYS
+                      return (
+                        <tr key={user.id} className="hover:bg-gray-50/70 transition opacity-80">
+                          <td className="px-4 py-4 min-w-0">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-9 h-9 flex items-center justify-center shrink-0 ${avatarClass(user.role)}`}>
+                                <span className={`text-xs font-bold ${avatarTextClass(user.role)}`}>{initials(user.name)}</span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 text-sm truncate" title={user.name}>{user.name}</p>
+                                <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeClass(user.role)}`}>
+                              {roleLabel(user.role)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-400">
+                            {daysDisabled === null ? "—" : daysDisabled === 0 ? "Today" : `${daysDisabled}d ago`}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${droppedFromReporting ? "bg-gray-100 text-gray-500" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"}`}>
+                              {droppedFromReporting ? "Hidden from reports" : "Still in reports"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            {isSuperAdmin && (
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => toggleDisabled(user.id, false)}
+                                  title="Re-enable login"
+                                  className="p-1.5 rounded-lg text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/>
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => deleteUser(user.id)}
+                                  title="Delete user"
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

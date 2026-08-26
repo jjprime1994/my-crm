@@ -7,6 +7,7 @@ import Link from "next/link"
 import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import ManagerTeamBreakdownClient from "@/components/ManagerTeamBreakdownClient"
 import { businessMsElapsed } from "@/lib/responseTime"
+import { reportingVisibleFilter } from "@/lib/user-visibility"
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified",
@@ -88,15 +89,15 @@ export default async function ManagerOverviewPage({
 
   // ADMIN sees all salespeople in their extended team (including under team leaders)
   // TEAM_LEADER sees only their direct salesperson reports
-  const salespersonWhere = isFullManager
-    ? {
-        role: "SALESPERSON" as const,
-        OR: [
-          { managerId: effectiveUserId },
-          { manager: { managerId: effectiveUserId } },
-        ],
-      }
-    : { role: "SALESPERSON" as const, managerId: effectiveUserId }
+  const salespersonWhere = {
+    AND: [
+      { role: "SALESPERSON" as const },
+      isFullManager
+        ? { OR: [{ managerId: effectiveUserId }, { manager: { managerId: effectiveUserId } }] }
+        : { managerId: effectiveUserId },
+      reportingVisibleFilter(),
+    ],
+  }
 
   const leadsAssignedWhere = isFullManager
     ? {
@@ -146,9 +147,9 @@ export default async function ManagerOverviewPage({
     isFullManager
       ? db.user.findMany({
           where: {
-            OR: [
-              { id: effectiveUserId },
-              { role: "TEAM_LEADER" as const, managerId: effectiveUserId },
+            AND: [
+              { OR: [{ id: effectiveUserId }, { role: "TEAM_LEADER" as const, managerId: effectiveUserId }] },
+              reportingVisibleFilter(),
             ],
           },
           select: {

@@ -49,6 +49,7 @@ export default async function UsersPage() {
         managerId: true,
         createdAt: true,
         disabled: true,
+        disabledAt: true,
         _count: { select: { leads: true } },
       },
       orderBy: { createdAt: "desc" },

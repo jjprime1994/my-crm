@@ -106,12 +106,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ("disabled" in body) {
     if (!isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
     data.disabled = !!body.disabled
+    // Tracks when disabled turned on, not just that it's on — Business/Team Overview
+    // reporting uses this to drop someone off after 30 days (see reportingVisibleFilter).
+    // Cleared on re-enable so a re-disable later starts its own fresh 30-day window.
+    data.disabledAt = data.disabled ? new Date() : null
   }
 
   const user = await db.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, claimLimit: true, newLeadThreshold: true, role: true, disabled: true },
+    select: { id: true, name: true, claimLimit: true, newLeadThreshold: true, role: true, disabled: true, disabledAt: true },
   })
   return NextResponse.json(user)
 }
