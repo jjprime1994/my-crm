@@ -76,6 +76,8 @@ Leads arrive unassigned (`assignedToId: null`). They become "available" for sale
 
 `POST /api/webhooks/meta` receives Facebook Lead Ads notifications. It verifies the `x-hub-signature-256` HMAC signature, then calls the Graph API to fetch the full lead record (`/v19.0/{leadgen_id}`), plus ad and campaign names. Leads are upserted by `metaLeadId` to avoid duplicates. Always returns `{ ok: true }` with HTTP 200 to prevent Meta from retrying — even on signature mismatch.
 
+`adName` and `campaignName` are fetched via two separate Graph API calls (`/{ad_id}?fields=name,campaign{name}`, with a `/{campaign_id}?fields=name` fallback) — `campaign{name}` needs an extra ads-read permission on top of what fetching the ad itself needs, so the two can fail independently. `campaignName` went null on every new lead from ~19 Aug to 26 Aug 2026 while `adName` (helped by its own form-name fallback) kept working, because `META_PAGE_ACCESS_TOKEN` lost that permission — visible as `"Missing Ads or Marketing Messages permission"` in the `[meta-webhook] campaign fetch error` console logs. Fixed on the read side (26 Aug 2026): Campaign Performance and Lead Sources on Business Overview now fall back to `adName` when `campaignName` is null, same as Recent Leads already did — but the underlying token permission is an external Meta Business/App setting, not something a code fix restores; if `campaign fetch error` logs reappear, that's where to look.
+
 `GET /api/webhooks/meta` handles the one-time webhook verification handshake Meta performs when you register the webhook URL.
 
 ### Website Enquiries Webhook

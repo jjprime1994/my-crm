@@ -17,6 +17,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.33.0",
+    date: "2026-08-26",
+    title: "Campaign Performance & Lead Sources Fixed for Recent Leads",
+    items: [
+      "Fixed: filtering Business Overview to 7d/30d/90d showed \"No campaign data\" and \"No source data\" even with hundreds of leads in that window. Root cause was on Meta's side — a lost permission meant campaign names stopped coming through for new leads since ~19 Aug, though the leads themselves and their ad/form names were unaffected",
+      "Campaign Performance and Lead Sources now fall back to the ad/form name when the campaign name is missing, same as Recent Leads already did, so this stays fixed even if the same permission lapses again",
+    ],
+  },
+  {
     version: "1.32.0",
     date: "2026-08-19",
     title: "Auto-Lost Now Covers Claimed Leads Too",

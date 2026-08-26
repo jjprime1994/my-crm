@@ -108,7 +108,7 @@ export default async function SuperAdminOverviewPage({
     }
   }
 
-  const [total, byStatus, byPlatform, salespersonStats, managerStats, sourceStats, recentLeads, campaignPerformance, mgmtStats] = await Promise.all([
+  const [total, byStatus, byPlatform, salespersonStats, managerStats, recentLeads, campaignPerformance, mgmtStats] = await Promise.all([
     db.lead.count({ where: dateFilter }),
     db.lead.groupBy({ by: ["status"], _count: true, where: dateFilter }),
     db.lead.groupBy({ by: ["source"], _count: true, where: dateFilter }),
@@ -148,12 +148,6 @@ export default async function SuperAdminOverviewPage({
         },
       },
     }),
-    db.lead.groupBy({
-      by: ["campaignName"],
-      _count: true,
-      where: dateFilter,
-      orderBy: { _count: { campaignName: "desc" } },
-    }),
     db.lead.findMany({
       where: dateFilter,
       orderBy: { createdAt: "desc" },
@@ -185,13 +179,14 @@ export default async function SuperAdminOverviewPage({
   ] as const
   const platformStats = PLATFORMS.map((p) => ({ ...p, count: platformMap[p.key] ?? 0 }))
 
-  // Only show leads with a known campaign name
-  const sourceRows = sourceStats
-    .filter((s) => s.campaignName)
-    .map((s) => ({ name: s.campaignName!, count: s._count }))
-  const sourcedCount = sourceRows.reduce((sum, s) => sum + s.count, 0)
-
   const { campaigns } = campaignPerformance
+
+  // Reuses the same campaign/ad-name breakdown Campaign Performance shows, rather than a
+  // separate groupBy(campaignName) query — that used to leave this widget looking empty
+  // whenever campaignName went unpopulated (see getCampaignPerformance for why) even though
+  // Campaign Performance itself, one tab over, had the real numbers via the adName fallback.
+  const sourceRows = campaigns.map((c) => ({ name: c.name, count: c.total }))
+  const sourcedCount = sourceRows.reduce((sum, s) => sum + s.count, 0)
 
   const individuals = salespersonStats
     .map((s) => {
