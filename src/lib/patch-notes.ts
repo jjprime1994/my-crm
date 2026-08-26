@@ -17,6 +17,16 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.34.0",
+    date: "2026-08-26",
+    title: "New 'States' Tab on Business Overview",
+    items: [
+      "New \"States\" tab shows leads broken down by Malaysian state — total, claimed, unclaimed, and the full stage breakdown (New/Contacted/Appointment Made/Won/Lost), same style as Campaign Performance",
+      "Leads with no resolved state show under a dimmed \"No state\" row at the bottom, so it doesn't crowd out the real states while still surfacing that data-quality gap",
+      "CSV export included",
+    ],
+  },
+  {
     version: "1.33.0",
     date: "2026-08-26",
     title: "Campaign Performance & Lead Sources Fixed for Recent Leads",

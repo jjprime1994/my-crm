@@ -13,6 +13,7 @@ import RepairBlankLeadsButton from "@/components/RepairBlankLeadsButton"
 import MetaTokenRefreshTool from "@/components/MetaTokenRefreshTool"
 import RoutingAuditTool from "@/components/RoutingAuditTool"
 import { getCampaignPerformance } from "@/lib/campaign-stats"
+import { getStatePerformance } from "@/lib/state-stats"
 import { initials } from "@/lib/format"
 import { businessMsElapsed } from "@/lib/responseTime"
 
@@ -108,7 +109,7 @@ export default async function SuperAdminOverviewPage({
     }
   }
 
-  const [total, byStatus, byPlatform, salespersonStats, managerStats, recentLeads, campaignPerformance, mgmtStats] = await Promise.all([
+  const [total, byStatus, byPlatform, salespersonStats, managerStats, recentLeads, campaignPerformance, statePerformance, mgmtStats] = await Promise.all([
     db.lead.count({ where: dateFilter }),
     db.lead.groupBy({ by: ["status"], _count: true, where: dateFilter }),
     db.lead.groupBy({ by: ["source"], _count: true, where: dateFilter }),
@@ -155,6 +156,7 @@ export default async function SuperAdminOverviewPage({
       include: { assignedTo: { select: { name: true } } },
     }),
     getCampaignPerformance(since, until),
+    getStatePerformance(since, until),
     db.user.findMany({
       where: { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER"] } },
       select: {
@@ -180,6 +182,7 @@ export default async function SuperAdminOverviewPage({
   const platformStats = PLATFORMS.map((p) => ({ ...p, count: platformMap[p.key] ?? 0 }))
 
   const { campaigns } = campaignPerformance
+  const { states } = statePerformance
 
   // Reuses the same campaign/ad-name breakdown Campaign Performance shows, rather than a
   // separate groupBy(campaignName) query — that used to leave this widget looking empty
@@ -353,6 +356,7 @@ export default async function SuperAdminOverviewPage({
   const TABS = [
     { id: "overview", label: "Overview" },
     { id: "campaigns", label: "Campaigns" },
+    { id: "states", label: "States" },
     { id: "teams", label: "Teams" },
     { id: "funnel", label: "Funnel" },
     { id: "leaderboard", label: "Leaderboard" },
@@ -715,6 +719,94 @@ export default async function SuperAdminOverviewPage({
                         <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-100 w-24">
                           {PIPELINE_STAGES.map((status) => {
                             const pct = c.total > 0 ? Math.round((c.statusCounts[status] / c.total) * 100) : 0
+                            return pct > 0 ? <div key={status} className={`h-full ${STATUS_BAR[status]}`} style={{ width: `${pct}%` }} /> : null
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* ── States tab ── */}
+      {tab === "states" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+            <div>
+              <h2 className="font-semibold text-gray-900">Leads by State</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{states.length} state{states.length !== 1 ? "s" : ""}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {states.length > 0 && (
+                <a
+                  href={`/api/export/states${rangeQueryParams()}`}
+                  className="inline-flex items-center gap-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Export CSV
+                </a>
+              )}
+            </div>
+          </div>
+          {states.length === 0 ? (
+            <div className="text-center py-12 text-sm text-gray-400">No state data in this period.</div>
+          ) : (
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-gray-50 bg-gray-50/40">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Unclaimed</th>
+                  {PIPELINE_STAGES.map((status) => (
+                    <th key={status} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                      {STATUS_LABELS[status]}
+                    </th>
+                  ))}
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Breakdown</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {states.map((s) => (
+                    <tr key={s.name} className={`hover:bg-gray-50/70 transition ${s.name === "No state" ? "opacity-60" : ""}`}>
+                      <td className="px-6 py-4 max-w-[180px]">
+                        <span className="font-medium text-gray-800 text-sm truncate block">{s.name}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-semibold text-gray-900">{s.total}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-600">{s.claimed}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {s.unclaimed > 0 ? (
+                          <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">{s.unclaimed}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400">0</span>
+                        )}
+                      </td>
+                      {PIPELINE_STAGES.map((status) => (
+                        <td key={status} className="px-6 py-4">
+                          <span className={`text-sm ${s.statusCounts[status] > 0 ? "font-semibold text-gray-800" : "text-gray-300"}`}>
+                            {s.statusCounts[status]}
+                          </span>
+                        </td>
+                      ))}
+                      <td className="px-6 py-4">
+                        <span className={`text-sm font-bold ${s.conversion >= 20 ? "text-emerald-600" : s.conversion >= 10 ? "text-amber-600" : "text-gray-500"}`}>
+                          {s.conversion}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-100 w-24">
+                          {PIPELINE_STAGES.map((status) => {
+                            const pct = s.total > 0 ? Math.round((s.statusCounts[status] / s.total) * 100) : 0
                             return pct > 0 ? <div key={status} className={`h-full ${STATUS_BAR[status]}`} style={{ width: `${pct}%` }} /> : null
                           })}
                         </div>
