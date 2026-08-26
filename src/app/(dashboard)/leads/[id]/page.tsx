@@ -13,7 +13,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     db.lead.findUnique({
       where: { id },
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
         notes: {
           include: { author: { select: { id: true, name: true } } },
           orderBy: { createdAt: "desc" },
@@ -66,6 +66,20 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   // Salespeople can only view leads assigned to them
   if (!adminAccess && lead.assignedToId !== session?.user.id) notFound()
 
+  // The dropdown's base list is scoped to "who this viewer may assign new leads to" — a
+  // permission question. Whoever the lead is ALREADY assigned to is a different question
+  // (just "what's true right now") and must always be selectable regardless of scope, or
+  // the <select> has no matching <option>, silently renders as "Unassigned" even though
+  // nothing changed, and the Save button — gated on the value actually differing from the
+  // lead's real assignedToId — never appears. Hit this for any lead assigned to someone
+  // outside the viewer's direct scope: another team's Team Leader/Manager, a Super Admin,
+  // or the viewer's own self-assigned lead (their own id is never in their own subordinate
+  // list). Affected ~1,418 active leads in production before this fix (self/cross-team
+  // Team Leader and Manager assignments), not just the Super Admin case fixed earlier.
+  const assigneeOptions = lead.assignedTo && !salespeople.some((s) => s.id === lead.assignedTo!.id)
+    ? [...salespeople, { id: lead.assignedTo.id, name: lead.assignedTo.name, role: lead.assignedTo.role }]
+    : salespeople
+
   const dupSibling = lead.isDuplicate && lead.phone
     ? await db.lead.findFirst({
         where: { phone: lead.phone, isDuplicate: false },
@@ -81,7 +95,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   return (
     <LeadDetailClient
       lead={{ ...lead, dupSibling }}
-      salespeople={salespeople}
+      salespeople={assigneeOptions}
       assignmentLogs={assignmentLogs}
       currentUser={{ id: session!.user.id, role: role }}
     />

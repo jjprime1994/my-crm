@@ -22,6 +22,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.39.0",
+    date: "2026-08-26",
+    title: "Same Unassign Fix, Now for Everyone — Not Just Super Admin",
+    audience: "Managers, Team Leaders & Super Admin",
+    items: [
+      "The previous fix only covered leads assigned to a Super Admin. Turns out the same bug hit any lead assigned to someone outside your own direct team — including your own self-assigned leads as a Manager or Team Leader — showing \"Unassigned\" and hiding the Save button even though the lead hadn't actually changed. Affected roughly 1,400 active leads. The Assigned To dropdown now always shows who a lead is really assigned to, no matter who that is",
+    ],
+  },
+  {
     version: "1.38.0",
     date: "2026-08-26",
     title: "Fixed: Can't Unassign a Lead Held by a Super Admin",
