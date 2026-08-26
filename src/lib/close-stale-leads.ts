@@ -12,17 +12,29 @@ const ACTIVE_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSA
 // unclaimed sweep has no such backlog problem (only ~99 leads) so isn't graced.
 export const CLAIMED_SWEEP_GRACE_UNTIL = new Date("2026-08-25T21:00:00.000Z") // 5am MYT, 26 Aug
 
-async function closeLeads(leadIds: { id: string; status: LeadStatus }[], reason: string): Promise<string[]> {
+const BATCH_SIZE = 500
+
+// One row per lead, three sequential awaited writes each, was the original shape here —
+// fine at the ~99-lead scale of the unclaimed sweep, but the claimed sweep launched to a
+// ~5,060-lead backlog and that shape silently ran into Vercel's 300s function timeout:
+// a single cron invocation got killed mid-loop having only processed 444 leads (observed
+// 25 Aug run, ~660ms/lead — mostly per-query round-trip latency), with no error surfaced
+// anywhere since a timeout just stops execution rather than throwing. Batched writes
+// (chunked to keep parameter counts sane) turn N*3 round trips into ~3 per chunk.
+async function closeLeads(leads: { id: string; status: LeadStatus }[], reason: string): Promise<string[]> {
   const closed: string[] = []
-  for (const lead of leadIds) {
-    await db.lead.update({ where: { id: lead.id }, data: { status: "CLOSED_LOST" } })
-    await db.leadStatusHistory.create({
-      data: { leadId: lead.id, from: lead.status, to: "CLOSED_LOST", changedById: null },
+  for (let i = 0; i < leads.length; i += BATCH_SIZE) {
+    const chunk = leads.slice(i, i + BATCH_SIZE)
+    const ids = chunk.map((l) => l.id)
+
+    await db.lead.updateMany({ where: { id: { in: ids } }, data: { status: "CLOSED_LOST" } })
+    await db.leadStatusHistory.createMany({
+      data: chunk.map((l) => ({ leadId: l.id, from: l.status, to: "CLOSED_LOST" as const, changedById: null })),
     })
-    await db.leadNote.create({
-      data: { leadId: lead.id, authorId: null, isSystem: true, content: reason },
+    await db.leadNote.createMany({
+      data: chunk.map((l) => ({ leadId: l.id, authorId: null, isSystem: true, content: reason })),
     })
-    closed.push(lead.id)
+    closed.push(...ids)
   }
   return closed
 }
