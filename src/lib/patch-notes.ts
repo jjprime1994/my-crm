@@ -17,6 +17,14 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.36.0",
+    date: "2026-08-26",
+    title: "Sortable Columns on Assign Leads",
+    items: [
+      "Assign Leads column headers (Name, State, Platform, Ad/Campaign, Age) are now clickable to sort by them, click again to reverse — same sortable-header style as Business Overview's tables",
+    ],
+  },
+  {
     version: "1.35.0",
     date: "2026-08-26",
     title: "Disabled Accounts Split Out in Manage Team",

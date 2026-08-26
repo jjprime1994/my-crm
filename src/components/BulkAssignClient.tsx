@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/Toast"
+import SortableTh from "@/components/SortableTh"
 
 const PAGE_SIZE = 50
 
@@ -81,6 +82,27 @@ function DupBadge({ sibling }: { sibling?: DupSibling | null }) {
   )
 }
 
+// No key selected falls back to newest-first, matching the server's default createdAt-desc
+// order. Blank branch/campaign values always sink to the bottom regardless of direction —
+// they're a data-quality gap, not a real value to rank asc/desc.
+function compareLeads(a: Lead, b: Lead, key: string | null, dir: 1 | -1): number {
+  if (!key) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  if (key === "name") {
+    const an = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim().toLowerCase()
+    const bn = `${b.firstName ?? ""} ${b.lastName ?? ""}`.trim().toLowerCase()
+    return dir * an.localeCompare(bn)
+  }
+  if (key === "createdAt") return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  if (key === "source") return dir * (a.source ?? "META").localeCompare(b.source ?? "META")
+  const pick = (l: Lead) => (key === "branch" ? l.branch : l.campaignName ?? l.adName) ?? ""
+  const av = pick(a)
+  const bv = pick(b)
+  if (!av && !bv) return 0
+  if (!av) return 1
+  if (!bv) return -1
+  return dir * av.localeCompare(bv)
+}
+
 function SourceBadge({ source }: { source?: string | null }) {
   if (!source || source === "META") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">Meta</span>
   if (source === "TIKTOK") return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-50 text-pink-600">TikTok</span>
@@ -96,11 +118,27 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
   const [assignTo, setAssignTo] = useState("")
   const [saving, setSaving] = useState(false)
   const [page, setPage] = useState(1)
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
-  const totalPages = Math.ceil(leads.length / PAGE_SIZE)
+  function handleSort(key: string) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"))
+    } else {
+      setSortKey(key)
+      setSortDir("desc")
+    }
+    setPage(1)
+  }
+
+  const sortedLeads = useMemo(
+    () => [...leads].sort((a, b) => compareLeads(a, b, sortKey, sortDir === "asc" ? 1 : -1)),
+    [leads, sortKey, sortDir]
+  )
+  const totalPages = Math.ceil(sortedLeads.length / PAGE_SIZE)
   const pageLeads = useMemo(
-    () => leads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [leads, page]
+    () => sortedLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [sortedLeads, page]
   )
   const allPageSelected = pageLeads.length > 0 && pageLeads.every((l) => selected.has(l.id))
 
@@ -324,12 +362,12 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
               </th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
+              <SortableTh label="Name" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
               <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Platform</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Ad / Campaign</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Age</th>
+              <SortableTh label="State" sortKey="branch" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortableTh label="Platform" sortKey="source" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortableTh label="Ad / Campaign" sortKey="campaign" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortableTh label="Age" sortKey="createdAt" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
