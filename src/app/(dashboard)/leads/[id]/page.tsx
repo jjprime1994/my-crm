@@ -25,7 +25,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           where: {
             disabled: false,
             ...(role === "SUPER_ADMIN"
-              ? { role: { in: ["ADMIN", "TEAM_LEADER", "SALESPERSON"] } }
+              ? { role: { in: ["SUPER_ADMIN", "ADMIN", "TEAM_LEADER", "SALESPERSON"] } }
               : role === "ADMIN"
                 ? {
                     OR: [

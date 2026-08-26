@@ -22,6 +22,15 @@ export function compareVersions(a: string, b: string): number {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.38.0",
+    date: "2026-08-26",
+    title: "Fixed: Can't Unassign a Lead Held by a Super Admin",
+    audience: "Super Admin only",
+    items: [
+      "Fixed: a lead assigned to a Super Admin showed \"Unassigned\" in the Assigned To dropdown on the lead page (Super Admins were missing from the dropdown's option list), so picking Unassigned again looked like nothing to save and the Save button never appeared — it now correctly shows who the lead is really assigned to, and Save works as expected",
+    ],
+  },
+  {
     version: "1.37.0",
     date: "2026-08-26",
     title: "Who Each Update Affects",

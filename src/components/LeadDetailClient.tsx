@@ -64,6 +64,7 @@ type Lead = {
 }
 
 function roleLabel(role: string) {
+  if (role === "SUPER_ADMIN") return "Super Admin"
   if (role === "ADMIN") return "Manager"
   if (role === "TEAM_LEADER") return "Team Leader"
   return null
