@@ -52,6 +52,9 @@ export default function PatchNotesPage() {
                     <p className="text-xs text-gray-400 mt-0.5">
                       v{note.version} · {new Date(note.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                     </p>
+                    <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 mt-1.5">
+                      {note.audience}
+                    </span>
                   </div>
                 </div>
                 <ul className="space-y-2">

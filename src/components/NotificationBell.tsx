@@ -131,13 +131,14 @@ export default function NotificationBell() {
                 <div className="space-y-3">
                   {PATCH_NOTES.map((note) => (
                     <div key={note.version}>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-xs font-semibold text-gray-800">{note.title}</span>
                         {newAtOpen.has(note.version) && (
                           <span className="text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">New</span>
                         )}
                         <span className="text-[10px] text-gray-300 ml-auto shrink-0">{note.date}</span>
                       </div>
+                      <p className="text-[10px] text-gray-400 mb-1">{note.audience}</p>
                       <ul className="space-y-0.5 pl-1">
                         {note.items.map((item, i) => (
                           <li key={i} className="text-xs text-gray-500 flex gap-2">
