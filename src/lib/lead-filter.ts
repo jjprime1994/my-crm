@@ -29,6 +29,21 @@ export function buildIndividualGrants(
   return grants
 }
 
+// Builds filterLeads' routeIndex from raw AdRoute rows, dropping ids for accounts with
+// no real downline (no salesperson/team-leader ever reports to them, directly or via a
+// team leader). Such an account isn't a real claim pool — an AdRoute pointed at one
+// (instead of, or alongside, a real team) must not count as "covered" and block the
+// default-team fallback (see CLAUDE.md → Lead Routing Rules #3). role is irrelevant:
+// a SUPER_ADMIN with real reports (e.g. the default-team owner) is just as valid a
+// route target as an ADMIN — only presence of a downline matters.
+export function toRouteIndex(
+  routes: { adName: string; teamIds: string[] }[],
+  managers: { id: string; hasDownline: boolean }[],
+): Record<string, string[]> {
+  const validIds = new Set(managers.filter((m) => m.hasDownline).map((m) => m.id))
+  return Object.fromEntries(routes.map((r) => [r.adName, r.teamIds.filter((id) => validIds.has(id))]))
+}
+
 export function filterLeads<T extends Lead>(
   allLeads: T[],
   effectiveAdmin: AdminInfo,

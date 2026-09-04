@@ -1,5 +1,16 @@
 import { db } from "@/lib/db"
-import { filterLeads, buildAdNameFilter, buildIndividualGrants, type AdminInfo } from "@/lib/lead-filter"
+import { filterLeads, buildAdNameFilter, buildIndividualGrants, toRouteIndex, type AdminInfo } from "@/lib/lead-filter"
+
+// Which manager ids (ADMIN or SUPER_ADMIN) have at least one direct report — a real
+// downline, not just a broad coveredStates config. Used to keep AdRoute.teamIds entries
+// for no-downline accounts (e.g. an oversight SUPER_ADMIN) from being treated as a real
+// claim pool. See toRouteIndex in lead-filter.ts.
+function getDownlineManagerIds() {
+  return db.user
+    .findMany({ where: { managerId: { not: null } }, select: { managerId: true }, distinct: ["managerId"] })
+    .then((rows) => new Set(rows.map((r) => r.managerId).filter((id): id is string => id !== null)))
+    .catch(() => new Set<string>())
+}
 
 export async function getEffectiveAdmin(userId: string, role: string): Promise<AdminInfo> {
   if (role === "ADMIN" || role === "SUPER_ADMIN") {
@@ -62,13 +73,14 @@ export async function getAvailableLeads(userId: string, role: string) {
   }
 
   // Step 1: fetch routing config first — lightweight, needed to build the lead query
-  const [allRoutes, allManagers, effectiveAdmin] = await Promise.all([
+  const [allRoutes, allManagers, effectiveAdmin, downlineManagerIds] = await Promise.all([
     db.adRoute.findMany({ where: { archived: false } }).catch(() => []),
     db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
     getEffectiveAdmin(userId, role).catch(() => null),
+    getDownlineManagerIds(),
   ])
 
-  const routeIndex = Object.fromEntries(allRoutes.map((r) => [r.adName, r.teamIds]))
+  const routeIndex = toRouteIndex(allRoutes, allManagers.map((m) => ({ id: m.id, hasDownline: downlineManagerIds.has(m.id) })))
   const routedAdNames = new Set(allRoutes.map((r) => r.adName))
   const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
   const hasDefaultTeam = allManagers.some((m) => m.isDefaultTeam)
@@ -113,12 +125,13 @@ export async function isLeadClaimableBy(
     return allowedStates.length === 0 || (lead.branch !== null && allowedStates.includes(lead.branch))
   }
 
-  const [allRoutes, allManagers, effectiveAdmin] = await Promise.all([
+  const [allRoutes, allManagers, effectiveAdmin, downlineManagerIds] = await Promise.all([
     db.adRoute.findMany({ where: { archived: false }, select: { adName: true, teamIds: true, userIds: true, userStates: true } }).catch(() => []),
     db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
     getEffectiveAdmin(userId, role).catch(() => null),
+    getDownlineManagerIds(),
   ])
-  const routeIndex = Object.fromEntries(allRoutes.map((r) => [r.adName, r.teamIds]))
+  const routeIndex = toRouteIndex(allRoutes, allManagers.map((m) => ({ id: m.id, hasDownline: downlineManagerIds.has(m.id) })))
   const routedAdNames = new Set(allRoutes.map((r) => r.adName))
   const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
   const hasDefaultTeam = allManagers.some((m) => m.isDefaultTeam)
@@ -160,12 +173,13 @@ export async function getAvailableLeadsCount(userId: string, role: string): Prom
       }).catch(() => 0)
     }
 
-    const [allRoutes, allManagers, effectiveAdmin] = await Promise.all([
+    const [allRoutes, allManagers, effectiveAdmin, downlineManagerIds] = await Promise.all([
       db.adRoute.findMany({ where: { archived: false }, select: { adName: true, teamIds: true, userIds: true, userStates: true } }).catch(() => []),
       db.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true, coveredStates: true, isDefaultTeam: true } }).catch(() => []),
       getEffectiveAdmin(userId, role).catch(() => null),
+      getDownlineManagerIds(),
     ])
-    const routeIndex = Object.fromEntries(allRoutes.map((r) => [r.adName, r.teamIds]))
+    const routeIndex = toRouteIndex(allRoutes, allManagers.map((m) => ({ id: m.id, hasDownline: downlineManagerIds.has(m.id) })))
     const routedAdNames = new Set(allRoutes.map((r) => r.adName))
     const managerStates = Object.fromEntries(allManagers.map((m) => [m.id, m.coveredStates]))
     const hasDefaultTeam = allManagers.some((m) => m.isDefaultTeam)

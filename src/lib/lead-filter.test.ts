@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { filterLeads, buildAdNameFilter, buildIndividualGrants, type AdminInfo } from "./lead-filter"
+import { filterLeads, buildAdNameFilter, buildIndividualGrants, toRouteIndex, type AdminInfo } from "./lead-filter"
 
 // Teams used across scenarios (mirrors production shape):
 //   defaultTeam — covers KL + Selangor, is the default/catch-all team
@@ -289,5 +289,60 @@ describe("buildIndividualGrants", () => {
   it("defaults to unrestricted when userStates has no entry for the user", () => {
     const routes = [{ adName: "Chinese Ad", userStates: { jack: ["Johor"] } }]
     expect(buildIndividualGrants(routes, "ken").get("Chinese Ad")).toEqual([])
+  })
+})
+
+describe("toRouteIndex", () => {
+  it("drops ids with no real downline, regardless of role", () => {
+    const routes = [{ adName: "MMAP JB MLK Form Eng", teamIds: ["jack", "ghost-super-admin", "johnny"] }]
+    const managers = [
+      { id: "jack", hasDownline: true }, // ADMIN with reports
+      { id: "ghost-super-admin", hasDownline: false }, // SUPER_ADMIN, no reports
+      { id: "johnny", hasDownline: true }, // SUPER_ADMIN, but has real reports (default team owner)
+    ]
+    expect(toRouteIndex(routes, managers)).toEqual({ "MMAP JB MLK Form Eng": ["jack", "johnny"] })
+  })
+
+  it("a route pointed only at a no-downline account falls through to the default team", () => {
+    // Regression: an AdRoute assigned to [Jack See (Johor only), Sofea (SUPER_ADMIN, all
+    // states, no salespeople)] made a Selangor lead unclaimable by anyone — Sofea's broad
+    // coveredStates made the branch look "covered" and blocked the default-team fallback.
+    const routes = [{ adName: "MMAP JB MLK Form Eng", teamIds: ["jack", "ghost-super-admin"] }]
+    const managers = [
+      { id: "jack", hasDownline: true },
+      { id: "ghost-super-admin", hasDownline: false },
+    ]
+    const routeIndex = toRouteIndex(routes, managers)
+    const routedAdNames = new Set(["MMAP JB MLK Form Eng"])
+    const states = { jack: ["Johor"], "ghost-super-admin": ["Selangor", "Kuala Lumpur", "Johor", "Penang"] }
+    const lead = { adName: "MMAP JB MLK Form Eng", branch: "Selangor" }
+
+    expect(
+      filterLeads([lead], defaultTeam, routeIndex, routedAdNames, states, true).length
+    ).toBe(1)
+    expect(
+      filterLeads([lead], penangTeam, routeIndex, routedAdNames, states, true).length
+    ).toBe(0)
+  })
+
+  it("a SUPER_ADMIN with real downline explicitly added to a route is treated as a genuine team, not just default-team overflow", () => {
+    // Johnny is both the default team AND, once explicitly added here, a directly
+    // assigned team — he should see the lead like any other assigned team, not only
+    // when no one else covers it.
+    const routes = [{ adName: "MMAP JB MLK Form Eng", teamIds: ["jack", "damond", "johnny"] }]
+    const managers = [
+      { id: "jack", hasDownline: true },
+      { id: "damond", hasDownline: true },
+      { id: "johnny", hasDownline: true },
+    ]
+    const routeIndex = toRouteIndex(routes, managers)
+    const routedAdNames = new Set(["MMAP JB MLK Form Eng"])
+    const states = { jack: ["Johor"], damond: ["Selangor", "Kuala Lumpur"], johnny: ["Selangor", "Kuala Lumpur"] }
+    const lead = { adName: "MMAP JB MLK Form Eng", branch: "Selangor" }
+    const damondTeam: AdminInfo = { id: "damond", coveredStates: ["Selangor", "Kuala Lumpur"], isDefaultTeam: false }
+    const johnnyTeam: AdminInfo = { id: "johnny", coveredStates: ["Selangor", "Kuala Lumpur"], isDefaultTeam: true }
+
+    expect(filterLeads([lead], damondTeam, routeIndex, routedAdNames, states, true).length).toBe(1)
+    expect(filterLeads([lead], johnnyTeam, routeIndex, routedAdNames, states, true).length).toBe(1)
   })
 })
