@@ -75,14 +75,25 @@ export default async function ManagerOverviewPage({
   const days = Number(period ?? 30)
   const since = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
   const dateFilter = since ? { createdAt: { gte: since } } : {}
-  // Pull leads created in the period OR claimed in the period, so a lead created before the
-  // window but claimed today still counts toward this period's claim-activity stats
-  // (claimed/avgResponseMs/notContacted) — see inRange() below for how the two get split back apart.
-  const leadsWhere = since ? { OR: [dateFilter, { claimedAt: { gte: since } }] } : {}
+  // Pull leads created in the period, claimed in the period, or won in the period, so a lead
+  // created (or claimed) before the window still counts toward this period's activity stats —
+  // claimed/avgResponseMs/notContacted (claimedAt) and Won (an actual CLOSED_WON transition in
+  // LeadStatusHistory) — see inRange()/wonAt() below for how these get split back apart.
+  const leadsWhere = since
+    ? { OR: [dateFilter, { claimedAt: { gte: since } }, { statusHistory: { some: { to: "CLOSED_WON" as const, createdAt: { gte: since } } } }] }
+    : {}
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 
   function inRange(date: Date): boolean {
     return !since || date >= since
+  }
+
+  // Latest CLOSED_WON transition timestamp for a lead, or null if it was never won.
+  function wonAt(lead: { status: LeadStatus; statusHistory: { to: LeadStatus; createdAt: Date }[] }): Date | null {
+    if (lead.status !== "CLOSED_WON") return null
+    const wins = lead.statusHistory.filter((h) => h.to === "CLOSED_WON")
+    if (wins.length === 0) return null
+    return wins.reduce((latest, h) => (h.createdAt > latest ? h.createdAt : latest), wins[0].createdAt)
   }
 
   const isFullManager = isAdmin(role)
@@ -109,7 +120,7 @@ export default async function ManagerOverviewPage({
     : { assignedTo: { managerId: effectiveUserId } }
 
 
-  const [teamMembers, byStatus, overdueCount, leaderStats] = await Promise.all([
+  const [teamMembers, byStatus, wonInPeriodCount, overdueCount, leaderStats] = await Promise.all([
     db.user.findMany({
       where: salespersonWhere,
       select: {
@@ -119,7 +130,7 @@ export default async function ManagerOverviewPage({
         manager: { select: { id: true, name: true } },
         leads: {
           where: leadsWhere,
-          select: { status: true, createdAt: true, updatedAt: true, claimedAt: true, firstContactedAt: true, statusHistory: { select: { from: true, to: true } } },
+          select: { status: true, createdAt: true, updatedAt: true, claimedAt: true, firstContactedAt: true, statusHistory: { select: { from: true, to: true, createdAt: true } } },
         },
       },
       orderBy: { name: "asc" },
@@ -129,6 +140,13 @@ export default async function ManagerOverviewPage({
       _count: true,
       where: { AND: [dateFilter, leadsAssignedWhere] },
     }),
+    // Leads that actually transitioned to Won during the period, regardless of when they were
+    // created — a lead worked for weeks before closing must still show up as a win this period.
+    since
+      ? db.lead.count({
+          where: { AND: [leadsAssignedWhere, { statusHistory: { some: { to: "CLOSED_WON", createdAt: { gte: since } } } }] },
+        })
+      : Promise.resolve(null),
     db.lead.count({
       where: {
         AND: [
@@ -154,27 +172,36 @@ export default async function ManagerOverviewPage({
           },
           select: {
             id: true, name: true, role: true, managerId: true,
-            leads: { where: leadsWhere, select: { status: true, createdAt: true, claimedAt: true, updatedAt: true, firstContactedAt: true, statusHistory: { select: { from: true, to: true } } } },
+            leads: { where: leadsWhere, select: { status: true, createdAt: true, claimedAt: true, updatedAt: true, firstContactedAt: true, statusHistory: { select: { from: true, to: true, createdAt: true } } } },
           },
         })
-      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: LeadStatus; createdAt: Date; claimedAt: Date | null; updatedAt: Date; firstContactedAt: Date | null; statusHistory: { from: LeadStatus | null; to: LeadStatus }[] }[] }[]),
+      : Promise.resolve([] as { id: string; name: string; role: string; managerId: string | null; leads: { status: LeadStatus; createdAt: Date; claimedAt: Date | null; updatedAt: Date; firstContactedAt: Date | null; statusHistory: { from: LeadStatus | null; to: LeadStatus; createdAt: Date }[] }[] }[]),
   ])
 
   const statusMap = Object.fromEntries(byStatus.map((s) => [s.status, s._count]))
   const total = Object.values(statusMap).reduce((a, b) => a + b, 0)
-  const won = statusMap["CLOSED_WON"] ?? 0
+  // wonCohort ("created in period and now won") keeps the Active-Pipeline/Conversion math
+  // internally consistent with `total`/`lost` (also cohort-based). The Won stat card itself
+  // shows `won` — leads that actually transitioned to CLOSED_WON during the period — since
+  // that's the number a manager expects to move the moment someone closes a deal.
+  const wonCohort = statusMap["CLOSED_WON"] ?? 0
+  const won = since ? (wonInPeriodCount ?? 0) : wonCohort
   const lost = statusMap["CLOSED_LOST"] ?? 0
-  const active = total - won - lost
-  const conversionRate = total > 0 ? Math.round((won / total) * 100) : 0
+  const active = total - wonCohort - lost
+  const conversionRate = total > 0 ? Math.round((wonCohort / total) * 100) : 0
 
-  // `leads` may include leads created outside the period as long as they were claimed inside
-  // it (see leadsWhere above) — split back into the "created this period" cohort (used for
-  // totalLeads/won/stale/statusCounts) and the "claimed this period" cohort (used for
-  // claimed/avgResponseMs/notContacted), since those answer different questions.
-  function splitPeriod<T extends { createdAt: Date; claimedAt: Date | null }>(leads: T[]) {
+  // `leads` may include leads created (or claimed, or won) outside the period as long as the
+  // matching activity happened inside it (see leadsWhere above) — split back into per-question
+  // cohorts: "created this period" (totalLeads/stale/statusCounts), "claimed this period"
+  // (claimed/avgResponseMs/notContacted), and "won this period" (the Won column/stat).
+  function splitPeriod<T extends { createdAt: Date; claimedAt: Date | null; status: LeadStatus; statusHistory: { to: LeadStatus; createdAt: Date }[] }>(leads: T[]) {
     return {
       createdInPeriod: leads.filter((l) => inRange(l.createdAt)),
       claimedInPeriod: leads.filter((l): l is T & { claimedAt: Date } => l.claimedAt !== null && inRange(l.claimedAt)),
+      wonInPeriod: leads.filter((l) => {
+        const at = wonAt(l)
+        return at !== null && inRange(at)
+      }),
     }
   }
 
@@ -192,9 +219,9 @@ export default async function ManagerOverviewPage({
   }
 
   const members = teamMembers.map((m) => {
-    const { createdInPeriod, claimedInPeriod } = splitPeriod(m.leads)
+    const { createdInPeriod, claimedInPeriod, wonInPeriod } = splitPeriod(m.leads)
     const totalLeads = createdInPeriod.length
-    const wonCount = createdInPeriod.filter((l) => l.status === "CLOSED_WON").length
+    const wonCount = wonInPeriod.length
     const claimedCount = claimedInPeriod.length
     const assignedCount = totalLeads - createdInPeriod.filter((l) => l.claimedAt).length
     const staleCount = createdInPeriod.filter((l) =>
@@ -220,8 +247,8 @@ export default async function ManagerOverviewPage({
 
   // Map of management users' own lead stats
   const leaderRowMap = new Map(leaderStats.map((u) => {
-    const { createdInPeriod, claimedInPeriod } = splitPeriod(u.leads)
-    const wonCount = createdInPeriod.filter((l) => l.status === "CLOSED_WON").length
+    const { createdInPeriod, claimedInPeriod, wonInPeriod } = splitPeriod(u.leads)
+    const wonCount = wonInPeriod.length
     const totalLeads = createdInPeriod.length
     const claimedCount = claimedInPeriod.length
     const staleCount = createdInPeriod.filter((l) =>
