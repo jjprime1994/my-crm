@@ -45,3 +45,6 @@ next-env.d.ts
 
 # claude code per-machine overrides
 .claude/settings.local.json
+
+# claude code skill content (regenerate via `npx skills experimental_install`)
+/.agents/skills
