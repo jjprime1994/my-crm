@@ -71,7 +71,7 @@ function DupBadge({ sibling }: { sibling?: DupSibling | null }) {
     <span className="inline-flex flex-col gap-0.5">
       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 ring-1 ring-amber-200">DUP</span>
       {sibling && (
-        <span className="text-[10px] text-gray-400 leading-tight max-w-[160px]">
+        <span className="text-[10px] text-gray-500 leading-tight max-w-[160px]">
           {assignee
             ? <><span className="text-rose-500 font-medium">{assignee}</span> · {campaign} · {status}</>
             : <>Unassigned · {campaign} · {status}</>
@@ -296,7 +296,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
       {/* Mobile cards */}
       <div className="sm:hidden space-y-2">
         {leads.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-sm text-gray-400">All leads are assigned.</div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-sm text-gray-500">All leads are assigned.</div>
         ) : (
           <>
             <button onClick={toggleAll} className="w-full text-xs font-medium text-blue-600 py-2 text-left px-1">
@@ -327,9 +327,9 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                     </div>
                     {ageBadge(lead.createdAt)}
                   </div>
-                  <p className="text-xs text-gray-400 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
+                  <p className="text-xs text-gray-500 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
                   {lead.isDuplicate && lead.dupSibling && (
-                    <p className="text-[10px] text-gray-400 leading-tight mt-0.5">
+                    <p className="text-[10px] text-gray-500 leading-tight mt-0.5">
                       {lead.dupSibling.assignedTo
                         ? <><span className="text-rose-500 font-medium">{lead.dupSibling.assignedTo.name}</span> · {lead.dupSibling.campaignName ?? lead.dupSibling.adName ?? "another campaign"} · {STATUS_LABELS[lead.dupSibling.status] ?? lead.dupSibling.status}</>
                         : <>Unassigned · {lead.dupSibling.campaignName ?? lead.dupSibling.adName ?? "another campaign"} · {STATUS_LABELS[lead.dupSibling.status] ?? lead.dupSibling.status}</>
@@ -339,7 +339,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                   <div className="flex items-center gap-2 mt-1">
                     {lead.branch && <span className="text-xs text-gray-500">{lead.branch}</span>}
                     {(lead.campaignName ?? lead.adName) && (
-                      <span className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</span>
+                      <span className="text-xs text-gray-500 truncate">{lead.campaignName ?? lead.adName}</span>
                     )}
                   </div>
                 </div>
@@ -363,7 +363,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                 />
               </th>
               <SortableTh label="Name" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</th>
               <SortableTh label="State" sortKey="branch" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
               <SortableTh label="Platform" sortKey="source" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
               <SortableTh label="Ad / Campaign" sortKey="campaign" currentKey={sortKey} direction={sortDir} onSort={handleSort} />
@@ -374,7 +374,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
             {leads.length === 0 && (
               <tr>
                 <td colSpan={7} className="text-center py-16">
-                  <div className="flex flex-col items-center gap-2 text-sm text-gray-400">
+                  <div className="flex flex-col items-center gap-2 text-sm text-gray-500">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300"><polyline points="20 6 9 17 4 12"/></svg>
                     All leads are assigned.
                   </div>
@@ -399,7 +399,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
                 </td>
                 <td className="px-5 py-3.5 text-sm">
                   <div className="text-gray-700">{lead.email ?? "—"}</div>
-                  {lead.phone && <div className="text-xs text-gray-400 mt-0.5">{lead.phone}</div>}
+                  {lead.phone && <div className="text-xs text-gray-500 mt-0.5">{lead.phone}</div>}
                 </td>
                 <td className="px-5 py-3.5 text-sm text-gray-600">
                   {lead.branch ?? <span className="text-gray-300">—</span>}
@@ -422,7 +422,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between px-1">
-          <span className="text-xs text-gray-400 text-center sm:text-left">
+          <span className="text-xs text-gray-500 text-center sm:text-left">
             Page {page} of {totalPages} · {leads.length} leads{selected.size > 0 ? ` · ${selected.size} selected` : ""}
           </span>
           <div className="flex items-center gap-1">
@@ -442,7 +442,7 @@ export default function BulkAssignClient({ leads: initial, salespeople }: Props)
               }, [])
               .map((p, i) =>
                 p === "..." ? (
-                  <span key={`e${i}`} className="px-2 text-gray-400 text-sm select-none">…</span>
+                  <span key={`e${i}`} className="px-2 text-gray-500 text-sm select-none">…</span>
                 ) : (
                   <button
                     key={p}

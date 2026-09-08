@@ -88,7 +88,7 @@ export default function NotificationBell() {
             {/* Follow-up reminders */}
             {followUps.length > 0 && (
               <div className="px-4 pt-3 pb-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Follow-ups due</p>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Follow-ups due</p>
                 <div className="space-y-1">
                   {followUps.map((lead) => {
                     const due = new Date(lead.followUpAt)
@@ -127,7 +127,7 @@ export default function NotificationBell() {
             {/* Patch notes */}
             {PATCH_NOTES.length > 0 && (
               <div className="px-4 pt-3 pb-3">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">What's new</p>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">What's new</p>
                 <div className="space-y-3">
                   {PATCH_NOTES.map((note) => (
                     <div key={note.version}>
@@ -138,7 +138,7 @@ export default function NotificationBell() {
                         )}
                         <span className="text-[10px] text-gray-300 ml-auto shrink-0">{note.date}</span>
                       </div>
-                      <p className="text-[10px] text-gray-400 mb-1">{note.audience}</p>
+                      <p className="text-[10px] text-gray-500 mb-1">{note.audience}</p>
                       <ul className="space-y-0.5 pl-1">
                         {note.items.map((item, i) => (
                           <li key={i} className="text-xs text-gray-500 flex gap-2">
@@ -154,7 +154,7 @@ export default function NotificationBell() {
             )}
 
             {followUps.length === 0 && PATCH_NOTES.length === 0 && (
-              <div className="px-4 py-10 text-center text-sm text-gray-400">All caught up!</div>
+              <div className="px-4 py-10 text-center text-sm text-gray-500">All caught up!</div>
             )}
           </div>
         </div>

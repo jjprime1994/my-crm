@@ -20,7 +20,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Profile</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Profile</p>
         <EditNameClient
           initialName={session?.user.name ?? ""}
           email={session?.user.email ?? ""}
@@ -29,7 +29,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Notifications</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Notifications</p>
         <p className="text-sm text-gray-500">Get alerted when a lead is assigned to you.</p>
         <EnableNotifications />
       </div>

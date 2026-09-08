@@ -82,7 +82,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
   }
 
   const empty = (
-    <div className="flex flex-col items-center gap-2 text-sm text-gray-400 py-12">
+    <div className="flex flex-col items-center gap-2 text-sm text-gray-500 py-12">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -118,7 +118,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                       {lead.isDuplicate && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">DUP</span>}
                       {lead.isDuplicate && <SourceBadge source={lead.source} />}
                     </div>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">{lead.email ?? lead.phone ?? "—"}</p>
                     {lead.isDuplicate && lead.dupSibling && (
                       <p className="text-[10px] text-amber-600 mt-0.5 truncate">
                         Orig: {lead.dupSibling.campaignName ?? "Unknown"} · {new Date(lead.dupSibling.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
@@ -140,7 +140,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                     </span>
                   )}
                   {(lead.campaignName ?? lead.adName) && (
-                    <span className="text-xs text-gray-400 truncate max-w-[120px]">{lead.campaignName ?? lead.adName}</span>
+                    <span className="text-xs text-gray-500 truncate max-w-[120px]">{lead.campaignName ?? lead.adName}</span>
                   )}
                   {lead.branch && (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200 shrink-0">{lead.branch}</span>
@@ -158,7 +158,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                         {WA_ICON}
                       </a>
                     )}
-                    <span className="text-xs text-gray-400">{new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}</span>
+                    <span className="text-xs text-gray-500">{new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}</span>
                   </div>
                 </div>
               </div>
@@ -172,17 +172,17 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               {showAssignedTo && (
-                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned To</th>
               )}
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Campaign</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Notes</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Added</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Campaign</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">State</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Notes</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Claimed</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Added</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -221,7 +221,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                   <div className="text-gray-700">{lead.email ?? "—"}</div>
                   {lead.phone && (
                     <div className="flex items-center gap-1.5 mt-1">
-                      <span className="text-gray-400 text-xs">{lead.phone}</span>
+                      <span className="text-gray-500 text-xs">{lead.phone}</span>
                       <a
                         href={`https://wa.me/${lead.phone.replace(/\D/g, "").replace(/^0/, "60")}`}
                         target="_blank"
@@ -266,7 +266,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                         </span>
                       )
                       if (lead.claimedAt && !lead.firstContactedAt) return (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded w-fit bg-gray-100 text-gray-400">
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded w-fit bg-gray-100 text-gray-500">
                           Not contacted
                         </span>
                       )
@@ -307,7 +307,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                     <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
-                <td className="px-5 py-3.5 text-xs text-gray-400">
+                <td className="px-5 py-3.5 text-xs text-gray-500">
                   {lead.claimedAt ? (
                     <div>
                       <div>{new Date(lead.claimedAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kuala_Lumpur" })}</div>
@@ -320,7 +320,7 @@ export default function LeadsTable({ leads, showAssignedTo }: { leads: LeadRow[]
                     </div>
                   )}
                 </td>
-                <td className="px-5 py-3.5 text-xs text-gray-400">
+                <td className="px-5 py-3.5 text-xs text-gray-500">
                   {new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
                 </td>
               </tr>

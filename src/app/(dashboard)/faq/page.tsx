@@ -222,7 +222,7 @@ export default async function FAQPage() {
       <Link href="/patch-notes" className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 hover:bg-gray-50 transition group">
         <div>
           <p className="text-sm font-semibold text-gray-900">What&apos;s New</p>
-          <p className="text-xs text-gray-400 mt-0.5">See the latest updates and improvements</p>
+          <p className="text-xs text-gray-500 mt-0.5">See the latest updates and improvements</p>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 group-hover:text-gray-500 transition">
           <polyline points="9 18 15 12 9 6" />
@@ -232,7 +232,7 @@ export default async function FAQPage() {
       {visible.map((section) => (
         <div key={section.category} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-5 pt-4 pb-2">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{section.category}</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{section.category}</p>
           </div>
           {section.items.map((item) => (
             <FAQItem key={item.q} q={item.q} a={item.a} />

@@ -75,7 +75,7 @@ export default function DisclaimerPage() {
         </section>
       </div>
 
-      <div className="mt-12 pt-6 border-t border-gray-100 text-xs text-gray-400 text-center">
+      <div className="mt-12 pt-6 border-t border-gray-100 text-xs text-gray-500 text-center">
         © {year} Tan Jia Jin. All rights reserved. This software is proprietary and confidential.
       </div>
     </div>

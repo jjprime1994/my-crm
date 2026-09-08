@@ -35,7 +35,7 @@ export default function RoutingAuditTool() {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
       <div>
         <h3 className="text-sm font-semibold text-gray-900">Routing Audit</h3>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-xs text-gray-500 mt-0.5">
           Runs the nightly health check now: available-pool routing per user, recently assigned leads held by the right teams, and daily claim limits. Read-only — nothing is changed.
         </p>
       </div>
@@ -80,7 +80,7 @@ export default function RoutingAuditTool() {
       )}
 
       {result !== null && (
-        <button onClick={() => { setResult(null); setError(null) }} className="text-xs text-gray-400 hover:text-gray-600 transition">
+        <button onClick={() => { setResult(null); setError(null) }} className="text-xs text-gray-500 hover:text-gray-600 transition">
           Run again
         </button>
       )}

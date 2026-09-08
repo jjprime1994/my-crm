@@ -88,7 +88,7 @@ export default function FeedbackClient({ initialSuggestions, isAdmin, currentUse
 
       {/* Submission form */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Submit Feedback</h2>
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Submit Feedback</h2>
 
         {/* Type toggle */}
         <div className="flex gap-2">
@@ -155,13 +155,13 @@ export default function FeedbackClient({ initialSuggestions, isAdmin, currentUse
       {isAdmin && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
               All Submissions
               <span className="ml-2 text-gray-300 font-medium normal-case tracking-normal">{allSuggestions.length}</span>
             </h2>
           </div>
           {allSuggestions.length === 0 ? (
-            <div className="text-center py-12 text-sm text-gray-400">No submissions yet.</div>
+            <div className="text-center py-12 text-sm text-gray-500">No submissions yet.</div>
           ) : (
             <ul className="divide-y divide-gray-50">
               {allSuggestions.map(s => (
@@ -175,7 +175,7 @@ export default function FeedbackClient({ initialSuggestions, isAdmin, currentUse
                         <span className="text-xs font-medium text-gray-700">{s.title}</span>
                       </div>
                       <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{s.description}</p>
-                      <p className="text-xs text-gray-400 mt-1.5">
+                      <p className="text-xs text-gray-500 mt-1.5">
                         {s.user.name} · {new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </p>
                     </div>
@@ -201,10 +201,10 @@ export default function FeedbackClient({ initialSuggestions, isAdmin, currentUse
       {!isAdmin && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Your Submissions</h2>
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Your Submissions</h2>
           </div>
           {mySuggestions.length === 0 ? (
-            <div className="text-center py-10 text-sm text-gray-400">You haven't submitted anything yet.</div>
+            <div className="text-center py-10 text-sm text-gray-500">You haven't submitted anything yet.</div>
           ) : (
             <ul className="divide-y divide-gray-50">
               {mySuggestions.map(s => (
@@ -218,7 +218,7 @@ export default function FeedbackClient({ initialSuggestions, isAdmin, currentUse
                         <span className="text-xs font-medium text-gray-700">{s.title}</span>
                       </div>
                       <p className="text-sm text-gray-500 leading-relaxed">{s.description}</p>
-                      <p className="text-xs text-gray-400 mt-1.5">
+                      <p className="text-xs text-gray-500 mt-1.5">
                         {new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </p>
                     </div>

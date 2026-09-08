@@ -183,10 +183,10 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 flex-wrap gap-3">
         <div>
           <h2 className="font-semibold text-gray-900">{title}</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5">
             {memberCount} salesperson{memberCount !== 1 ? "s" : ""} across {filteredGroups.length} team{filteredGroups.length !== 1 ? "s" : ""}
           </p>
-          {description && <p className="text-xs text-gray-400 mt-1 max-w-lg">{description}</p>}
+          {description && <p className="text-xs text-gray-500 mt-1 max-w-lg">{description}</p>}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <input
@@ -222,9 +222,9 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
         <FunnelChart stages={funnelStages.stages} won={funnelStages.won} lost={funnelStages.lost} total={funnelStages.total} />
       )}
       {filteredGroups.length === 0 ? (
-        <div className="text-center py-12 text-sm text-gray-400">No teams match this filter.</div>
+        <div className="text-center py-12 text-sm text-gray-500">No teams match this filter.</div>
       ) : !filteredGroups.some((g) => rowsOf(g).some(matchesFilters)) ? (
-        <div className="text-center py-12 text-sm text-gray-400">No members match your search.</div>
+        <div className="text-center py-12 text-sm text-gray-500">No members match your search.</div>
       ) : (
         <div className="divide-y divide-gray-100">
           {filteredGroups.map(({ managerId, managerName, managerRow, directMembers, subTeams }) => {
@@ -274,7 +274,7 @@ export default function TeamBreakdownClient({ groups, rangeQueryParams, title = 
                     <div key={groupId}>
                       {label && (
                         <div className="px-6 py-2 bg-gray-50/60">
-                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label} · {count} member{count !== 1 ? "s" : ""}</p>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label} · {count} member{count !== 1 ? "s" : ""}</p>
                         </div>
                       )}
 

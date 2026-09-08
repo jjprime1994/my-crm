@@ -73,7 +73,7 @@ export default function TeamAdAccessClient({ ads: initial, teamMembers, myCovere
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="px-5 pt-4 pb-3 border-b border-gray-50">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Individual Ad Access</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Individual Ad Access</p>
         <p className="text-sm text-gray-500 mt-0.5">
           Grant specific team members a campaign&apos;s leads outside the normal routing — e.g. a Chinese-speaking
           member handling that language&apos;s leads. Access is scoped to {myCoveredStates.length > 0 ? "your team's states" : "any state"}.
@@ -81,7 +81,7 @@ export default function TeamAdAccessClient({ ads: initial, teamMembers, myCovere
       </div>
 
       {ads.length === 0 ? (
-        <div className="px-5 py-8 text-center text-sm text-gray-400">No ads configured yet.</div>
+        <div className="px-5 py-8 text-center text-sm text-gray-500">No ads configured yet.</div>
       ) : (
         <div className="divide-y divide-gray-50">
           {ads.map((ad) => {
@@ -152,7 +152,7 @@ export default function TeamAdAccessClient({ ads: initial, teamMembers, myCovere
                   const allowedStates = ad.userStates[m.id] ?? []
                   return (
                     <div key={m.id} className="space-y-1.5 pt-1">
-                      <p className="text-[10px] text-gray-400">{m.name}&apos;s scoped state(s):</p>
+                      <p className="text-[10px] text-gray-500">{m.name}&apos;s scoped state(s):</p>
                       <div className="flex flex-wrap gap-1.5">
                         {scopableStates.map((state) => {
                           const active = allowedStates.includes(state)

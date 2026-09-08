@@ -202,7 +202,7 @@ export default async function LeadsPage({
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
               My Leads
-              <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{myTotal} leads</span>
+              <span className="ml-2 text-xs font-medium text-gray-500 normal-case tracking-normal">{myTotal} leads</span>
             </h2>
             <LeadsTable leads={myLeads} showAssignedTo={false} />
             <Pagination page={myPage} totalPages={Math.ceil(myTotal / PAGE_SIZE)} pageParam="myPage" basePath="/leads" />
@@ -211,7 +211,7 @@ export default async function LeadsPage({
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
               Team Leads
-              <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{teamTotal} leads</span>
+              <span className="ml-2 text-xs font-medium text-gray-500 normal-case tracking-normal">{teamTotal} leads</span>
             </h2>
             <LeadsTable leads={teamLeads} showAssignedTo={true} />
             <Pagination page={teamPage} totalPages={Math.ceil(teamTotal / PAGE_SIZE)} pageParam="teamPage" basePath="/leads" />
@@ -221,7 +221,7 @@ export default async function LeadsPage({
             <div>
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                 All Other Leads
-                <span className="ml-2 text-xs font-medium text-gray-400 normal-case tracking-normal">{otherTotal} leads</span>
+                <span className="ml-2 text-xs font-medium text-gray-500 normal-case tracking-normal">{otherTotal} leads</span>
               </h2>
               <LeadsTable leads={otherLeads} showAssignedTo={true} />
               <Pagination page={otherPage} totalPages={Math.ceil(otherTotal / PAGE_SIZE)} pageParam="otherPage" basePath="/leads" />

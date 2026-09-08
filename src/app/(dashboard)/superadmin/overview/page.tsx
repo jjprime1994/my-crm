@@ -429,7 +429,7 @@ export default async function SuperAdminOverviewPage({
               defaultValue={dateFrom ?? ""}
               className="text-xs bg-transparent focus:outline-none text-gray-700 w-[112px]"
             />
-            <span className="text-xs text-gray-400">–</span>
+            <span className="text-xs text-gray-500">–</span>
             <input
               type="date"
               name="dateTo"
@@ -444,7 +444,7 @@ export default async function SuperAdminOverviewPage({
             </button>
           </form>
           {isCustomRange && (
-            <Link href={buildUrl()} className="text-xs text-gray-400 hover:text-gray-600 underline">
+            <Link href={buildUrl()} className="text-xs text-gray-500 hover:text-gray-600 underline">
               Clear
             </Link>
           )}
@@ -540,7 +540,7 @@ export default async function SuperAdminOverviewPage({
                       <span className="text-gray-600">{STATUS_LABELS[status]}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-gray-400 text-xs">{pct}%</span>
+                      <span className="text-gray-500 text-xs">{pct}%</span>
                       <span className="font-semibold text-gray-900 w-6 text-right">{count}</span>
                     </div>
                   </div>
@@ -557,10 +557,10 @@ export default async function SuperAdminOverviewPage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-gray-900">Lead Sources</h2>
-            <span className="text-xs text-gray-400">{sourcedCount} of {total} tracked</span>
+            <span className="text-xs text-gray-500">{sourcedCount} of {total} tracked</span>
           </div>
           {sourceRows.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No source data yet.</p>
+            <p className="text-sm text-gray-500 text-center py-8">No source data yet.</p>
           ) : (
             <div className="space-y-3">
               {sourceRows.map((s, i) => {
@@ -570,7 +570,7 @@ export default async function SuperAdminOverviewPage({
                     <div className="flex items-center justify-between text-sm mb-1.5">
                       <span className="text-gray-600 truncate max-w-[200px]">{s.name}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-gray-400 text-xs">{pct}%</span>
+                        <span className="text-gray-500 text-xs">{pct}%</span>
                         <span className="font-semibold text-gray-900 w-6 text-right">{s.count}</span>
                       </div>
                     </div>
@@ -598,7 +598,7 @@ export default async function SuperAdminOverviewPage({
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h2 className="font-semibold text-gray-900 mb-5">Top Performers — Won</h2>
             {allIndividuals.length === 0 || maxWon === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-6">No won leads in this period.</p>
+              <p className="text-sm text-gray-500 text-center py-6">No won leads in this period.</p>
             ) : (
               <div className="space-y-3">
                 {allIndividuals.map((m, i) => {
@@ -606,7 +606,7 @@ export default async function SuperAdminOverviewPage({
                   const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null
                   return (
                     <div key={m.id} className="flex items-center gap-3">
-                      <span className="w-5 text-center text-sm shrink-0">{medal ?? <span className="text-xs text-gray-400">{i + 1}</span>}</span>
+                      <span className="w-5 text-center text-sm shrink-0">{medal ?? <span className="text-xs text-gray-500">{i + 1}</span>}</span>
                       <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
                         <span className="text-[11px] font-bold text-violet-600">{initials(m.name)}</span>
                       </div>
@@ -615,7 +615,7 @@ export default async function SuperAdminOverviewPage({
                           <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
                           <div className="flex items-center gap-2 shrink-0 ml-2">
                             <span className="text-sm font-bold text-emerald-600">{m.won} won</span>
-                            <span className="text-xs text-gray-400">({m.rate}%)</span>
+                            <span className="text-xs text-gray-500">({m.rate}%)</span>
                           </div>
                         </div>
                         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -640,16 +640,16 @@ export default async function SuperAdminOverviewPage({
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-50 bg-gray-50/40">
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Added</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned To</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Added</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {recentLeads.length === 0 && (
-              <tr><td colSpan={5} className="text-center py-10 text-sm text-gray-400">No leads in this period.</td></tr>
+              <tr><td colSpan={5} className="text-center py-10 text-sm text-gray-500">No leads in this period.</td></tr>
             )}
             {recentLeads.map((lead) => (
               <tr key={lead.id} className="hover:bg-gray-50/70 transition">
@@ -666,7 +666,7 @@ export default async function SuperAdminOverviewPage({
                 <td className="px-6 py-3.5 text-sm text-gray-600">{lead.email ?? lead.phone ?? "—"}</td>
                 <td className="px-6 py-3.5 text-sm text-gray-500 max-w-[150px] truncate">{lead.campaignName ?? lead.adName ?? "—"}</td>
                 <td className="px-6 py-3.5 text-sm text-gray-600">{lead.assignedTo?.name ?? <span className="text-gray-300 text-xs">Unassigned</span>}</td>
-                <td className="px-6 py-3.5 text-xs text-gray-400">
+                <td className="px-6 py-3.5 text-xs text-gray-500">
                   {new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
                 </td>
               </tr>
@@ -683,7 +683,7 @@ export default async function SuperAdminOverviewPage({
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
             <div>
               <h2 className="font-semibold text-gray-900">Campaign Performance</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {campaigns.length > 0 && (
@@ -700,21 +700,21 @@ export default async function SuperAdminOverviewPage({
             </div>
           </div>
           {campaigns.length === 0 ? (
-            <div className="text-center py-12 text-sm text-gray-400">No campaign data in this period.</div>
+            <div className="text-center py-12 text-sm text-gray-500">No campaign data in this period.</div>
           ) : (
             <table className="min-w-full">
               <thead>
                 <tr className="border-b border-gray-50 bg-gray-50/40">
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Campaign</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Unclaimed</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Campaign</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Leads</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Unclaimed</th>
                   {PIPELINE_STAGES.map((status) => (
-                    <th key={status} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    <th key={status} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       {STATUS_LABELS[status]}
                     </th>
                   ))}
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Breakdown</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Conv.</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Breakdown</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -730,7 +730,7 @@ export default async function SuperAdminOverviewPage({
                         {c.unclaimed > 0 ? (
                           <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">{c.unclaimed}</span>
                         ) : (
-                          <span className="text-sm text-gray-400">0</span>
+                          <span className="text-sm text-gray-500">0</span>
                         )}
                       </td>
                       {PIPELINE_STAGES.map((status) => (
@@ -767,7 +767,7 @@ export default async function SuperAdminOverviewPage({
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
             <div>
               <h2 className="font-semibold text-gray-900">Leads by State</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{states.length} state{states.length !== 1 ? "s" : ""}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{states.length} state{states.length !== 1 ? "s" : ""}</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {states.length > 0 && (
@@ -784,22 +784,22 @@ export default async function SuperAdminOverviewPage({
             </div>
           </div>
           {states.length === 0 ? (
-            <div className="text-center py-12 text-sm text-gray-400">No state data in this period.</div>
+            <div className="text-center py-12 text-sm text-gray-500">No state data in this period.</div>
           ) : (
             <table className="min-w-full">
               <thead>
                 <tr className="border-b border-gray-50 bg-gray-50/40">
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Claimed</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Unclaimed</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">State</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Leads</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Claimed</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Unclaimed</th>
                   {PIPELINE_STAGES.map((status) => (
-                    <th key={status} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    <th key={status} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       {STATUS_LABELS[status]}
                     </th>
                   ))}
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Conv.</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Breakdown</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Conv.</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Breakdown</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -818,7 +818,7 @@ export default async function SuperAdminOverviewPage({
                         {s.unclaimed > 0 ? (
                           <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">{s.unclaimed}</span>
                         ) : (
-                          <span className="text-sm text-gray-400">0</span>
+                          <span className="text-sm text-gray-500">0</span>
                         )}
                       </td>
                       {PIPELINE_STAGES.map((status) => (

@@ -48,7 +48,7 @@ export default function RepairBlankLeadsButton() {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
       <div>
         <h3 className="text-sm font-semibold text-gray-900">Repair Blank Leads</h3>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-xs text-gray-500 mt-0.5">
           Fills in missing name, phone, and email on leads that arrived blank due to an expired Meta token. Uses stored rawData first, then falls back to the Meta Graph API.
         </p>
       </div>
@@ -82,7 +82,7 @@ export default function RepairBlankLeadsButton() {
       )}
 
       {result !== null && (
-        <button onClick={() => setResult(null)} className="text-xs text-gray-400 hover:text-gray-600 transition">
+        <button onClick={() => setResult(null)} className="text-xs text-gray-500 hover:text-gray-600 transition">
           Run again
         </button>
       )}

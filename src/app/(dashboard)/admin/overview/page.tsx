@@ -404,7 +404,7 @@ export default async function ManagerOverviewPage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h2 className="font-semibold text-gray-900 mb-5">Pipeline Funnel</h2>
           {total === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-6">No leads in this period.</p>
+            <p className="text-sm text-gray-500 text-center py-6">No leads in this period.</p>
           ) : (
             <div className="space-y-3">
               {PIPELINE_STAGES.map((status) => {
@@ -418,7 +418,7 @@ export default async function ManagerOverviewPage({
                         <span className="text-gray-600">{STATUS_LABELS[status]}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-gray-400 text-xs">{pct}%</span>
+                        <span className="text-gray-500 text-xs">{pct}%</span>
                         <span className="font-semibold text-gray-900 w-6 text-right">{count}</span>
                       </div>
                     </div>
@@ -437,12 +437,12 @@ export default async function ManagerOverviewPage({
           <h2 className="font-semibold text-gray-900 mb-5">Conversion</h2>
           <div className="flex items-end gap-3 mb-4">
             <span className="text-5xl font-bold text-violet-600">{conversionRate}%</span>
-            <span className="text-sm text-gray-400 mb-2">overall</span>
+            <span className="text-sm text-gray-500 mb-2">overall</span>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${conversionRate}%` }} />
           </div>
-          <div className="flex justify-between text-xs text-gray-400 mt-2">
+          <div className="flex justify-between text-xs text-gray-500 mt-2">
             <span>{won} won</span>
             <span>{lost} lost</span>
             <span>{active} active</span>
@@ -459,7 +459,7 @@ export default async function ManagerOverviewPage({
             <div className="px-6 py-4 border-b border-gray-50">
               <h2 className="font-semibold text-gray-900">Team Breakdown</h2>
             </div>
-            <div className="text-center py-12 text-sm text-gray-400">No team members yet.</div>
+            <div className="text-center py-12 text-sm text-gray-500">No team members yet.</div>
           </div>
         ) : (
           <ManagerTeamBreakdownClient sections={teamSections} />
@@ -473,7 +473,7 @@ export default async function ManagerOverviewPage({
             <div className="px-6 py-4 border-b border-gray-50">
               <h2 className="font-semibold text-gray-900">Funnel Breakdown</h2>
             </div>
-            <div className="text-center py-12 text-sm text-gray-400">No team members yet.</div>
+            <div className="text-center py-12 text-sm text-gray-500">No team members yet.</div>
           </div>
         ) : (
           <ManagerTeamBreakdownClient

@@ -94,19 +94,19 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-50 bg-gray-50/40">
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Rank</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide min-w-[160px]">Conversion</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Response</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Not Contacted</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Rank</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Member</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Leads</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Won</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-[160px]">Conversion</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg Response</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Not Contacted</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {sortedIndividuals.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-400">No data yet.</td>
+                <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">No data yet.</td>
               </tr>
             )}
             {sortedIndividuals.map((row, i) => (
@@ -115,7 +115,7 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
                   <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${
                     i === 0 ? "bg-amber-100 text-amber-700" :
                     i === 1 ? "bg-gray-100 text-gray-600" :
-                    i === 2 ? "bg-orange-50 text-orange-600" : "text-gray-400"
+                    i === 2 ? "bg-orange-50 text-orange-600" : "text-gray-500"
                   }`}>
                     {i + 1}
                   </span>
@@ -165,18 +165,18 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-50 bg-gray-50/40">
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Rank</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Team (Manager)</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Members</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Won</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide min-w-[160px]">Conversion</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Rank</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Team (Manager)</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Members</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Leads</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Won</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-[160px]">Conversion</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {teams.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-400">No teams set up yet. Assign managers to salespersons in Manage Team.</td>
+                <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">No teams set up yet. Assign managers to salespersons in Manage Team.</td>
               </tr>
             )}
             {teams.map((row, i) => (
@@ -185,7 +185,7 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
                   <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${
                     i === 0 ? "bg-amber-100 text-amber-700" :
                     i === 1 ? "bg-gray-100 text-gray-600" :
-                    i === 2 ? "bg-orange-50 text-orange-600" : "text-gray-400"
+                    i === 2 ? "bg-orange-50 text-orange-600" : "text-gray-500"
                   }`}>
                     {i + 1}
                   </span>
@@ -197,7 +197,7 @@ export default function LeaderboardTabs({ individuals, teams }: Props) {
                     </div>
                     <div>
                       <p className="font-medium text-gray-900 text-sm">{row.managerName}&apos;s Team</p>
-                      <p className="text-xs text-gray-400">{row.memberCount} member{row.memberCount !== 1 ? "s" : ""}</p>
+                      <p className="text-xs text-gray-500">{row.memberCount} member{row.memberCount !== 1 ? "s" : ""}</p>
                     </div>
                   </div>
                 </td>

@@ -51,7 +51,7 @@ function LeadList({ leads, showAssignee, emptyLabel }: { leads: LeadRow[]; showA
       {/* Mobile cards */}
       <div className="sm:hidden space-y-2">
         {leads.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-10 text-sm text-gray-400">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-10 text-sm text-gray-500">
             {emptyLabel}
           </div>
         ) : leads.map((lead) => {
@@ -110,19 +110,19 @@ function LeadList({ leads, showAssignee, emptyLabel }: { leads: LeadRow[]; showA
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Lead</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Waiting</th>
-              {showAssignee && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned To</th>}
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Lead</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Waiting</th>
+              {showAssignee && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned To</th>}
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {leads.length === 0 && (
               <tr>
                 <td colSpan={showAssignee ? 6 : 5} className="text-center py-12">
-                  <div className="flex flex-col items-center gap-2 text-sm text-gray-400">
+                  <div className="flex flex-col items-center gap-2 text-sm text-gray-500">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300"><polyline points="20 6 9 17 4 12"/></svg>
                     {emptyLabel}
                   </div>
@@ -148,7 +148,7 @@ function LeadList({ leads, showAssignee, emptyLabel }: { leads: LeadRow[]; showA
                   </td>
                   <td className="px-5 py-3.5 text-sm">
                     <div className="text-gray-700">{lead.email ?? "—"}</div>
-                    {lead.phone && <div className="text-gray-400 text-xs mt-0.5">{lead.phone}</div>}
+                    {lead.phone && <div className="text-gray-500 text-xs mt-0.5">{lead.phone}</div>}
                   </td>
                   <td className="px-5 py-3.5">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[lead.status] ?? "bg-gray-100 text-gray-600"}`}>

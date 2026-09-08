@@ -235,7 +235,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
       {/* Back */}
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition -mt-1"
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition -mt-1"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
@@ -296,7 +296,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                   )
                   return null
                 })()}
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-500">
                   Added {new Date(lead.createdAt).toLocaleDateString("en-MY", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kuala_Lumpur" })}
                 </span>
               </div>
@@ -346,7 +346,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
         <div className="lg:col-span-2 space-y-5">
           {/* Contact info */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Contact Info</h2>
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Contact Info</h2>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
               {[
                 { label: "Email", value: lead.email },
@@ -357,14 +357,14 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 { label: "Ad ID", value: lead.adId, mono: true },
               ].map(({ label, value, mono }) => (
                 <div key={label}>
-                  <p className="text-xs text-gray-400 font-medium mb-0.5">{label}</p>
+                  <p className="text-xs text-gray-500 font-medium mb-0.5">{label}</p>
                   <p className={`text-gray-900 ${mono ? "font-mono text-xs" : ""} truncate`}>
                     {value ?? <span className="text-gray-300">—</span>}
                   </p>
                 </div>
               ))}
               <div>
-                <p className="text-xs text-gray-400 font-medium mb-0.5">State</p>
+                <p className="text-xs text-gray-500 font-medium mb-0.5">State</p>
                 <select
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
@@ -377,7 +377,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 </select>
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-medium mb-0.5">Platform</p>
+                <p className="text-xs text-gray-500 font-medium mb-0.5">Platform</p>
                 {lead.source === "TIKTOK" ? (
                   <span className="inline-flex text-xs font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 ring-1 ring-pink-100">TikTok</span>
                 ) : lead.source === "WEBSITE" ? (
@@ -397,7 +397,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                 >
                   {releasing ? "Releasing…" : "Verify state & release to the pool"}
                 </button>
-                <p className="text-xs text-gray-400 mt-1.5">
+                <p className="text-xs text-gray-500 mt-1.5">
                   {branch
                     ? `This will unassign the lead from ${lead.assignedTo.id === currentUser.id ? "you" : lead.assignedTo.name} and put it in the ${branch} pool, claimable by anyone covering that state.`
                     : "Select the state the customer confirmed, then release this lead into that state's general pool."}
@@ -415,7 +415,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
               name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
             return (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Form Responses</h2>
+                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Form Responses</h2>
                 <div className="space-y-3">
                   {fields.map((f, i) => (
                     <div key={i} className="bg-gray-50 rounded-xl px-4 py-3 border-l-4 border-blue-200">
@@ -430,7 +430,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
 
           {/* Notes */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Notes</h2>
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Notes</h2>
             <div className="flex gap-2">
               <textarea
                 value={noteContent}
@@ -451,7 +451,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
 
             <ul className="space-y-3">
               {notes.length === 0 && (
-                <li className="text-sm text-gray-400 text-center py-6 border-2 border-dashed border-gray-100 rounded-xl">
+                <li className="text-sm text-gray-500 text-center py-6 border-2 border-dashed border-gray-100 rounded-xl">
                   No notes yet. Add one above.
                 </li>
               )}
@@ -468,7 +468,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                         <span className="text-[9px] font-bold text-blue-600">{(note.author?.name ?? "?")[0].toUpperCase()}</span>
                       </div>
                     )}
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-500">
                       {note.isSystem ? "System" : (note.author?.name ?? "Deleted user")} · {new Date(note.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                     </p>
                   </div>
@@ -481,11 +481,12 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
         {/* Right: Pipeline */}
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Pipeline</h2>
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Pipeline</h2>
 
             <div className="space-y-2">
-              <label className="block text-xs font-medium text-gray-600">Status</label>
+              <label htmlFor="lead-status" className="block text-xs font-medium text-gray-600">Status</label>
               <select
+                id="lead-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
@@ -498,8 +499,9 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
 
             {isAdmin && (
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-600">Assigned To</label>
+                <label htmlFor="lead-assigned-to" className="block text-xs font-medium text-gray-600">Assigned To</label>
                 <select
+                  id="lead-assigned-to"
                   value={assignedToId}
                   onChange={(e) => setAssignedToId(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
@@ -518,8 +520,9 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
             )}
 
             <div className="space-y-2">
-              <label className="block text-xs font-medium text-gray-600">Follow-up reminder</label>
+              <label htmlFor="lead-followup-at" className="block text-xs font-medium text-gray-600">Follow-up reminder</label>
               <input
+                id="lead-followup-at"
                 type="date"
                 value={followUpAt}
                 onChange={(e) => setFollowUpAt(e.target.value)}
@@ -541,7 +544,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                   </button>
                 ))}
                 {followUpAt && (
-                  <button onClick={() => setFollowUpAt("")} className="text-xs text-gray-400 hover:text-gray-600 px-2.5 py-1">
+                  <button onClick={() => setFollowUpAt("")} className="text-xs text-gray-500 hover:text-gray-600 px-2.5 py-1">
                     Clear
                   </button>
                 )}
@@ -579,18 +582,18 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
             {/* Assigned to info */}
             {lead.assignedTo && (
               <div className="pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 font-medium mb-2">Assigned to</p>
+                <p className="text-xs text-gray-500 font-medium mb-2">Assigned to</p>
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center">
                     <span className="text-xs font-bold text-violet-600">{lead.assignedTo.name[0].toUpperCase()}</span>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900">{lead.assignedTo.name}</p>
-                    <p className="text-xs text-gray-400">{lead.assignedTo.email}</p>
+                    <p className="text-xs text-gray-500">{lead.assignedTo.email}</p>
                   </div>
                 </div>
                 {lead.claimedAt && (
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-xs text-gray-500 mt-2">
                     Claimed on{" "}
                     <span className="text-gray-600 font-medium">
                       {new Date(lead.claimedAt).toLocaleString("en-MY", {
@@ -606,14 +609,14 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
             {/* Assignment history */}
             {assignmentLogs.length > 0 && (
               <div className="pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 font-medium mb-2">Assignment history</p>
+                <p className="text-xs text-gray-500 font-medium mb-2">Assignment history</p>
                 <ul className="space-y-2">
                   {assignmentLogs.map((log) => (
                     <li key={log.id} className="text-xs text-gray-500">
                       <span className="font-medium text-gray-700">{log.assignedBy?.name ?? "Deleted user"}</span>
                       {" → "}
                       <span className="font-medium text-gray-700">{log.assignedTo?.name ?? "Unassigned"}</span>
-                      <span className="block text-gray-400">
+                      <span className="block text-gray-500">
                         {new Date(log.createdAt).toLocaleString("en-MY", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                         {" · "}
                         {log.source === "BULK_ASSIGN" ? "Bulk assign" : log.source === "SINGLE_ASSIGN" ? "Manual assign" : log.source === "RELEASED_TO_POOL" ? "Released to pool (state verified)" : log.source}
@@ -628,7 +631,7 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
           {/* Status history timeline */}
           {lead.statusHistory.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Status History</h2>
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Status History</h2>
               <ol className="relative border-l border-gray-100 space-y-5 ml-1.5">
                 {lead.statusHistory.map((entry, i) => {
                   const toLabel = STATUS_OPTIONS.find((s) => s.value === entry.to)?.label ?? entry.to
@@ -641,11 +644,11 @@ export default function LeadDetailClient({ lead, salespeople, assignmentLogs, cu
                       <div>
                         <p className="text-xs font-semibold text-gray-800">
                           {fromLabel ? (
-                            <span className="text-gray-400">{fromLabel} → </span>
+                            <span className="text-gray-500">{fromLabel} → </span>
                           ) : null}
                           <span>{toLabel}</span>
                         </p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">
+                        <p className="text-[11px] text-gray-500 mt-0.5">
                           {new Date(entry.createdAt).toLocaleString("en-US", {
                             month: "short", day: "numeric", year: i === 0 ? "numeric" : undefined,
                             hour: "numeric", minute: "2-digit",

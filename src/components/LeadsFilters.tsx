@@ -62,7 +62,7 @@ export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sourc
     <div className="space-y-3">
       {/* Search bar */}
       <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
         <input
@@ -73,7 +73,7 @@ export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sourc
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
         />
         {search && (
-          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-600">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         )}
@@ -159,7 +159,7 @@ export default function LeadsFilters({ isAdmin, isSuperAdmin, salespeople, sourc
         {(activeStatus || searchParams.get("source") || searchParams.get("channel") || searchParams.get("branch") || searchParams.get("assignedToId") || search) && (
           <button
             onClick={() => { setSearch(""); router.push("/leads?") }}
-            className="text-xs text-gray-400 hover:text-gray-600 font-medium px-3 py-2 rounded-xl hover:bg-gray-100 transition"
+            className="text-xs text-gray-500 hover:text-gray-600 font-medium px-3 py-2 rounded-xl hover:bg-gray-100 transition"
           >
             Clear filters
           </button>

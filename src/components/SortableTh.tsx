@@ -15,7 +15,7 @@ export default function SortableTh({ label, sortKey, currentKey, direction, onSo
     <th
       onClick={() => onSort(sortKey)}
       title={title}
-      className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide cursor-pointer select-none hover:text-gray-600 transition whitespace-nowrap"
+      className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none hover:text-gray-600 transition whitespace-nowrap"
     >
       <span className="inline-flex items-center gap-1">
         {label}

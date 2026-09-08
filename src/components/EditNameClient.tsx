@@ -43,8 +43,8 @@ export default function EditNameClient({ initialName, email, roleLabel }: Props)
         </div>
         <div>
           <p className="font-semibold text-gray-900">{displayName}</p>
-          <p className="text-sm text-gray-400">{email}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{roleLabel}</p>
+          <p className="text-sm text-gray-500">{email}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{roleLabel}</p>
         </div>
       </div>
 

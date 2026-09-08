@@ -33,7 +33,7 @@ export default function AvgResponseStars({ avgResponseMs }: { avgResponseMs: num
       <div className="flex items-center gap-0.5" title={`${stars}/5`}>
         {[1, 2, 3, 4, 5].map((i) => <Star key={i} filled={i <= stars} />)}
       </div>
-      <span className="text-[11px] text-gray-400">{formatAvgResponseTime(avgResponseMs)}</span>
+      <span className="text-[11px] text-gray-500">{formatAvgResponseTime(avgResponseMs)}</span>
     </div>
   )
 }

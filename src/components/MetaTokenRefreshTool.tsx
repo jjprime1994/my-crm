@@ -41,7 +41,7 @@ export default function MetaTokenRefreshTool() {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
       <div>
         <h3 className="text-sm font-semibold text-gray-900">Refresh Meta Page Token</h3>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-xs text-gray-500 mt-0.5">
           Paste a short-lived token from{" "}
           <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer" className="underline">
             Graph API Explorer
@@ -95,7 +95,7 @@ export default function MetaTokenRefreshTool() {
               {copied ? "Copied!" : "Copy"}
             </button>
           </div>
-          <button onClick={() => { setResult(null); setToken("") }} className="text-xs text-gray-400 hover:text-gray-600 transition">
+          <button onClick={() => { setResult(null); setToken("") }} className="text-xs text-gray-500 hover:text-gray-600 transition">
             Start over
           </button>
         </div>

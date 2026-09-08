@@ -58,7 +58,7 @@ function StatCard({ label, value, valueClass = "text-gray-900", sub, icon }: {
         <p className={`text-2xl sm:text-3xl font-bold mt-1 ${valueClass}`}>{value}</p>
         {sub && <div className="mt-1">{sub}</div>}
       </div>
-      <div className="p-2.5 bg-gray-50 rounded-xl text-gray-400 shrink-0">{icon}</div>
+      <div className="p-2.5 bg-gray-50 rounded-xl text-gray-500 shrink-0">{icon}</div>
     </div>
   )
 }
@@ -212,7 +212,7 @@ export default async function DashboardPage() {
             valueClass={atLimitCount > 0 ? "text-rose-500" : "text-gray-900"}
             sub={
               <div>
-                <p className={`text-xs font-medium ${atLimitCount > 0 ? "text-rose-400" : "text-gray-400"}`}>
+                <p className={`text-xs font-medium ${atLimitCount > 0 ? "text-rose-400" : "text-gray-500"}`}>
                   {atLimitPct}% of team at limit
                 </p>
                 {isSuperAdmin && <ResetLimitsButton />}
@@ -235,7 +235,7 @@ export default async function DashboardPage() {
               <AvgResponseStars avgResponseMs={myAvgResponseMs} />
             </div>
           </div>
-          <div className="p-2.5 bg-gray-50 rounded-xl text-gray-400 shrink-0">
+          <div className="p-2.5 bg-gray-50 rounded-xl text-gray-500 shrink-0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
         </div>
@@ -276,7 +276,7 @@ export default async function DashboardPage() {
             </div>
             <ul className="divide-y divide-gray-50">
               {recent.length === 0 && (
-                <li className="px-6 py-10 text-center text-sm text-gray-400">No leads yet.</li>
+                <li className="px-6 py-10 text-center text-sm text-gray-500">No leads yet.</li>
               )}
               {recent.map((lead) => (
                 <li key={lead.id}>
@@ -290,7 +290,7 @@ export default async function DashboardPage() {
                       <p className="font-medium text-gray-900 truncate text-sm">
                         {lead.firstName} {lead.lastName}
                       </p>
-                      <p className="text-xs text-gray-400 truncate">{lead.email ?? lead.phone ?? "—"}</p>
+                      <p className="text-xs text-gray-500 truncate">{lead.email ?? lead.phone ?? "—"}</p>
                     </div>
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[lead.status]}`}>
                       {STATUS_LABELS[lead.status]}
@@ -340,12 +340,12 @@ export default async function DashboardPage() {
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <AnimatedBar pct={claimPct} className={atLimit ? "bg-rose-400" : "bg-blue-400"} />
                         </div>
-                        <span className="text-xs text-gray-400 shrink-0">{member.claimedToday}/{member.claimLimit} claimed</span>
+                        <span className="text-xs text-gray-500 shrink-0">{member.claimedToday}/{member.claimLimit} claimed</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold text-emerald-600">{rate}%</p>
-                      <p className="text-xs text-gray-400">{member._count.leads} leads</p>
+                      <p className="text-xs text-gray-500">{member._count.leads} leads</p>
                     </div>
                   </li>
                 )

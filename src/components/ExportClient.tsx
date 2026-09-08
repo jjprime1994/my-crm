@@ -124,7 +124,7 @@ export default function ExportClient({ sources, branches, managers, counts, init
         <div className="p-6 space-y-3">
           <div>
             <label className="text-sm font-semibold text-gray-700">Status</label>
-            <p className="text-xs text-gray-400 mt-0.5">Leave all unchecked to include every status. Counts shown are database totals.</p>
+            <p className="text-xs text-gray-500 mt-0.5">Leave all unchecked to include every status. Counts shown are database totals.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {STATUS_OPTIONS.map((s) => {
@@ -155,7 +155,7 @@ export default function ExportClient({ sources, branches, managers, counts, init
           <label className="text-sm font-semibold text-gray-700">Date Range</label>
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <label className="text-xs text-gray-400 mb-1 block">From</label>
+              <label className="text-xs text-gray-500 mb-1 block">From</label>
               <input
                 type="date"
                 value={dateFrom}
@@ -165,7 +165,7 @@ export default function ExportClient({ sources, branches, managers, counts, init
             </div>
             <div className="text-gray-300 mt-5">—</div>
             <div className="flex-1">
-              <label className="text-xs text-gray-400 mb-1 block">To</label>
+              <label className="text-xs text-gray-500 mb-1 block">To</label>
               <input
                 type="date"
                 value={dateTo}
@@ -244,7 +244,7 @@ export default function ExportClient({ sources, branches, managers, counts, init
           <div className="p-6 space-y-3">
             <div>
               <label className="text-sm font-semibold text-gray-700">Team</label>
-              <p className="text-xs text-gray-400 mt-0.5">Export only leads assigned to a specific team</p>
+              <p className="text-xs text-gray-500 mt-0.5">Export only leads assigned to a specific team</p>
             </div>
             <select
               value={managerId}
@@ -264,7 +264,7 @@ export default function ExportClient({ sources, branches, managers, counts, init
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-700">Exclude duplicates</p>
-              <p className="text-xs text-gray-400 mt-0.5">Remove leads flagged as duplicate before exporting</p>
+              <p className="text-xs text-gray-500 mt-0.5">Remove leads flagged as duplicate before exporting</p>
             </div>
             <button
               onClick={() => setExcludeDuplicates(!excludeDuplicates)}
@@ -283,14 +283,14 @@ export default function ExportClient({ sources, branches, managers, counts, init
             <div className="flex items-center gap-2">
               <p className="text-sm text-gray-500">Matching leads:</p>
               {countLoading ? (
-                <svg className="animate-spin text-gray-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg className="animate-spin text-gray-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                 </svg>
               ) : (
                 <span className="text-sm font-bold text-gray-900">{liveCount?.toLocaleString() ?? "—"}</span>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Columns: Name · Email · Phone · Status · Ad · Campaign · State · Platform · Assigned To · Duplicate · Follow-up · Created · Updated · Stage dates (Contacted/Qualified/Appointment Made/Won/Lost) · Full Status Journey
             </p>
           </div>

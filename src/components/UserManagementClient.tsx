@@ -2,6 +2,16 @@
 
 import { useState } from "react"
 import { REPORTING_GRACE_DAYS } from "@/lib/user-visibility"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type User = {
   id: string
@@ -79,6 +89,9 @@ export default function UserManagementClient({ users: initial, currentUserId, is
   const [resetSaving, setResetSaving] = useState(false)
   const [resetError, setResetError] = useState("")
   const [resetSuccess, setResetSuccess] = useState("")
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deleteError, setDeleteError] = useState("")
+  const [deleting, setDeleting] = useState(false)
 
   async function saveResetPassword(id: string) {
     if (!newPassword || newPassword.length < 8) { setResetError("Password must be at least 8 characters."); return }
@@ -127,15 +140,24 @@ export default function UserManagementClient({ users: initial, currentUserId, is
     setShowForm(false)
   }
 
-  async function deleteUser(id: string) {
-    if (!confirm("Permanently delete this user? This cannot be undone.")) return
-    const res = await fetch(`/api/users/${id}`, { method: "DELETE" })
+  function deleteUser(id: string) {
+    const user = users.find((u) => u.id === id)
+    setDeleteError("")
+    setDeleteTarget({ id, name: user?.name ?? "this user" })
+  }
+
+  async function confirmDeleteUser() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const res = await fetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" })
+    setDeleting(false)
     if (!res.ok) {
       const message = await res.text()
-      alert(message || "Failed to delete user.")
+      setDeleteError(message || "Failed to delete user.")
       return
     }
-    setUsers(users.filter((u) => u.id !== id))
+    setUsers(users.filter((u) => u.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   async function toggleDisabled(id: string, disabled: boolean) {
@@ -265,7 +287,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex flex-wrap gap-2">
         <div className="relative flex-1 min-w-[160px]">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
@@ -321,7 +343,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
             Clear ({activeFilters})
           </button>
         )}
-        <p className="w-full text-xs text-gray-400 px-1">{filteredUsers.length} of {activeUsers.length} members</p>
+        <p className="w-full text-xs text-gray-500 px-1">{filteredUsers.length} of {activeUsers.length} members</p>
       </div>
 
       {showForm && (
@@ -384,7 +406,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
       {/* Mobile card list */}
       <div className="sm:hidden space-y-3">
         {filteredUsers.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-10 text-sm text-gray-400">No members match your filters.</div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-10 text-sm text-gray-500">No members match your filters.</div>
         )}
         {filteredUsers.map((user) => (
           <div key={user.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
@@ -408,7 +430,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                       autoFocus
                     />
                     <button onClick={() => saveName(user.id, editingName.value)} className="text-xs font-semibold text-white bg-blue-600 px-2 py-1 rounded-lg shrink-0">Save</button>
-                    <button onClick={() => setEditingName(null)} className="text-xs text-gray-400 p-1 rounded-lg hover:bg-gray-100">✕</button>
+                    <button onClick={() => setEditingName(null)} className="text-xs text-gray-500 p-1 rounded-lg hover:bg-gray-100">✕</button>
                   </div>
                 ) : (
                   <p
@@ -418,14 +440,14 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                     {user.name}
                   </p>
                 )}
-                <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                <p className="text-xs text-gray-500 truncate">{user.email}</p>
               </div>
               {/* Action icons */}
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => { setResettingPassword(resettingPassword === user.id ? null : user.id); setResetError(""); setNewPassword("") }}
                   title="Reset password"
-                  className={`p-1.5 rounded-xl transition ${resettingPassword === user.id ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"}`}
+                  className={`p-1.5 rounded-xl transition ${resettingPassword === user.id ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:text-blue-600 hover:bg-blue-50"}`}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -435,7 +457,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   <button
                     onClick={() => toggleDisabled(user.id, !user.disabled)}
                     title={user.disabled ? "Re-enable login" : "Disable login"}
-                    className={`p-1.5 rounded-xl transition ${user.disabled ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50" : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"}`}
+                    className={`p-1.5 rounded-xl transition ${user.disabled ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50" : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"}`}
                   >
                     {user.disabled ? (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -452,7 +474,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   <button
                     onClick={() => deleteUser(user.id)}
                     title="Delete user"
-                    className="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                    className="p-1.5 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -486,11 +508,11 @@ export default function UserManagementClient({ users: initial, currentUserId, is
             {user.role !== "SUPER_ADMIN" && (
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-gray-50 rounded-xl p-2.5 text-center">
-                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Leads</p>
+                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1">Leads</p>
                   <p className="text-sm font-bold text-gray-900">{user._count.leads}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-2.5 text-center">
-                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Claim / day</p>
+                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1">Claim / day</p>
                   {editingLimit?.id === user.id ? (
                     <div className="flex flex-col items-center gap-1.5">
                       <input
@@ -503,7 +525,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                       <div className="flex gap-1">
                         <button onClick={() => saveClaimLimit(user.id, editingLimit.value)} className="text-[10px] font-bold text-white bg-blue-600 px-2 py-0.5 rounded">✓</button>
                         <button onClick={() => applyClaimLimitToAll(editingLimit.value)} disabled={applyingAll} className="text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded disabled:opacity-50">{applyingAll ? "…" : "All"}</button>
-                        <button onClick={() => setEditingLimit(null)} className="text-[10px] text-gray-400 px-2 py-0.5 rounded hover:bg-gray-200">✕</button>
+                        <button onClick={() => setEditingLimit(null)} className="text-[10px] text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200">✕</button>
                       </div>
                     </div>
                   ) : (
@@ -514,7 +536,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   )}
                 </div>
                 <div className="bg-gray-50 rounded-xl p-2.5 text-center">
-                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Max New</p>
+                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1">Max New</p>
                   {editingThreshold?.id === user.id ? (
                     <div className="flex flex-col items-center gap-1.5">
                       <input
@@ -526,12 +548,12 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                       />
                       <div className="flex gap-1">
                         <button onClick={() => saveThreshold(user.id, editingThreshold.value)} className="text-[10px] font-bold text-white bg-blue-600 px-2 py-0.5 rounded">✓</button>
-                        <button onClick={() => setEditingThreshold(null)} className="text-[10px] text-gray-400 px-2 py-0.5 rounded hover:bg-gray-200">✕</button>
+                        <button onClick={() => setEditingThreshold(null)} className="text-[10px] text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200">✕</button>
                       </div>
                     </div>
                   ) : (
                     <button onClick={() => setEditingThreshold({ id: user.id, value: user.newLeadThreshold })} className="w-full flex flex-col items-center gap-0.5 group">
-                      <span className={`text-sm font-bold ${user.newLeadThreshold === 0 ? "text-gray-400" : "text-amber-600"}`}>
+                      <span className={`text-sm font-bold ${user.newLeadThreshold === 0 ? "text-gray-500" : "text-amber-600"}`}>
                         {user.newLeadThreshold === 0 ? "Off" : user.newLeadThreshold}
                       </span>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-300 group-hover:text-blue-400 transition"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -544,7 +566,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
             {/* Manager select (super admin only) */}
             {isSuperAdmin && (user.role === "SALESPERSON" || user.role === "TEAM_LEADER") && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 shrink-0">Manager</span>
+                <span className="text-xs text-gray-500 shrink-0">Manager</span>
                 <select
                   value={user.managerId ?? ""}
                   onChange={(e) => saveManagerId(user.id, e.target.value)}
@@ -560,7 +582,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
 
             {/* Footer: joined date */}
             <div className="pt-2 border-t border-gray-50">
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-500">
                 Joined {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               </span>
             </div>
@@ -597,19 +619,19 @@ export default function UserManagementClient({ users: initial, currentUserId, is
         <table className="w-full table-fixed">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Role</th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-16">Leads</th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Claim / day</th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-20">Max New</th>
-              {isSuperAdmin && <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Manager</th>}
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-24">Joined</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Member</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Role</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Leads</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Claim / day</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-20">Max New</th>
+              {isSuperAdmin && <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Manager</th>}
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Joined</th>
               <th className="px-4 py-3.5 w-16" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {filteredUsers.length === 0 && (
-              <tr><td colSpan={isSuperAdmin ? 8 : 7} className="text-center py-12 text-sm text-gray-400">No members match your filters.</td></tr>
+              <tr><td colSpan={isSuperAdmin ? 8 : 7} className="text-center py-12 text-sm text-gray-500">No members match your filters.</td></tr>
             )}
             {filteredUsers.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50/70 transition">
@@ -635,7 +657,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                             autoFocus
                           />
                           <button onClick={() => saveName(user.id, editingName.value)} className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded-lg transition">Save</button>
-                          <button onClick={() => setEditingName(null)} className="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1 rounded-lg hover:bg-gray-100 transition">✕</button>
+                          <button onClick={() => setEditingName(null)} className="text-xs text-gray-500 hover:text-gray-600 px-1.5 py-1 rounded-lg hover:bg-gray-100 transition">✕</button>
                         </div>
                       ) : (
                         <p
@@ -646,7 +668,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                           {user.name}
                         </p>
                       )}
-                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
                     </div>
                   </div>
                 </td>
@@ -670,7 +692,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                 </td>
                 <td className="px-4 py-4">
                   <span className="text-sm font-semibold text-gray-900">{user._count.leads}</span>
-                  <span className="text-xs text-gray-400 ml-1">leads</span>
+                  <span className="text-xs text-gray-500 ml-1">leads</span>
                 </td>
                 <td className="px-4 py-4">
                   {user.role !== "SUPER_ADMIN" ? (
@@ -699,7 +721,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         </button>
                         <button
                           onClick={() => setEditingLimit(null)}
-                          className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                          className="text-xs text-gray-500 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
                         >
                           Cancel
                         </button>
@@ -741,14 +763,14 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         </button>
                         <button
                           onClick={() => setEditingThreshold(null)}
-                          className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                          className="text-xs text-gray-500 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
                         >
                           Cancel
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className={`text-sm font-semibold px-2.5 py-1 rounded-lg ${user.newLeadThreshold === 0 ? "bg-gray-100 text-gray-400" : "bg-amber-50 text-amber-700"}`}>
+                        <span className={`text-sm font-semibold px-2.5 py-1 rounded-lg ${user.newLeadThreshold === 0 ? "bg-gray-100 text-gray-500" : "bg-amber-50 text-amber-700"}`}>
                           {user.newLeadThreshold === 0 ? "Off" : user.newLeadThreshold}
                         </span>
                         <button
@@ -781,7 +803,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                     )}
                   </td>
                 )}
-                <td className="px-4 py-4 text-sm text-gray-400">
+                <td className="px-4 py-4 text-sm text-gray-500">
                   {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </td>
                 <td className="px-4 py-4 text-right">
@@ -806,7 +828,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         </button>
                         <button
                           onClick={() => { setResettingPassword(null); setNewPassword(""); setResetError("") }}
-                          className="text-xs text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"
+                          className="text-xs text-gray-500 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
@@ -815,7 +837,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                       <button
                         onClick={() => { setResettingPassword(user.id); setResetError("") }}
                         title="Reset password"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                        className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -826,7 +848,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                       <button
                         onClick={() => toggleDisabled(user.id, !user.disabled)}
                         title={user.disabled ? "Re-enable login" : "Disable login"}
-                        className={`p-1.5 rounded-lg transition ${user.disabled ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50" : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"}`}
+                        className={`p-1.5 rounded-lg transition ${user.disabled ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50" : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"}`}
                       >
                         {user.disabled ? (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -843,7 +865,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                       <button
                         onClick={() => deleteUser(user.id)}
                         title="Delete user"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                        className="p-1.5 rounded-lg text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -871,7 +893,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
           </div>
 
           {filteredDisabledAccounts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-10 text-sm text-gray-400">No disabled accounts match your filters.</div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-10 text-sm text-gray-500">No disabled accounts match your filters.</div>
           ) : (
             <>
               {/* Mobile card list */}
@@ -887,7 +909,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-900 text-sm truncate">{user.name}</p>
-                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
                         </div>
                         {isSuperAdmin && (
                           <div className="flex items-center gap-1 shrink-0">
@@ -903,7 +925,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                             <button
                               onClick={() => deleteUser(user.id)}
                               title="Delete user"
-                              className="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                              className="p-1.5 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition"
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -916,7 +938,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeClass(user.role)}`}>
                           {roleLabel(user.role)}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500">
                           Disabled {daysDisabled === null ? "—" : daysDisabled === 0 ? "today" : `${daysDisabled}d ago`}
                         </span>
                         <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${droppedFromReporting ? "bg-gray-100 text-gray-500" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"}`}>
@@ -933,10 +955,10 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                 <table className="w-full table-fixed">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/60">
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Member</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Role</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Disabled</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide w-40">Reporting</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Member</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Role</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Disabled</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-40">Reporting</th>
                       <th className="px-4 py-3.5 w-20" />
                     </tr>
                   </thead>
@@ -953,7 +975,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                               </div>
                               <div className="min-w-0">
                                 <p className="font-medium text-gray-900 text-sm truncate" title={user.name}>{user.name}</p>
-                                <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                <p className="text-xs text-gray-500 truncate">{user.email}</p>
                               </div>
                             </div>
                           </td>
@@ -962,7 +984,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                               {roleLabel(user.role)}
                             </span>
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-400">
+                          <td className="px-4 py-4 text-sm text-gray-500">
                             {daysDisabled === null ? "—" : daysDisabled === 0 ? "Today" : `${daysDisabled}d ago`}
                           </td>
                           <td className="px-4 py-4">
@@ -985,7 +1007,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                                 <button
                                   onClick={() => deleteUser(user.id)}
                                   title="Delete user"
-                                  className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                  className="p-1.5 rounded-lg text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition"
                                 >
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -1004,6 +1026,40 @@ export default function UserManagementClient({ users: initial, currentUserId, is
           )}
         </div>
       )}
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) { setDeleteTarget(null); setDeleteError("") }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the user. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <div className="flex items-center gap-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              {deleteError}
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleting}
+              onClick={confirmDeleteUser}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

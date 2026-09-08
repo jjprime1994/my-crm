@@ -145,7 +145,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
             </div>
             <div className="flex items-end gap-1 mb-2">
               <span key={recentClaims} className={`text-2xl font-bold [animation:countUp_0.3s_ease-out] ${atLimit ? "text-rose-600" : "text-gray-900"}`}>{recentClaims}</span>
-              <span className="text-sm text-gray-400 mb-0.5">/ {claimLimit}</span>
+              <span className="text-sm text-gray-500 mb-0.5">/ {claimLimit}</span>
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div
@@ -204,7 +204,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
       {/* Mobile cards */}
       <div className="sm:hidden space-y-2">
         {leads.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-sm text-gray-400">No available leads right now.</div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-sm text-gray-500">No available leads right now.</div>
         ) : leads.map((lead) => {
           const days = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000)
           const label = days === 0 ? "Today" : `${days}d ago`
@@ -228,7 +228,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                   <SourceBadge source={lead.source} />
                   {(lead.isDuplicate || lead.claimedBefore) && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200 shrink-0">DUP</span>}
                   {(lead.campaignName ?? lead.adName) && (
-                    <p className="text-xs text-gray-400 truncate">{lead.campaignName ?? lead.adName}</p>
+                    <p className="text-xs text-gray-500 truncate">{lead.campaignName ?? lead.adName}</p>
                   )}
                   {(lead.isDuplicate || lead.claimedBefore) && dupReason(lead) && (
                     <p className="text-[10px] text-amber-600 truncate w-full">{dupReason(lead)}</p>
@@ -247,7 +247,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                     onClick={() => claim(lead.id)}
                     disabled={atLimit || blockedByNew || claiming === lead.id}
                     className={`text-sm font-semibold px-4 py-2 rounded-lg transition min-h-[40px] ${
-                      atLimit || blockedByNew ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
+                      atLimit || blockedByNew ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
                     } disabled:opacity-60`}
                   >
                     {claiming === lead.id ? (
@@ -266,11 +266,11 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">State</th>
-              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Received</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">State</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Received</th>
               <th className="px-5 py-3.5" />
             </tr>
           </thead>
@@ -278,7 +278,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
             {leads.length === 0 && (
               <tr>
                 <td colSpan={6} className="text-center py-16">
-                  <div className="flex flex-col items-center gap-2 text-sm text-gray-400">
+                  <div className="flex flex-col items-center gap-2 text-sm text-gray-500">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300">
                       <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
                       <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
@@ -297,11 +297,11 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                       </svg>
                     </div>
-                    <span className="text-sm text-gray-400 italic">Hidden until claimed</span>
+                    <span className="text-sm text-gray-500 italic">Hidden until claimed</span>
                   </div>
                 </td>
                 <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
@@ -352,7 +352,7 @@ export default function AvailableLeadsClient({ leads: initial, claimLimit, recen
                       onClick={() => claim(lead.id)}
                       disabled={atLimit || blockedByNew || claiming === lead.id}
                       className={`text-xs font-semibold px-4 py-2 rounded-lg transition ${
-                        atLimit || blockedByNew ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
+                        atLimit || blockedByNew ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
                       } disabled:opacity-60`}
                     >
                       {claiming === lead.id ? (

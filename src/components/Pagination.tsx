@@ -46,7 +46,7 @@ export default function Pagination({
       </button>
       {pageList(page, totalPages).map((p, i) =>
         p === "..." ? (
-          <span key={`e${i}`} className="px-2 text-gray-400 text-sm select-none">…</span>
+          <span key={`e${i}`} className="px-2 text-gray-500 text-sm select-none">…</span>
         ) : (
           <button
             key={p}

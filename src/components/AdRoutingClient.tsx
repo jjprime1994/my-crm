@@ -211,8 +211,8 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
       {/* Default Team */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Default Team</p>
-          {savingDefault && <span className="text-xs text-gray-400">Saving…</span>}
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Default Team</p>
+          {savingDefault && <span className="text-xs text-gray-500">Saving…</span>}
         </div>
         <p className="text-sm text-gray-500">Unrouted leads (ads with no team assigned, or unrecognised state) go to this team.</p>
         <div className="flex flex-wrap gap-2">
@@ -232,7 +232,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
           {defaultTeamId && (
             <button
               onClick={() => changeDefault(defaultTeamId)}
-              className="px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              className="px-3 py-1.5 rounded-xl text-sm text-gray-500 hover:text-gray-600 hover:bg-gray-100 transition"
             >
               Clear
             </button>
@@ -243,7 +243,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
       {/* State Routing */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 pt-4 pb-3 border-b border-gray-50">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">State Routing</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">State Routing</p>
           <p className="text-sm text-gray-500 mt-0.5">Leads auto-assign via round-robin to the selected people for each state.</p>
         </div>
         <div className="divide-y divide-gray-50">
@@ -257,7 +257,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm text-gray-900 w-36 shrink-0">{state}</span>
-                    {isSaving && <span className="text-xs text-gray-400">Saving…</span>}
+                    {isSaving && <span className="text-xs text-gray-500">Saving…</span>}
                   </div>
                   <button
                     onClick={() => setExpandedStateRoute(isExpanded ? null : state)}
@@ -304,7 +304,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
       {/* Team States */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 pt-4 pb-3 border-b border-gray-50">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Teams</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Teams</p>
           <p className="text-sm text-gray-500 mt-0.5">Name each team and set which states it covers. Leave states empty for a team that should cover all states (e.g. a language-specific team).</p>
         </div>
         <div className="divide-y divide-gray-50">
@@ -327,12 +327,12 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
                         className="text-sm font-medium border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 w-40"
                       />
                       <button onClick={() => saveTeamName(m.id)} className="text-xs text-blue-600 font-semibold hover:text-blue-800">Save</button>
-                      <button onClick={() => setEditingTeamName(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                      <button onClick={() => setEditingTeamName(null)} className="text-xs text-gray-500 hover:text-gray-600">Cancel</button>
                     </>
                   ) : (
                     <>
                       <span className="font-medium text-sm text-gray-900 truncate">{teamLabel(m)}</span>
-                      {m.teamName && <span className="text-xs text-gray-400 shrink-0">({m.name})</span>}
+                      {m.teamName && <span className="text-xs text-gray-500 shrink-0">({m.name})</span>}
                       <button
                         onClick={() => startRenameTeam(m)}
                         title="Rename team"
@@ -347,7 +347,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
                   {m.isDefaultTeam && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 ring-1 ring-violet-200 shrink-0">Default</span>
                   )}
-                  {(savingStates === m.id || savingTeamName === m.id) && <span className="text-xs text-gray-400 shrink-0">Saving…</span>}
+                  {(savingStates === m.id || savingTeamName === m.id) && <span className="text-xs text-gray-500 shrink-0">Saving…</span>}
                 </div>
                 <button
                   onClick={() => setExpandedStates(expandedStates === m.id ? null : m.id)}
@@ -394,7 +394,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 pt-4 pb-3 border-b border-gray-50 flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Ad → Team Assignment</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Ad → Team Assignment</p>
             <p className="text-sm text-gray-500 mt-0.5">Pre-configure routing before a campaign goes live. Use &quot;Individual access&quot; to grant specific salespeople an ad&apos;s leads outside their team&apos;s normal routing (e.g. a language-specific campaign) — click a granted person&apos;s name to restrict it to their own state(s) instead of all states.</p>
           </div>
         </div>
@@ -427,7 +427,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
               <div key={ad.adName} className={`px-5 py-4 space-y-2 ${ad.archived ? "opacity-60" : ""}`}>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate" title={ad.adName}>{ad.adName}</p>
-                  {saving === ad.adName && <span className="text-xs text-gray-400 shrink-0">Saving…</span>}
+                  {saving === ad.adName && <span className="text-xs text-gray-500 shrink-0">Saving…</span>}
                   {!ad.archived && ad.teamIds.length === 0 && saving !== ad.adName && (
                     <span className="text-xs text-amber-600 font-medium shrink-0">→ Default team</span>
                   )}
@@ -454,7 +454,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
                       className="shrink-0 text-gray-300 hover:text-rose-500 transition disabled:opacity-40"
                     >
                       {removingAd === ad.adName ? (
-                        <span className="text-xs text-gray-400">…</span>
+                        <span className="text-xs text-gray-500">…</span>
                       ) : (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
@@ -487,7 +487,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
                   return (
                     <div className="pt-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Individual access:</span>
+                        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Individual access:</span>
                         {grantedUsers.map((u) => {
                           const allowedStates = ad.userStates[u.id] ?? []
                           const userKey = `${ad.adName}:${u.id}`
@@ -559,7 +559,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
                         const allowedStates = ad.userStates[u.id] ?? []
                         return (
                           <div key={u.id} className="mt-2 space-y-1.5">
-                            <p className="text-[10px] text-gray-400">
+                            <p className="text-[10px] text-gray-500">
                               {u.name}&apos;s access — leave empty for all states, or pick specific state(s) to restrict to just those:
                             </p>
                             <div className="flex flex-wrap gap-1.5">
@@ -591,7 +591,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
           return (
             <>
               {activeAds.length === 0 && archivedAds.length === 0 ? (
-                <div className="px-5 py-8 text-center text-sm text-gray-400">No ads yet — add one above or wait for leads to come in.</div>
+                <div className="px-5 py-8 text-center text-sm text-gray-500">No ads yet — add one above or wait for leads to come in.</div>
               ) : (
                 <div className="divide-y divide-gray-50">
                   {activeAds.map((ad) => <AdRow key={ad.adName} ad={ad} />)}
@@ -600,7 +600,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
               {archivedAds.length > 0 && (
                 <div className="border-t border-gray-100">
                   <div className="px-5 py-2.5 bg-gray-50/60">
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Archived ({archivedAds.length})</p>
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Archived ({archivedAds.length})</p>
                   </div>
                   <div className="divide-y divide-gray-50">
                     {archivedAds.map((ad) => <AdRow key={ad.adName} ad={ad} />)}

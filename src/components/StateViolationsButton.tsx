@@ -52,7 +52,7 @@ export default function StateViolationsButton() {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
       <div>
         <h3 className="text-sm font-semibold text-gray-900">Release Wrong-State Leads</h3>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-xs text-gray-500 mt-0.5">
           Finds leads claimed by salespeople whose team does not cover that lead&apos;s state, and returns them to the available pool.
         </p>
       </div>
@@ -84,11 +84,11 @@ export default function StateViolationsButton() {
               <div key={i} className="flex items-center justify-between text-xs px-3 py-2 bg-gray-50 rounded-lg">
                 <div>
                   <span className="font-medium text-gray-900">{sp.name}</span>
-                  <span className="text-gray-400 ml-2">covers {sp.coveredStates.join(", ")}</span>
+                  <span className="text-gray-500 ml-2">covers {sp.coveredStates.join(", ")}</span>
                 </div>
                 <div className="text-right">
                   <span className="font-semibold text-rose-600">{sp.count} wrong lead{sp.count !== 1 ? "s" : ""}</span>
-                  <span className="text-gray-400 ml-1">({sp.states.join(", ")})</span>
+                  <span className="text-gray-500 ml-1">({sp.states.join(", ")})</span>
                 </div>
               </div>
             ))}
@@ -124,7 +124,7 @@ export default function StateViolationsButton() {
       )}
 
       {(summary !== null || released !== null) && (
-        <button onClick={() => { setSummary(null); setReleased(null); setError(null) }} className="text-xs text-gray-400 hover:text-gray-600 transition">
+        <button onClick={() => { setSummary(null); setReleased(null); setError(null) }} className="text-xs text-gray-500 hover:text-gray-600 transition">
           Reset
         </button>
       )}

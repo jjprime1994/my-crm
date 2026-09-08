@@ -40,7 +40,7 @@ export default function ChangePasswordClient() {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Change Password</p>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-5">Change Password</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
