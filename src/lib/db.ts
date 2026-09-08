@@ -19,6 +19,10 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
 if (!globalForPrisma.dbInitialized) {
   globalForPrisma.dbInitialized = true
 
+  // Table/column creation for schema that predates this app's migration history now lives in
+  // prisma/migrations/20260605000000_backfill_manually_created_schema instead of here.
+  // LeadStatusHistory's CREATE TABLE is likewise now redundant with migration
+  // 20260514095000_add_lead_status_history, but its backfill (below) still needs to run.
   db.$executeRaw`
     CREATE TABLE IF NOT EXISTS "LeadStatusHistory" (
       "id"          TEXT         NOT NULL,
@@ -43,91 +47,6 @@ if (!globalForPrisma.dbInitialized) {
     `
   )
   .then(() => backfillStatusHistory())
-  .then(() =>
-    db.$executeRaw`
-      CREATE TABLE IF NOT EXISTS "Suggestion" (
-        "id"          TEXT         NOT NULL,
-        "userId"      TEXT         NOT NULL,
-        "type"        TEXT         NOT NULL DEFAULT 'SUGGESTION',
-        "title"       TEXT         NOT NULL,
-        "description" TEXT         NOT NULL,
-        "status"      TEXT         NOT NULL DEFAULT 'OPEN',
-        "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "Suggestion_pkey" PRIMARY KEY ("id"),
-        CONSTRAINT "Suggestion_userId_fkey"
-          FOREIGN KEY ("userId") REFERENCES "User"("id")
-          ON DELETE CASCADE ON UPDATE CASCADE
-      )
-    `
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "branch" TEXT`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "coveredStates" TEXT[] NOT NULL DEFAULT '{}'`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isDefaultTeam" BOOLEAN NOT NULL DEFAULT false`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "teamName" TEXT`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "AdRoute" ADD COLUMN IF NOT EXISTS "userIds" TEXT[] NOT NULL DEFAULT '{}'`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "AdRoute" ADD COLUMN IF NOT EXISTS "userStates" JSONB NOT NULL DEFAULT '{}'`
-  )
-  .then(() =>
-    db.$executeRaw`
-      CREATE TABLE IF NOT EXISTS "AdRoute" (
-        "id"        TEXT         NOT NULL,
-        "adId"      TEXT,
-        "adName"    TEXT         NOT NULL,
-        "teamIds"   TEXT[]       NOT NULL DEFAULT '{}',
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "AdRoute_pkey" PRIMARY KEY ("id"),
-        CONSTRAINT "AdRoute_adName_key" UNIQUE ("adName")
-      )
-    `
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "source" TEXT NOT NULL DEFAULT 'META'`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "firstContactedAt" TIMESTAMP(3)`
-  )
-  .then(() =>
-    db.$executeRaw`
-      CREATE TABLE IF NOT EXISTS "StateRoute" (
-        "id"                TEXT         NOT NULL,
-        "state"             TEXT         NOT NULL,
-        "userIds"           TEXT[]       NOT NULL DEFAULT '{}',
-        "lastAssignedIndex" INT          NOT NULL DEFAULT 0,
-        "createdAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "StateRoute_pkey" PRIMARY KEY ("id"),
-        CONSTRAINT "StateRoute_state_key" UNIQUE ("state")
-      )
-    `
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "StateRoute" ADD COLUMN IF NOT EXISTS "userIds" TEXT[] NOT NULL DEFAULT '{}'`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "StateRoute" ADD COLUMN IF NOT EXISTS "lastAssignedIndex" INT NOT NULL DEFAULT 0`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "StateRoute" DROP COLUMN IF EXISTS "userId"`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "LeadNote" ADD COLUMN IF NOT EXISTS "isSystem" BOOLEAN NOT NULL DEFAULT false`
-  )
-  .then(() =>
-    db.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "disabledAt" TIMESTAMP(3)`
-  )
   .then(() =>
     // Backfill: anyone already disabled before this column existed gets a fresh 30-day
     // grace period starting now, rather than vanishing from reporting immediately or
