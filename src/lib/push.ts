@@ -26,6 +26,10 @@ export async function sendPushToUser(userId: string, payload: { title: string; b
   )
 }
 
+export async function sendPushToUsers(userIds: string[], payload: { title: string; body: string; url?: string }) {
+  await Promise.allSettled(userIds.map((id) => sendPushToUser(id, payload)))
+}
+
 export async function sendPushToSuperAdmins(payload: { title: string; body: string; url?: string }) {
   const superAdmins = await db.user.findMany({
     where: { role: "SUPER_ADMIN", pushSubscriptions: { some: {} } },

@@ -13,7 +13,7 @@ interface Props {
   viewingAs: PickableUser | null
   viewAsUsers: PickableUser[]
   isSuperAdmin: boolean
-  counts: { followUps: number; availableLeads: number }
+  counts: { followUps: number; availableLeads: number; availableAppointments: number }
   children: React.ReactNode
 }
 

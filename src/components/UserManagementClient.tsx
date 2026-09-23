@@ -19,6 +19,7 @@ type User = {
   email: string
   role: string
   claimLimit: number
+  appointmentClaimLimit: number
   newLeadThreshold: number
   managerId: string | null
   createdAt: Date | string
@@ -82,6 +83,8 @@ export default function UserManagementClient({ users: initial, currentUserId, is
   const [error, setError] = useState("")
   const [editingName, setEditingName] = useState<{ id: string; value: string } | null>(null)
   const [editingLimit, setEditingLimit] = useState<{ id: string; value: number } | null>(null)
+  const [editingApptLimit, setEditingApptLimit] = useState<{ id: string; value: number } | null>(null)
+  const [applyingApptAll, setApplyingApptAll] = useState(false)
   const [editingThreshold, setEditingThreshold] = useState<{ id: string; value: number } | null>(null)
   const [applyingAll, setApplyingAll] = useState(false)
   const [resettingPassword, setResettingPassword] = useState<string | null>(null)
@@ -189,6 +192,28 @@ export default function UserManagementClient({ users: initial, currentUserId, is
     setApplyingAll(false)
     if (res.ok) setUsers(users.map((u) => (u.role !== "SUPER_ADMIN" ? { ...u, claimLimit: value } : u)))
     setEditingLimit(null)
+  }
+
+  async function saveApptLimit(id: string, value: number) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ appointmentClaimLimit: value }),
+    })
+    if (res.ok) setUsers(users.map((u) => (u.id === id ? { ...u, appointmentClaimLimit: value } : u)))
+    setEditingApptLimit(null)
+  }
+
+  async function applyApptLimitToAll(value: number) {
+    setApplyingApptAll(true)
+    const res = await fetch("/api/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ appointmentClaimLimit: value }),
+    })
+    setApplyingApptAll(false)
+    if (res.ok) setUsers(users.map((u) => (u.role !== "SUPER_ADMIN" ? { ...u, appointmentClaimLimit: value } : u)))
+    setEditingApptLimit(null)
   }
 
   async function saveThreshold(id: string, value: number) {
@@ -506,7 +531,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
 
             {/* Stats row */}
             {user.role !== "SUPER_ADMIN" && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="bg-gray-50 rounded-xl p-2.5 text-center">
                   <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1">Leads</p>
                   <p className="text-sm font-bold text-gray-900">{user._count.leads}</p>
@@ -531,6 +556,30 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                   ) : (
                     <button onClick={() => setEditingLimit({ id: user.id, value: user.claimLimit })} className="w-full flex flex-col items-center gap-0.5 group">
                       <span className="text-sm font-bold text-gray-900">{user.claimLimit}</span>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-300 group-hover:text-blue-400 transition"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  )}
+                </div>
+                <div className="bg-gray-50 rounded-xl p-2.5 text-center">
+                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1">Appt / day</p>
+                  {editingApptLimit?.id === user.id ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={1} max={500}
+                        value={editingApptLimit.value}
+                        onChange={(e) => setEditingApptLimit({ id: user.id, value: Number(e.target.value) })}
+                        className="w-12 text-center border border-gray-200 rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <div className="flex gap-1">
+                        <button onClick={() => saveApptLimit(user.id, editingApptLimit.value)} className="text-[10px] font-bold text-white bg-blue-600 px-2 py-0.5 rounded">✓</button>
+                        <button onClick={() => applyApptLimitToAll(editingApptLimit.value)} disabled={applyingApptAll} className="text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded disabled:opacity-50">{applyingApptAll ? "…" : "All"}</button>
+                        <button onClick={() => setEditingApptLimit(null)} className="text-[10px] text-gray-500 px-2 py-0.5 rounded hover:bg-gray-200">✕</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setEditingApptLimit({ id: user.id, value: user.appointmentClaimLimit })} className="w-full flex flex-col items-center gap-0.5 group">
+                      <span className="text-sm font-bold text-gray-900">{user.appointmentClaimLimit}</span>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-300 group-hover:text-blue-400 transition"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                   )}
@@ -623,6 +672,7 @@ export default function UserManagementClient({ users: initial, currentUserId, is
               <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Role</th>
               <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Leads</th>
               <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Claim / day</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Appt / day</th>
               <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-20">Max New</th>
               {isSuperAdmin && <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Manager</th>}
               <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Joined</th>
@@ -733,6 +783,55 @@ export default function UserManagementClient({ users: initial, currentUserId, is
                         </span>
                         <button
                           onClick={() => setEditingLimit({ id: user.id, value: user.claimLimit })}
+                          className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-4">
+                  {user.role !== "SUPER_ADMIN" ? (
+                    editingApptLimit?.id === user.id ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={500}
+                          value={editingApptLimit.value}
+                          onChange={(e) => setEditingApptLimit({ id: user.id, value: Number(e.target.value) })}
+                          className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                        />
+                        <button
+                          onClick={() => saveApptLimit(user.id, editingApptLimit.value)}
+                          className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 rounded-lg transition"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => applyApptLimitToAll(editingApptLimit.value)}
+                          disabled={applyingApptAll}
+                          className="text-xs font-semibold text-violet-600 hover:text-white bg-violet-50 hover:bg-violet-600 border border-violet-200 hover:border-transparent px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
+                        >
+                          {applyingApptAll ? "Applying…" : "Apply to All"}
+                        </button>
+                        <button
+                          onClick={() => setEditingApptLimit(null)}
+                          className="text-xs text-gray-500 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900 bg-gray-100 px-2.5 py-1 rounded-lg">
+                          {user.appointmentClaimLimit}
+                        </span>
+                        <button
+                          onClick={() => setEditingApptLimit({ id: user.id, value: user.appointmentClaimLimit })}
                           className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition"
                         >
                           Edit

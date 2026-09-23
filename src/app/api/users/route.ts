@@ -22,15 +22,21 @@ export async function PATCH(req: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 
-  const { claimLimit } = await req.json()
-  if (typeof claimLimit !== "number" || claimLimit < 1 || claimLimit > 500) {
-    return new NextResponse("Invalid claimLimit", { status: 400 })
+  const { claimLimit, appointmentClaimLimit } = await req.json()
+
+  if (claimLimit !== undefined) {
+    if (typeof claimLimit !== "number" || claimLimit < 1 || claimLimit > 500) {
+      return new NextResponse("Invalid claimLimit", { status: 400 })
+    }
+    await db.user.updateMany({ where: { role: { notIn: ["SUPER_ADMIN"] } }, data: { claimLimit } })
   }
 
-  await db.user.updateMany({
-    where: { role: { notIn: ["SUPER_ADMIN"] } },
-    data: { claimLimit },
-  })
+  if (appointmentClaimLimit !== undefined) {
+    if (typeof appointmentClaimLimit !== "number" || appointmentClaimLimit < 1 || appointmentClaimLimit > 500) {
+      return new NextResponse("Invalid appointmentClaimLimit", { status: 400 })
+    }
+    await db.user.updateMany({ where: { role: { notIn: ["SUPER_ADMIN"] } }, data: { appointmentClaimLimit } })
+  }
 
   return NextResponse.json({ ok: true })
 }
@@ -74,7 +80,7 @@ export async function POST(req: NextRequest) {
     data: { name, email, password: hashed, role: requestedRole, managerId },
     select: {
       id: true, name: true, email: true, role: true,
-      claimLimit: true, newLeadThreshold: true, managerId: true, createdAt: true,
+      claimLimit: true, appointmentClaimLimit: true, newLeadThreshold: true, managerId: true, createdAt: true,
       _count: { select: { leads: true } },
     },
   })

@@ -79,6 +79,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!Number.isInteger(v) || v < 1 || v > 100) return new NextResponse("claimLimit must be an integer between 1 and 100", { status: 400 })
     data.claimLimit = v
   }
+  if ("appointmentClaimLimit" in body) {
+    const v = Number(body.appointmentClaimLimit)
+    if (!Number.isInteger(v) || v < 1 || v > 100) return new NextResponse("appointmentClaimLimit must be an integer between 1 and 100", { status: 400 })
+    data.appointmentClaimLimit = v
+  }
   if ("newLeadThreshold" in body) {
     const v = Number(body.newLeadThreshold)
     if (!Number.isInteger(v) || v < 0 || v > 10000) return new NextResponse("newLeadThreshold must be an integer between 0 and 10000", { status: 400 })
@@ -115,7 +120,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const user = await db.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, claimLimit: true, newLeadThreshold: true, role: true, disabled: true, disabledAt: true },
+    select: { id: true, name: true, claimLimit: true, appointmentClaimLimit: true, newLeadThreshold: true, role: true, disabled: true, disabledAt: true },
   })
   return NextResponse.json(user)
 }

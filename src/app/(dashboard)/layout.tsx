@@ -4,6 +4,7 @@ import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import DashboardShell from "@/components/DashboardShell"
 import { db } from "@/lib/db"
 import { getAvailableLeadsCount } from "@/lib/available-leads"
+import { getAvailableAppointmentsCount } from "@/lib/available-appointments"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -38,7 +39,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // (near-empty) leads — that's the whole point of previewing as someone.
   const effectiveUserId = viewAsUser?.id ?? session.user.id
 
-  const [followUpsCount, availableLeadsCount] = await Promise.all([
+  const [followUpsCount, availableLeadsCount, availableAppointmentsCount] = await Promise.all([
     db.lead.count({
       where: {
         assignedToId: effectiveUserId,
@@ -47,6 +48,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       },
     }).catch(() => 0),
     getAvailableLeadsCount(effectiveUserId, effectiveRole),
+    getAvailableAppointmentsCount(effectiveUserId, effectiveRole),
   ])
 
   const effectiveUser = { ...session.user, role: effectiveRole }
@@ -57,7 +59,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       viewingAs={viewAsUser}
       viewAsUsers={viewAsUsers}
       isSuperAdmin={isSuperAdmin}
-      counts={{ followUps: followUpsCount, availableLeads: availableLeadsCount }}
+      counts={{ followUps: followUpsCount, availableLeads: availableLeadsCount, availableAppointments: availableAppointmentsCount }}
     >
       {children}
     </DashboardShell>

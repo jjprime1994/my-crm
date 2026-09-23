@@ -14,6 +14,7 @@ model User {
   password          String
   role              Role                @default(SALESPERSON)
   claimLimit        Int                 @default(5)
+  appointmentClaimLimit Int             @default(5)
   newLeadThreshold  Int                 @default(0)
   coveredStates     String[]            @default([])
   isDefaultTeam     Boolean             @default(false)
@@ -32,6 +33,8 @@ model User {
   claimedLeads      Lead[]              @relation("ClaimedLeads")
   assignmentsMade   LeadAssignmentLog[] @relation("AssignedByLogs")
   assignmentsReceived LeadAssignmentLog[] @relation("AssignedToLogs")
+  claimedAppointments AppointmentSlot[] @relation("ClaimedAppointments")
+  createdAppointments AppointmentSlot[] @relation("CreatedAppointments")
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 }
@@ -69,6 +72,8 @@ model Lead {
   notes            LeadNote[]
   statusHistory    LeadStatusHistory[]
   assignmentLogs   LeadAssignmentLog[]
+  appointment      AppointmentSlot?
+  whatsAppConversation WhatsAppConversation?
   rawData          Json?
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
@@ -106,6 +111,56 @@ enum LeadStatus {
   PROPOSAL
   CLOSED_WON
   CLOSED_LOST
+}
+
+model AppointmentSlot {
+  id               String            @id @default(cuid())
+  branch           String
+  startAt          DateTime
+  endAt            DateTime
+  status           AppointmentStatus @default(OPEN)
+  leadId           String?           @unique
+  lead             Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  claimedById      String?
+  claimedBy        User?             @relation("ClaimedAppointments", fields: [claimedById], references: [id], onDelete: SetNull)
+  claimedAt        DateTime?
+  createdByAdminId String?
+  createdByAdmin   User?             @relation("CreatedAppointments", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  reminderSentAt   DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([branch, status])
+  @@index([startAt])
+  @@index([claimedById, claimedAt])
+}
+
+enum AppointmentStatus {
+  OPEN
+  BOOKED
+  CLAIMED
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+model WhatsAppConversation {
+  id        String                    @id @default(cuid())
+  phone     String                    @unique
+  leadId    String?                   @unique
+  lead      Lead?                     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  state     WhatsAppConversationState @default(AWAITING_VALIDATION)
+  branch    String?
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+}
+
+enum WhatsAppConversationState {
+  AWAITING_VALIDATION
+  AWAITING_BRANCH
+  AWAITING_SLOT
+  BOOKED
+  DECLINED
 }
 
 model PushSubscription {

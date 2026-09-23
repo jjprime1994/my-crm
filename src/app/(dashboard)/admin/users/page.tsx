@@ -45,6 +45,7 @@ export default async function UsersPage() {
         email: true,
         role: true,
         claimLimit: true,
+        appointmentClaimLimit: true,
         newLeadThreshold: true,
         managerId: true,
         createdAt: true,

@@ -26,6 +26,10 @@ META_APP_SECRET           # Used to verify HMAC-SHA256 signatures on incoming we
 META_PAGE_ACCESS_TOKEN    # Page access token for fetching lead details (leadgen_id lookups)
 WEBSITE_FORM_SECRET       # Shared secret the website's contact form (or its backend) sends as x-website-secret
 CRON_SECRET               # Vercel cron auth for /api/cron/check-routing (Vercel sends it as a Bearer token)
+WHATSAPP_VERIFY_TOKEN     # Token for the WhatsApp Cloud API webhook verification handshake
+WHATSAPP_APP_SECRET       # Used to verify HMAC-SHA256 signatures on incoming WhatsApp webhook payloads
+WHATSAPP_ACCESS_TOKEN     # Messaging-scoped Cloud API token for sending WhatsApp messages (/messages endpoint)
+WHATSAPP_PHONE_NUMBER_ID  # The WhatsApp Business phone number ID messages are sent from
 ```
 
 ## Architecture
@@ -92,6 +96,16 @@ Leads arrive unassigned (`assignedToId: null`). They become "available" for sale
 - Leads are created with `source: "WEBSITE"`.
 
 As of 2026-07-06, the live website (nuvendingtech.com, WordPress + Divi) is wired up: the Divi contact form was replaced with a Fluent Forms form (`[fluentform id="3"]`), and a WPCode PHP snippet on the `fluentform/submission_inserted` hook POSTs new submissions to this endpoint.
+
+### WhatsApp Booking Bot
+
+`POST /api/webhooks/whatsapp` receives inbound WhatsApp Cloud API messages (pilot: leads come from a Meta Click-to-WhatsApp ad). Same signature-verification and always-200 pattern as the Meta webhook, but checks `WHATSAPP_APP_SECRET`/`WHATSAPP_VERIFY_TOKEN` and only handles `field === "messages"` changes on a `whatsapp_business_account` object.
+
+`src/lib/whatsapp-bot.ts` runs a small conversation state machine per phone number (`WhatsAppConversation.state`): light yes/no validation → ask state/branch (via `resolveStateBranch`) → offer up to 10 open `AppointmentSlot` rows for that branch as a WhatsApp interactive list → book the picked slot. Uses native Cloud API interactive button/list messages (`src/lib/whatsapp-send.ts`) — no WhatsApp Flows, no encryption setup. The first inbound message's `referral.source_id` (present on Click-to-WhatsApp taps) is resolved to `adName`/`campaignName` via the same Graph API call the Meta webhook uses (needs `META_PAGE_ACCESS_TOKEN`, not the WhatsApp messaging token) so these leads attribute correctly in Campaign Performance/Lead Sources. A phone number with an existing active lead (any source, within 30 days) reuses that lead rather than creating a duplicate.
+
+A booked slot (`AppointmentSlot.status = BOOKED`) is unclaimed until a salesperson claims it from **Available Appointments** (`/available-appointments`), routed by branch only (via `src/lib/available-appointments.ts`, reusing `filterLeads` with `adName` forced null — no ad-routing for appointments). Claiming uses `User.appointmentClaimLimit` — a **separate daily quota** from the lead `claimLimit`, same midnight-MYT-reset pattern (`/api/appointment-slots/[id]/claim`). Admins manage the slot calendar at `/superadmin/appointments` (SUPER_ADMIN only, same as Ad Routing).
+
+`GET /api/cron/check-appointments` (`vercel.json`, once daily — Vercel Hobby caps cron frequency) flags `BOOKED` slots due that day (push to eligible salespeople/admins for the branch) and marks past-due `BOOKED` slots `MISSED` (push to SUPER_ADMINs, logs a `LeadNote`). Logic in `src/lib/check-appointments.ts`. Both sweeps are idempotent, so tightening the cadence later (Pro plan, or an external scheduler hitting the same endpoint) needs no code change.
 
 ## Windows / Shell Rules
 

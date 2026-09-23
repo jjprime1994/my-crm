@@ -14,7 +14,7 @@ interface Props {
   isSuperAdmin: boolean
   viewingAs: PickableUser | null
   viewAsUsers: PickableUser[]
-  counts: { followUps: number; availableLeads: number }
+  counts: { followUps: number; availableLeads: number; availableAppointments: number }
   onClose?: () => void
 }
 
@@ -109,6 +109,11 @@ const Icons = {
       <circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v3a6 6 0 0 0 6 6h3"/><path d="M13 6h3a3 3 0 0 1 3 3v3"/>
     </svg>
   ),
+  calendar: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
 }
 
 export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs, viewAsUsers, counts }: Props) {
@@ -133,6 +138,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
     { href: "/leads", label: "Leads", icon: Icons.leads, count: 0 },
     { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell, count: counts.followUps },
     { href: "/available-leads", label: "Available Leads", icon: Icons.inbox, count: counts.availableLeads },
+    { href: "/available-appointments", label: "Available Appointments", icon: Icons.calendar, count: counts.availableAppointments },
     ...(managerLevel ? [{ href: "/admin/users", label: "Manage Team", icon: Icons.team, count: 0 }] : []),
     ...(managerLevel && !superAdmin ? [
       { href: "/admin/overview", label: "Team Overview", icon: Icons.overview, count: 0 },
@@ -145,6 +151,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
         { href: "/superadmin/overview", label: "Overview", icon: Icons.overview },
         { href: "/superadmin/export", label: "Export Leads", icon: Icons.export },
         { href: "/superadmin/routing", label: "Ad Routing", icon: Icons.routing },
+        { href: "/superadmin/appointments", label: "Appointment Slots", icon: Icons.calendar },
       ]
     : []
 
