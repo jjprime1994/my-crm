@@ -104,6 +104,15 @@ model AdRoute {
   updatedAt DateTime @updatedAt
 }
 
+// Campaigns whose leadgen webhook events are skipped entirely (no Lead row created) —
+// used for campaigns whose leads are handled directly on the business WhatsApp number instead.
+model ExcludedCampaign {
+  id           String   @id @default(cuid())
+  campaignId   String   @unique
+  campaignName String?
+  createdAt    DateTime @default(now())
+}
+
 enum LeadStatus {
   NEW
   CONTACTED

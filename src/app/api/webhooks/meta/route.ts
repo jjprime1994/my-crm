@@ -50,11 +50,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  const excludedCampaigns = await db.excludedCampaign.findMany({ select: { campaignId: true } }).catch(() => [])
+  const excludedCampaignIds = new Set(excludedCampaigns.map((c) => c.campaignId))
+
   for (const entry of body.entry ?? []) {
     for (const change of entry.changes ?? []) {
       if (change.field !== "leadgen") continue
 
       const { leadgen_id, form_id, ad_id, campaign_id, adgroup_id } = change.value
+
+      // Campaign is opted out of the CRM (handled directly on the business WhatsApp number instead) — skip entirely.
+      if (campaign_id && excludedCampaignIds.has(campaign_id)) {
+        console.log("[meta-webhook] skipping excluded campaign:", campaign_id, "leadgen_id:", leadgen_id)
+        continue
+      }
 
       // Fetch full lead data from Meta Graph API
       let firstName, lastName, email, phone, adName, campaignName, branch: string | null = null
@@ -87,6 +96,13 @@ export async function POST(req: NextRequest) {
         fieldData = fields
         if (!resolvedAdId && leadData.ad_id) resolvedAdId = leadData.ad_id
         if (!resolvedCampaignId && leadData.campaign_id) resolvedCampaignId = leadData.campaign_id
+
+        // Re-check exclusion in case campaign_id was only resolved just now (webhook payload omitted it).
+        if (resolvedCampaignId && excludedCampaignIds.has(resolvedCampaignId)) {
+          console.log("[meta-webhook] skipping excluded campaign (resolved via Graph API):", resolvedCampaignId, "leadgen_id:", leadgen_id)
+          continue
+        }
+
         const get = (key: string) => fields.find((f) => f.name === key)?.values?.[0]
         email = get("email")
         phone = get("phone_number") ?? get("phone") ?? get("whatsapp_number") ?? get("whatsapp") ?? get("mobile_phone") ?? get("mobile") ?? get("contact_number") ?? get("hp") ?? get("handphone") ?? get("no_telefon") ?? get("telefon")

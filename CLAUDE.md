@@ -84,6 +84,8 @@ Leads arrive unassigned (`assignedToId: null`). They become "available" for sale
 
 `GET /api/webhooks/meta` handles the one-time webhook verification handshake Meta performs when you register the webhook URL.
 
+**Excluded Campaigns**: some Meta Lead Ads campaigns are handled directly on the business WhatsApp number instead of the CRM (a stopgap until the WhatsApp booking bot fully replaces manual handling for them). SUPER_ADMIN manages this at `/superadmin/excluded-campaigns` (`ExcludedCampaign` model, keyed by Meta's numeric `campaignId`). The webhook checks the exclusion set twice — once against `campaign_id` straight off the webhook payload (skips before any Graph API calls), and again after the leadgen fetch resolves `campaign_id` for the rare payload that omits it — and on a match, `continue`s past that lead entirely: no Graph API calls for ad/campaign/form name, no `Lead` row created. `/api/excluded-campaigns` (GET/POST/DELETE) backs the page; GET merges campaigns already seen via existing `Lead` rows with manually-added `ExcludedCampaign` rows, since an excluded campaign that's never sent a lead won't appear in the `Lead` table on its own.
+
 ### Website Enquiries Webhook
 
 `POST /api/webhooks/website` receives contact-form enquiries from the company website. Unlike Meta/TikTok this isn't a platform with its own retry policy, so it returns real HTTP status codes (401/400/500) instead of always-200.
