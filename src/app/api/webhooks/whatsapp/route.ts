@@ -46,6 +46,13 @@ export async function POST(req: NextRequest) {
     for (const change of entry.changes ?? []) {
       if (change.field !== "messages") continue
 
+      // Outbound delivery statuses — log failures so the Meta error code is visible in Vercel logs
+      for (const status of change.value?.statuses ?? []) {
+        if (status.status === "failed") {
+          console.error("[whatsapp-webhook] outbound message failed:", JSON.stringify(status.errors), "to:", status.recipient_id)
+        }
+      }
+
       for (const message of change.value?.messages ?? []) {
         try {
           await handleInboundWhatsAppMessage(message)
