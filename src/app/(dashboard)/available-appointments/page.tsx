@@ -1,4 +1,6 @@
 import { auth } from "@/auth"
+import { isClaimingPaused } from "@/lib/app-settings"
+import ClaimingPausedNotice from "@/components/ClaimingPausedNotice"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import AvailableAppointmentsClient from "@/components/AvailableAppointmentsClient"
@@ -8,6 +10,7 @@ import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 export default async function AvailableAppointmentsPage() {
   const session = await auth()
   if (!session) redirect("/login")
+  if (await isClaimingPaused()) return <ClaimingPausedNotice what="Available Appointments" />
 
   const [effectiveRole, viewAsUser] = await Promise.all([
     getViewAsRole(session.user.role),

@@ -35,6 +35,8 @@ model User {
   assignmentsReceived LeadAssignmentLog[] @relation("AssignedToLogs")
   claimedAppointments AppointmentSlot[] @relation("ClaimedAppointments")
   createdAppointments AppointmentSlot[] @relation("CreatedAppointments")
+  dailyActivities   DailyActivity[]     @relation("DailyActivityOwner")
+  commissionClaims  CommissionClaim[]   @relation("CommissionClaimOwner")
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 }
@@ -241,4 +243,70 @@ model LeadAssignmentLog {
   @@index([leadId])
   @@index([assignedToId])
   @@index([assignedById])
+}
+
+// Key/value app-wide switches. "claimingPaused" = "true" hides Available Leads/Appointments
+// and makes the claim endpoints refuse — flip it back to "false" to restore claiming.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// One row per person per MYT day: self-reported leads received + appointments made.
+model DailyActivity {
+  id                String   @id @default(cuid())
+  user              User     @relation("DailyActivityOwner", fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  date              String   // "YYYY-MM-DD" in MYT
+  leadsCount        Int      @default(0)
+  appointmentsCount Int      @default(0)
+  updatedById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+enum CommissionKind {
+  MA // Sales commission
+  LA // Location commission
+}
+
+// One row of a monthly commission claim (MA or LA sheet of the commission template).
+model CommissionClaim {
+  id              String         @id @default(cuid())
+  kind            CommissionKind
+  user            User           @relation("CommissionClaimOwner", fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  month           String         // "YYYY-MM"
+  branch          String?
+  customerName    String
+  commissionType  String?
+  packageType     String?
+  // MA only
+  machineType     String?
+  poNo            String?
+  poDate          String?        // "YYYY-MM-DD"
+  sellingPrice    Decimal?       @db.Decimal(12, 2)
+  totalCollection Decimal?       @db.Decimal(12, 2)
+  lastPaymentDate String?        // "YYYY-MM-DD"
+  machineCount    Int?
+  kpi             Decimal?       @db.Decimal(12, 2)
+  incentive       Decimal?       @db.Decimal(12, 2)
+  // LA only
+  machinePoNo     String?
+  locationPoNo    String?
+  locationName    String?
+  // both
+  paymentMadePct  Decimal?       @db.Decimal(6, 2)
+  amountClaim     Decimal        @db.Decimal(12, 2)
+  createdById     String?
+  updatedById     String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([kind, month])
+  @@index([userId, month])
 }

@@ -3,12 +3,18 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isAdmin } from "@/lib/roles"
 import { isLeadClaimableBy } from "@/lib/available-leads"
+import { isClaimingPaused } from "@/lib/app-settings"
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
   const { id } = await params
+
+  // Claim system paused (commission mode) — see src/lib/app-settings.ts
+  if (await isClaimingPaused()) {
+    return NextResponse.json({ error: "Claiming is currently paused." }, { status: 423 })
+  }
 
   const user = await db.user.findUnique({ where: { id: session.user.id } })
   if (!user) return new NextResponse("User not found", { status: 404 })

@@ -1,4 +1,6 @@
 import { auth } from "@/auth"
+import { isClaimingPaused } from "@/lib/app-settings"
+import ClaimingPausedNotice from "@/components/ClaimingPausedNotice"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import AvailableLeadsClient from "@/components/AvailableLeadsClient"
@@ -8,6 +10,7 @@ import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 export default async function AvailableLeadsPage() {
   const session = await auth()
   if (!session) redirect("/login")
+  if (await isClaimingPaused()) return <ClaimingPausedNotice what="Available Leads" />
 
   const [effectiveRole, viewAsUser] = await Promise.all([
     getViewAsRole(session.user.role),

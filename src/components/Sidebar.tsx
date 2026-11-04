@@ -15,6 +15,7 @@ interface Props {
   viewingAs: PickableUser | null
   viewAsUsers: PickableUser[]
   counts: { followUps: number; availableLeads: number; availableAppointments: number }
+  claimingPaused: boolean
   onClose?: () => void
 }
 
@@ -114,6 +115,16 @@ const Icons = {
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
   ),
+  money: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>
+    </svg>
+  ),
+  pin: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+    </svg>
+  ),
   blocked: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
@@ -121,7 +132,7 @@ const Icons = {
   ),
 }
 
-export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs, viewAsUsers, counts }: Props) {
+export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs, viewAsUsers, counts, claimingPaused }: Props) {
   const pathname = usePathname()
   const admin = isAdmin(user.role)
   const superAdmin = isSuperAdmin(user.role)
@@ -142,8 +153,13 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
     { href: "/", label: "Dashboard", icon: Icons.dashboard, count: 0 },
     { href: "/leads", label: "Leads", icon: Icons.leads, count: 0 },
     { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell, count: counts.followUps },
-    { href: "/available-leads", label: "Available Leads", icon: Icons.inbox, count: counts.availableLeads },
-    { href: "/available-appointments", label: "Available Appointments", icon: Icons.calendar, count: counts.availableAppointments },
+    { href: "/daily-activity", label: "Daily Activity", icon: Icons.overview, count: 0 },
+    { href: "/commission/ma", label: "MA – Sales Commission", icon: Icons.money, count: 0 },
+    { href: "/commission/la", label: "LA – Location Commission", icon: Icons.pin, count: 0 },
+    ...(claimingPaused ? [] : [
+      { href: "/available-leads", label: "Available Leads", icon: Icons.inbox, count: counts.availableLeads },
+      { href: "/available-appointments", label: "Available Appointments", icon: Icons.calendar, count: counts.availableAppointments },
+    ]),
     ...(managerLevel ? [{ href: "/admin/users", label: "Manage Team", icon: Icons.team, count: 0 }] : []),
     ...(managerLevel && !superAdmin ? [
       { href: "/admin/overview", label: "Team Overview", icon: Icons.overview, count: 0 },
@@ -158,6 +174,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
         { href: "/superadmin/routing", label: "Ad Routing", icon: Icons.routing },
         { href: "/superadmin/appointments", label: "Appointment Slots", icon: Icons.calendar },
         { href: "/superadmin/excluded-campaigns", label: "Excluded Campaigns", icon: Icons.blocked },
+        { href: "/superadmin/claim-system", label: "Claim System", icon: Icons.settings },
       ]
     : []
 
