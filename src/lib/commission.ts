@@ -157,3 +157,29 @@ export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unk
   }
   return { ok: true, data }
 }
+
+// Lead sources for appointments entered on Daily Activity. "Other" needs a typed description.
+export const APPOINTMENT_SOURCES = ["Facebook / Instagram", "TikTok", "Website", "WhatsApp", "Referral", "Walk-in", "Other"] as const
+
+export type DailyAppointmentRow = { id: string; source: string; sourceOther: string | null; customerName: string | null }
+
+type ApptParse = { ok: true; data: { source: string; sourceOther: string | null; customerName: string | null } } | { ok: false; error: string }
+
+export function parseAppointmentBody(body: Record<string, unknown>): ApptParse {
+  const text = (k: string) => {
+    const v = body[k]
+    if (v === null || v === undefined) return null
+    const s = String(v).trim()
+    return s === "" ? null : s.slice(0, 200)
+  }
+  const source = text("source")
+  if (!source) return { ok: false, error: "Lead source is required." }
+  if (!(APPOINTMENT_SOURCES as readonly string[]).includes(source)) return { ok: false, error: "Invalid lead source." }
+  const sourceOther = source === "Other" ? text("sourceOther") : null
+  if (source === "Other" && !sourceOther) return { ok: false, error: "Please specify the lead source for \"Other\"." }
+  return { ok: true, data: { source, sourceOther, customerName: text("customerName") } }
+}
+
+/** "Other" sources show what was typed, e.g. "Other: Roadshow". */
+export const sourceLabel = (a: { source: string; sourceOther: string | null }) =>
+  a.source === "Other" && a.sourceOther ? `Other: ${a.sourceOther}` : a.source

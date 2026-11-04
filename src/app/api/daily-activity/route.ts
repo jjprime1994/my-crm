@@ -5,7 +5,9 @@ import { isUserDisabled } from "@/lib/session-guard"
 import { canManageUser } from "@/lib/team-scope"
 import { isDateStr, todayMYT } from "@/lib/commission"
 
-// POST: upsert one person's daily numbers. Body: { userId?, date, leadsCount, appointmentsCount }
+// POST: set one person's lead count for a day. Body: { userId?, date, leadsCount }
+// Appointments are entered one by one (with lead source) via /api/daily-activity/appointments,
+// which keeps appointmentsCount in sync — so it is not accepted here.
 // Anyone can enter their own; managers can enter/edit for people under them; SUPER_ADMIN for anyone.
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -19,11 +21,8 @@ export async function POST(req: NextRequest) {
   if (date > todayMYT()) return NextResponse.json({ error: "Can't enter numbers for a future date." }, { status: 400 })
 
   const leadsCount = Number(body.leadsCount)
-  const appointmentsCount = Number(body.appointmentsCount)
-  for (const [n, label] of [[leadsCount, "Leads"], [appointmentsCount, "Appointments"]] as const) {
-    if (!Number.isInteger(n) || n < 0 || n > 10000) {
-      return NextResponse.json({ error: `${label} must be a whole number of 0 or more.` }, { status: 400 })
-    }
+  if (!Number.isInteger(leadsCount) || leadsCount < 0 || leadsCount > 10000) {
+    return NextResponse.json({ error: "Leads must be a whole number of 0 or more." }, { status: 400 })
   }
 
   if (!(await canManageUser(session.user.id, session.user.role, userId))) {
@@ -32,8 +31,8 @@ export async function POST(req: NextRequest) {
 
   const row = await db.dailyActivity.upsert({
     where: { userId_date: { userId, date } },
-    create: { userId, date, leadsCount, appointmentsCount, updatedById: session.user.id },
-    update: { leadsCount, appointmentsCount, updatedById: session.user.id },
+    create: { userId, date, leadsCount, updatedById: session.user.id },
+    update: { leadsCount, updatedById: session.user.id },
   })
   return NextResponse.json(row)
 }

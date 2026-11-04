@@ -23,8 +23,9 @@ async function main() {
 
   if (process.argv.includes("--clear")) {
     const { count } = await db.commissionClaim.deleteMany({ where: { createdById: DEMO } })
+    const appts = await db.dailyAppointment.deleteMany({ where: { createdById: DEMO } })
     const act = await db.dailyActivity.deleteMany({ where: { updatedById: DEMO } })
-    console.log(`Deleted ${count} demo claim rows and ${act.count} demo daily-activity rows.`)
+    console.log(`Deleted ${count} demo claim rows, ${act.count} demo daily-activity rows and ${appts.count} demo appointments.`)
     return
   }
 
@@ -214,4 +215,25 @@ async function main() {
   console.log(`Seeded ${n} demo rows for ${month} across: ${people.map((p) => p.name).join(", ")}`)
 }
 
-main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1) })
+// Demo activity rows only carry a count — give each counted appointment a real entry with a lead source.
+async function backfillDemoAppointments() {
+  if (process.argv.includes("--clear")) return
+  const { db } = await import("../src/lib/db")
+  const { APPOINTMENT_SOURCES } = await import("../src/lib/commission")
+  const rows = await db.dailyActivity.findMany({ where: { updatedById: DEMO, appointmentsCount: { gt: 0 } } })
+  let n = 0
+  for (const [i, r] of rows.entries()) {
+    const have = await db.dailyAppointment.count({ where: { userId: r.userId, date: r.date } })
+    for (let k = have; k < r.appointmentsCount; k++) {
+      const source = APPOINTMENT_SOURCES[(i + k * 3) % APPOINTMENT_SOURCES.length]
+      await db.dailyAppointment.create({ data: {
+        userId: r.userId, date: r.date, source, sourceOther: source === "Other" ? "Roadshow" : null,
+        customerName: k % 2 ? null : `[DEMO] Customer ${i + 1}-${k + 1}`, createdById: DEMO,
+      } })
+      n++
+    }
+  }
+  if (n) console.log(`Added ${n} demo appointment entries with lead sources.`)
+}
+
+main().then(backfillDemoAppointments).then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1) })

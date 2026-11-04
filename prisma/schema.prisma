@@ -36,6 +36,7 @@ model User {
   claimedAppointments AppointmentSlot[] @relation("ClaimedAppointments")
   createdAppointments AppointmentSlot[] @relation("CreatedAppointments")
   dailyActivities   DailyActivity[]     @relation("DailyActivityOwner")
+  dailyAppointments DailyAppointment[]  @relation("DailyAppointmentOwner")
   commissionClaims  CommissionClaim[]   @relation("CommissionClaimOwner")
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -266,6 +267,24 @@ model DailyActivity {
   updatedAt         DateTime @updatedAt
 
   @@unique([userId, date])
+  @@index([date])
+}
+
+// One appointment made on a day, with its lead source. DailyActivity.appointmentsCount is kept
+// equal to the number of these rows for that person/day (recounted on every add/delete).
+model DailyAppointment {
+  id           String   @id @default(cuid())
+  user         User     @relation("DailyAppointmentOwner", fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  date         String   // "YYYY-MM-DD" in MYT
+  source       String   // one of APPOINTMENT_SOURCES in src/lib/commission.ts
+  sourceOther  String?  // required when source = "Other"
+  customerName String?
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, date])
   @@index([date])
 }
 

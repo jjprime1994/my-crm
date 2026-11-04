@@ -23,14 +23,23 @@ export default async function DailyActivityPage({ searchParams }: { searchParams
   const users = (await getScopedUsers(me, role)).filter((u) => !u.disabled || u.id === me)
   const ids = users.map((u) => u.id)
 
-  const [dayRows, monthRows] = await Promise.all([
+  const monthRange = { gte: `${month}-01`, lte: `${month}-31` }
+  const [dayRows, monthRows, dayAppts, monthSources] = await Promise.all([
     db.dailyActivity.findMany({ where: { userId: { in: ids }, date } }),
     db.dailyActivity.groupBy({
       by: ["userId"],
       where: { userId: { in: ids }, date: { gte: `${month}-01`, lte: `${month}-31` } },
       _sum: { leadsCount: true, appointmentsCount: true },
     }),
+    db.dailyAppointment.findMany({
+      where: { userId: { in: ids }, date },
+      select: { id: true, userId: true, source: true, sourceOther: true, customerName: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    db.dailyAppointment.groupBy({ by: ["userId", "source"], where: { userId: { in: ids }, date: monthRange }, _count: { _all: true } }),
   ])
+  const apptMap = new Map<string, { id: string; source: string; sourceOther: string | null; customerName: string | null }[]>()
+  for (const { userId, ...a } of dayAppts) apptMap.set(userId, [...(apptMap.get(userId) ?? []), a])
 
   const dayMap = new Map(dayRows.map((r) => [r.userId, r]))
   const monthMap = new Map(monthRows.map((r) => [r.userId, r._sum]))
@@ -47,10 +56,12 @@ export default async function DailyActivityPage({ searchParams }: { searchParams
       appointments: dayMap.get(u.id)?.appointmentsCount ?? null,
       monthLeads: monthMap.get(u.id)?.leadsCount ?? 0,
       monthAppointments: monthMap.get(u.id)?.appointmentsCount ?? 0,
+      appts: apptMap.get(u.id) ?? [],
     }))
     .sort((a, b) => comparePeople({ ...a, id: a.userId }, { ...b, id: b.userId }, me))
 
   const showTeams = role === "SUPER_ADMIN"
 
-  return <DailyActivityClient key={`${me}-${date}`} date={date} today={today} meId={me} rows={rows} showTeams={showTeams} />
+  return <DailyActivityClient key={`${me}-${date}`} date={date} today={today} meId={me} rows={rows} showTeams={showTeams}
+    monthSources={monthSources.map((m) => ({ userId: m.userId, source: m.source, count: m._count._all }))} />
 }

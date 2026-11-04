@@ -73,3 +73,22 @@ describe("comparePeople", () => {
     expect(order).toEqual(["a2", "sa", "a1", "s1"])
   })
 })
+
+describe("parseAppointmentBody", () => {
+  it("requires a known lead source", async () => {
+    const { parseAppointmentBody } = await import("./commission")
+    expect(parseAppointmentBody({}).ok).toBe(false)
+    expect(parseAppointmentBody({ source: "Billboard" }).ok).toBe(false)
+    expect(parseAppointmentBody({ source: "TikTok", customerName: "  Ali  " })).toEqual({
+      ok: true, data: { source: "TikTok", sourceOther: null, customerName: "Ali" },
+    })
+  })
+
+  it("makes the description compulsory for Other, and drops it for other sources", async () => {
+    const { parseAppointmentBody } = await import("./commission")
+    expect(parseAppointmentBody({ source: "Other" })).toEqual({ ok: false, error: 'Please specify the lead source for "Other".' })
+    expect(parseAppointmentBody({ source: "Other", sourceOther: "   " }).ok).toBe(false)
+    expect(parseAppointmentBody({ source: "Other", sourceOther: "Roadshow" })).toMatchObject({ ok: true, data: { sourceOther: "Roadshow" } })
+    expect(parseAppointmentBody({ source: "Referral", sourceOther: "ignored" })).toMatchObject({ ok: true, data: { sourceOther: null } })
+  })
+})
