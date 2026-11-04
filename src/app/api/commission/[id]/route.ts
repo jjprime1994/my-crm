@@ -3,12 +3,14 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isUserDisabled } from "@/lib/session-guard"
 import { canManageUser } from "@/lib/team-scope"
+import { canViewCommission } from "@/lib/app-settings"
 import { isMonthStr, parseClaimBody, serializeClaim } from "@/lib/commission"
 
 async function loadEditable(id: string) {
   const session = await auth()
   if (!session) return { error: new NextResponse("Unauthorized", { status: 401 }) }
   if (await isUserDisabled(session.user.id)) return { error: new NextResponse("Account disabled", { status: 403 }) }
+  if (!(await canViewCommission(session.user.id))) return { error: new NextResponse("Forbidden", { status: 403 }) }
   const claim = await db.commissionClaim.findUnique({ where: { id } })
   if (!claim) return { error: NextResponse.json({ error: "Claim not found." }, { status: 404 }) }
   if (!(await canManageUser(session.user.id, session.user.role, claim.userId))) {

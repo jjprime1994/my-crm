@@ -5,7 +5,7 @@ import DashboardShell from "@/components/DashboardShell"
 import { db } from "@/lib/db"
 import { getAvailableLeadsCount } from "@/lib/available-leads"
 import { getAvailableAppointmentsCount } from "@/lib/available-appointments"
-import { isClaimingPaused } from "@/lib/app-settings"
+import { getCommissionBlockedIds, isClaimingPaused } from "@/lib/app-settings"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -40,7 +40,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // (near-empty) leads — that's the whole point of previewing as someone.
   const effectiveUserId = viewAsUser?.id ?? session.user.id
 
-  const claimingPaused = await isClaimingPaused()
+  const [claimingPaused, commissionBlocked] = await Promise.all([isClaimingPaused(), getCommissionBlockedIds()])
+  const commissionHidden = commissionBlocked.includes(session.user.id) || commissionBlocked.includes(effectiveUserId)
 
   const [followUpsCount, availableLeadsCount, availableAppointmentsCount] = await Promise.all([
     db.lead.count({
@@ -64,6 +65,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       isSuperAdmin={isSuperAdmin}
       counts={{ followUps: followUpsCount, availableLeads: availableLeadsCount, availableAppointments: availableAppointmentsCount }}
       claimingPaused={claimingPaused}
+      commissionHidden={commissionHidden}
     >
       {children}
     </DashboardShell>

@@ -15,10 +15,11 @@ interface Props {
   isSuperAdmin: boolean
   counts: { followUps: number; availableLeads: number; availableAppointments: number }
   claimingPaused: boolean
+  commissionHidden: boolean
   children: React.ReactNode
 }
 
-export default function DashboardShell({ user, viewingAs, viewAsUsers, isSuperAdmin, counts, claimingPaused, children }: Props) {
+export default function DashboardShell({ user, viewingAs, viewAsUsers, isSuperAdmin, counts, claimingPaused, commissionHidden, children }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -36,7 +37,7 @@ export default function DashboardShell({ user, viewingAs, viewAsUsers, isSuperAd
       <div className={`fixed inset-y-0 left-0 z-30 transition-transform duration-200 lg:static lg:translate-x-0 lg:z-auto ${
         open ? "translate-x-0" : "-translate-x-full"
       }`}>
-        <Sidebar user={user} onClose={() => setOpen(false)} isSuperAdmin={isSuperAdmin} viewingAs={viewingAs} viewAsUsers={viewAsUsers} counts={counts} claimingPaused={claimingPaused} />
+        <Sidebar user={user} onClose={() => setOpen(false)} isSuperAdmin={isSuperAdmin} viewingAs={viewingAs} viewAsUsers={viewAsUsers} counts={counts} claimingPaused={claimingPaused} commissionHidden={commissionHidden} />
       </div>
 
       {/* Main content */}

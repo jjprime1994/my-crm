@@ -5,6 +5,7 @@ import { getViewAsRole, getViewAsUser } from "@/lib/viewas"
 import { getScopedUsers } from "@/lib/team-scope"
 import { currentMonthMYT, isMonthStr, serializeClaim } from "@/lib/commission"
 import CommissionClient from "@/components/CommissionClient"
+import { getCommissionBlockedIds } from "@/lib/app-settings"
 
 // /commission/ma → Sales commission, /commission/la → Location commission
 export default async function CommissionPage({
@@ -23,6 +24,8 @@ export default async function CommissionPage({
 
   const [role, viewAsUser] = await Promise.all([getViewAsRole(session.user.role), getViewAsUser(session.user.role)])
   const me = viewAsUser?.id ?? session.user.id
+  const blocked = await getCommissionBlockedIds()
+  if (blocked.includes(session.user.id) || blocked.includes(me)) notFound()
   const month = isMonthStr(sp.month) ? sp.month : currentMonthMYT()
 
   const users = await getScopedUsers(me, role)

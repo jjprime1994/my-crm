@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/roles"
 import { comparePeople, isMonthStr, monthLabel, serializeClaim, type CommissionRow } from "@/lib/commission"
 import { getScopedUsers } from "@/lib/team-scope"
+import { canViewCommission } from "@/lib/app-settings"
 
 type Col = { header: string; width: number; get: (r: CommissionRow, i: number) => string | number | null; money?: boolean }
 
@@ -50,6 +51,7 @@ const border = { top: thin, left: thin, bottom: thin, right: thin }
 export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session || !isSuperAdmin(session.user.role)) return new NextResponse("Forbidden", { status: 403 })
+  if (!(await canViewCommission(session.user.id))) return new NextResponse("Forbidden", { status: 403 })
 
   const kind = req.nextUrl.searchParams.get("kind")
   const month = req.nextUrl.searchParams.get("month")

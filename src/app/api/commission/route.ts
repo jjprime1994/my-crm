@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isUserDisabled } from "@/lib/session-guard"
 import { canManageUser } from "@/lib/team-scope"
+import { canViewCommission } from "@/lib/app-settings"
 import { isMonthStr, parseClaimBody, serializeClaim } from "@/lib/commission"
 
 // POST: add a commission claim row. Body: { kind: "MA"|"LA", userId?, month: "YYYY-MM", ...fields }
@@ -10,6 +11,7 @@ export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session) return new NextResponse("Unauthorized", { status: 401 })
   if (await isUserDisabled(session.user.id)) return new NextResponse("Account disabled", { status: 403 })
+  if (!(await canViewCommission(session.user.id))) return new NextResponse("Forbidden", { status: 403 })
 
   const body = await req.json().catch(() => ({}))
   const kind = body.kind

@@ -16,6 +16,7 @@ interface Props {
   viewAsUsers: PickableUser[]
   counts: { followUps: number; availableLeads: number; availableAppointments: number }
   claimingPaused: boolean
+  commissionHidden: boolean
   onClose?: () => void
 }
 
@@ -132,7 +133,7 @@ const Icons = {
   ),
 }
 
-export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs, viewAsUsers, counts, claimingPaused }: Props) {
+export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin, viewingAs, viewAsUsers, counts, claimingPaused, commissionHidden }: Props) {
   const pathname = usePathname()
   const admin = isAdmin(user.role)
   const superAdmin = isSuperAdmin(user.role)
@@ -154,8 +155,10 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
     { href: "/leads", label: "Leads", icon: Icons.leads, count: 0 },
     { href: "/follow-ups", label: "Follow-ups", icon: Icons.bell, count: counts.followUps },
     { href: "/daily-activity", label: "Daily Activity", icon: Icons.overview, count: 0 },
-    { href: "/commission/ma", label: "MA – Sales Commission", icon: Icons.money, count: 0 },
-    { href: "/commission/la", label: "LA – Location Commission", icon: Icons.pin, count: 0 },
+    ...(commissionHidden ? [] : [
+      { href: "/commission/ma", label: "MA – Sales Commission", icon: Icons.money, count: 0 },
+      { href: "/commission/la", label: "LA – Location Commission", icon: Icons.pin, count: 0 },
+    ]),
     ...(claimingPaused ? [] : [
       { href: "/available-leads", label: "Available Leads", icon: Icons.inbox, count: counts.availableLeads },
       { href: "/available-appointments", label: "Available Appointments", icon: Icons.calendar, count: counts.availableAppointments },

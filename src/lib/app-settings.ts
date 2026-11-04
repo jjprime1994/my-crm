@@ -17,3 +17,17 @@ export async function setClaimingPaused(paused: boolean): Promise<void> {
     update: { value: String(paused) },
   })
 }
+
+const COMMISSION_BLOCKED = "commissionBlockedUserIds"
+
+// Users (by id, comma-separated in AppSetting "commissionBlockedUserIds") who must not see or use
+// the MA / LA commission pages — even if their role would normally allow it (e.g. the
+// "Marketing Team" Super Admin account). Missing row = nobody blocked.
+export async function getCommissionBlockedIds(): Promise<string[]> {
+  const row = await db.appSetting.findUnique({ where: { key: COMMISSION_BLOCKED } }).catch(() => null)
+  return (row?.value ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+}
+
+export async function canViewCommission(userId: string): Promise<boolean> {
+  return !(await getCommissionBlockedIds()).includes(userId)
+}
