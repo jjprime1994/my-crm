@@ -91,4 +91,13 @@ describe("parseAppointmentBody", () => {
     expect(parseAppointmentBody({ source: "Other", sourceOther: "Roadshow" })).toMatchObject({ ok: true, data: { sourceOther: "Roadshow" } })
     expect(parseAppointmentBody({ source: "Referral", sourceOther: "ignored" })).toMatchObject({ ok: true, data: { sourceOther: null } })
   })
+
+  it("requires the event name for Event and shows it in the label", async () => {
+    const { parseAppointmentBody, sourceLabel } = await import("./commission")
+    expect(parseAppointmentBody({ source: "Event" })).toEqual({ ok: false, error: "Please enter the event name." })
+    const r = parseAppointmentBody({ source: "Event", sourceOther: " MIHAS 2026 " })
+    expect(r).toMatchObject({ ok: true, data: { source: "Event", sourceOther: "MIHAS 2026" } })
+    expect(sourceLabel({ source: "Event", sourceOther: "MIHAS 2026" })).toBe("Event: MIHAS 2026")
+    expect(sourceLabel({ source: "TikTok", sourceOther: null })).toBe("TikTok")
+  })
 })

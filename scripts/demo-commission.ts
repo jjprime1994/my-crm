@@ -227,7 +227,7 @@ async function backfillDemoAppointments() {
     for (let k = have; k < r.appointmentsCount; k++) {
       const source = APPOINTMENT_SOURCES[(i + k * 3) % APPOINTMENT_SOURCES.length]
       await db.dailyAppointment.create({ data: {
-        userId: r.userId, date: r.date, source, sourceOther: source === "Other" ? "Roadshow" : null,
+        userId: r.userId, date: r.date, source, sourceOther: source === "Other" ? "Roadshow" : source === "Event" ? "[DEMO] Expo" : null,
         customerName: k % 2 ? null : `[DEMO] Customer ${i + 1}-${k + 1}`, createdById: DEMO,
       } })
       n++

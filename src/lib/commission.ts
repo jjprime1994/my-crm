@@ -158,8 +158,13 @@ export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unk
   return { ok: true, data }
 }
 
-// Lead sources for appointments entered on Daily Activity. "Other" needs a typed description.
-export const APPOINTMENT_SOURCES = ["Facebook / Instagram", "TikTok", "Website", "WhatsApp", "Referral", "Walk-in", "Other"] as const
+// Lead sources for appointments entered on Daily Activity. Sources in SOURCE_DETAIL need a typed
+// detail (stored in DailyAppointment.sourceOther): the event name for "Event", a description for "Other".
+export const APPOINTMENT_SOURCES = ["Facebook / Instagram", "TikTok", "Website", "WhatsApp", "Referral", "Walk-in", "Event", "Other"] as const
+export const SOURCE_DETAIL: Record<string, { label: string; placeholder: string; error: string }> = {
+  Event: { label: "Event name", placeholder: "e.g. MIHAS 2026", error: "Please enter the event name." },
+  Other: { label: "Specify source", placeholder: "e.g. Roadshow", error: 'Please specify the lead source for "Other".' },
+}
 
 export type DailyAppointmentRow = { id: string; source: string; sourceOther: string | null; customerName: string | null }
 
@@ -175,11 +180,12 @@ export function parseAppointmentBody(body: Record<string, unknown>): ApptParse {
   const source = text("source")
   if (!source) return { ok: false, error: "Lead source is required." }
   if (!(APPOINTMENT_SOURCES as readonly string[]).includes(source)) return { ok: false, error: "Invalid lead source." }
-  const sourceOther = source === "Other" ? text("sourceOther") : null
-  if (source === "Other" && !sourceOther) return { ok: false, error: "Please specify the lead source for \"Other\"." }
+  const detail = SOURCE_DETAIL[source]
+  const sourceOther = detail ? text("sourceOther") : null
+  if (detail && !sourceOther) return { ok: false, error: detail.error }
   return { ok: true, data: { source, sourceOther, customerName: text("customerName") } }
 }
 
-/** "Other" sources show what was typed, e.g. "Other: Roadshow". */
+/** Sources with a detail show it, e.g. "Event: MIHAS 2026", "Other: Roadshow". */
 export const sourceLabel = (a: { source: string; sourceOther: string | null }) =>
-  a.source === "Other" && a.sourceOther ? `Other: ${a.sourceOther}` : a.source
+  SOURCE_DETAIL[a.source] && a.sourceOther ? `${a.source}: ${a.sourceOther}` : a.source

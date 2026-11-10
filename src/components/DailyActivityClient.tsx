@@ -3,7 +3,7 @@
 import { Fragment, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/Toast"
-import { APPOINTMENT_SOURCES, sourceLabel, type DailyAppointmentRow } from "@/lib/commission"
+import { APPOINTMENT_SOURCES, SOURCE_DETAIL, sourceLabel, type DailyAppointmentRow } from "@/lib/commission"
 
 export type DailyRow = {
   userId: string
@@ -52,8 +52,8 @@ function AppointmentsPanel({ row, date, onAdded, onDeleted }: {
   const [customer, setCustomer] = useState("")
   const [busy, setBusy] = useState(false)
   const toast = useToast()
-  const needOther = source === "Other"
-  const canAdd = !!source && (!needOther || other.trim() !== "")
+  const detail = SOURCE_DETAIL[source]
+  const canAdd = !!source && (!detail || other.trim() !== "")
 
   async function add() {
     setBusy(true)
@@ -106,10 +106,10 @@ function AppointmentsPanel({ row, date, onAdded, onDeleted }: {
             {APPOINTMENT_SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        {needOther && (
+        {detail && (
           <div>
-            <label htmlFor={id("oth")} className="block text-xs font-medium text-gray-600 mb-1">Specify source <span className="text-red-600">*</span></label>
-            <input id={id("oth")} value={other} onChange={(e) => setOther(e.target.value)} placeholder="e.g. Roadshow" className={`${inputCls} w-44`} />
+            <label htmlFor={id("oth")} className="block text-xs font-medium text-gray-600 mb-1">{detail.label} <span className="text-red-600">*</span></label>
+            <input id={id("oth")} value={other} onChange={(e) => setOther(e.target.value)} placeholder={detail.placeholder} className={`${inputCls} w-44`} />
           </div>
         )}
         <div>
