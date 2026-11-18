@@ -38,7 +38,20 @@ export async function getEffectiveAdmin(userId: string, role: string): Promise<A
   return null
 }
 
+const AVAILABLE_LEAD_SELECT = { id: true, firstName: true, lastName: true, email: true, phone: true, adName: true, campaignName: true, branch: true, source: true, isDuplicate: true, createdAt: true } as const
+
 export async function getAvailableLeads(userId: string, role: string) {
+  // SUPER_ADMIN sees the whole unassigned pool (CLAUDE.md routing rule 6) — team routing
+  // doesn't apply. Without this, a super admin with no downline/covered states got an empty
+  // list while the sidebar badge (getAvailableLeadsCount) showed every unassigned lead.
+  if (role === "SUPER_ADMIN") {
+    return db.lead.findMany({
+      where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } },
+      select: AVAILABLE_LEAD_SELECT,
+      orderBy: { createdAt: "desc" },
+    })
+  }
+
   // StateRoute members only see unassigned leads from their assigned state(s) —
   // plus any ad individually routed to them directly (e.g. a language-specific ad),
   // which overrides the state restriction.
@@ -141,7 +154,7 @@ export async function isLeadClaimableBy(
 
 export async function getAvailableLeadsCount(userId: string, role: string): Promise<number> {
   if (role === "SUPER_ADMIN") {
-    return db.lead.count({ where: { assignedToId: null } }).catch(() => 0)
+    return db.lead.count({ where: { assignedToId: null, status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } } }).catch(() => 0)
   }
 
   try {
