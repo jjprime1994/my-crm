@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-
-type CampaignEntry = { campaignId: string; campaignName: string | null; excluded: boolean }
+import type { CampaignEntry } from "@/lib/excluded-campaigns"
 
 interface Props {
   campaigns: CampaignEntry[]
@@ -49,8 +48,8 @@ export default function ExcludedCampaignsClient({ campaigns: initial }: Props) {
 
     setCampaigns((prev) => {
       const existing = prev.find((c) => c.campaignId === campaignId)
-      if (existing) return prev.map((c) => (c.campaignId === campaignId ? { ...c, excluded: true, campaignName: campaignName ?? c.campaignName } : c))
-      return [...prev, { campaignId, campaignName, excluded: true }].sort((a, b) =>
+      if (existing) return prev.map((c) => (c.campaignId === campaignId ? { ...c, excluded: true, ...(campaignName && { campaignName, nameFromAd: false }) } : c))
+      return [...prev, { campaignId, campaignName, nameFromAd: false, excluded: true }].sort((a, b) =>
         (a.campaignName ?? a.campaignId).localeCompare(b.campaignName ?? b.campaignId)
       )
     })
@@ -67,13 +66,16 @@ export default function ExcludedCampaignsClient({ campaigns: initial }: Props) {
     return (
       <div className="px-5 py-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{c.campaignName ?? "(unnamed campaign)"}</p>
+          <p className="text-sm font-medium text-gray-900 truncate">
+            {c.campaignName ?? "(unnamed campaign)"}
+            {c.nameFromAd && <span className="ml-1.5 text-xs font-normal text-gray-500">(ad name)</span>}
+          </p>
           <p className="text-xs text-gray-500 truncate">{c.campaignId}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isToggling && <span className="text-xs text-gray-500">Saving…</span>}
           <button
-            onClick={() => setExcluded(c.campaignId, c.campaignName, !c.excluded)}
+            onClick={() => setExcluded(c.campaignId, c.nameFromAd ? null : c.campaignName, !c.excluded)}
             disabled={isToggling}
             className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition disabled:opacity-40 ${
               c.excluded
