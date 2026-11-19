@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import crypto from "crypto"
 import { resolveStateBranch } from "@/lib/branch"
 import { assignToDefaultTeam } from "@/lib/assign-default-team"
-import { assignLeadByBranch } from "@/lib/route-lead"
+import { assignLeadByBranch, hasActiveAdRoute } from "@/lib/route-lead"
 import { sendPushToSuperAdmins } from "@/lib/push"
 
 // Cooldown so super admins don't get spammed if many leads arrive while token is broken
@@ -170,8 +170,10 @@ export async function POST(req: NextRequest) {
       if (!branch && campaignName) branch = resolveStateBranch(campaignName)
       if (!branch && adName) branch = resolveStateBranch(adName)
 
-      // Auto-assign via StateRoute round-robin — only members of a StateRoute are eligible.
-      let assignedToId: string | null = await assignLeadByBranch(branch)
+      // Ad-routed leads stay unassigned so the routed team claims them from Available Leads.
+      // Otherwise auto-assign via StateRoute round-robin — only members of a StateRoute are eligible.
+      const adRouted = await hasActiveAdRoute(adName)
+      let assignedToId: string | null = adRouted ? null : await assignLeadByBranch(branch)
 
       // Flag as duplicate only if an active lead with same contact exists within 30 days
       let isDuplicate = false
@@ -194,7 +196,7 @@ export async function POST(req: NextRequest) {
       if (isDuplicate) assignedToId = null
 
       // Fallback: if no state route matched and not a duplicate, assign to Johnny's team
-      if (!assignedToId && !isDuplicate) {
+      if (!assignedToId && !isDuplicate && !adRouted) {
         assignedToId = await assignToDefaultTeam()
       }
 

@@ -1,6 +1,19 @@
 import { db } from "@/lib/db"
 
 /**
+ * True when the lead's ad has an active AdRoute with at least one team or individual.
+ * Such leads skip auto-assignment and stay unassigned in the Available Leads pool, where
+ * filterLeads shows them to the routed team(s) — Ad Routing wins over State Routing at intake.
+ */
+export async function hasActiveAdRoute(adName: string | null): Promise<boolean> {
+  if (!adName) return false
+  const route = await db.adRoute
+    .findFirst({ where: { adName, archived: false }, select: { teamIds: true, userIds: true } })
+    .catch(() => null)
+  return !!route && (route.teamIds.length > 0 || route.userIds.length > 0)
+}
+
+/**
  * Auto-assign via StateRoute round-robin — only members of a StateRoute are eligible.
  * The index is incremented atomically so concurrent webhooks get unique starting slots.
  * Returns null if there's no branch, no matching StateRoute, or everyone in the route is at capacity.
