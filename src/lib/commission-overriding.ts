@@ -1,25 +1,25 @@
 import { db } from "@/lib/db"
 import { getCommissionBlockedIds } from "@/lib/app-settings"
 import type { CommissionClaim } from "@/generated/prisma/client"
+import { OVERRIDING_FOR } from "./commission"
 
-// Owner rule (23 Nov 2026): when someone keys in an MA "Sales Commission" row, the same row is
-// copied as "Sales Overriding" to their DIRECT leader (managerId) — one level only, not the
-// leader's leader — with Amount Claim left blank for the leader to fill in.
+// Owner rule (23 Nov 2026): when someone keys in an MA "Sales Commission" (or LA "Location
+// Commission") row, the same row is copied as "Sales Overriding" (or "Location Overriding") to
+// their DIRECT leader (managerId) — one level only, not the leader's leader — with Amount Claim
+// left blank for the leader to fill in.
 // The copy is linked by sourceClaimId: editing the source re-syncs the copy's details (the
 // leader's amount is kept), deleting the source deletes the copy (FK cascade), and changing the
 // source away from "Sales Commission" removes the copy.
 
-export const SALES_COMMISSION = "Sales Commission"
-export const SALES_OVERRIDING = "Sales Overriding"
-
 const COPIED_FIELDS = [
   "month", "branch", "customerName", "packageType", "machineType", "poNo", "poDate", "sellingPrice",
   "totalCollection", "lastPaymentDate", "machineCount", "kpi", "incentive", "paymentMadePct",
+  "machinePoNo", "locationPoNo", "locationName",
 ] as const
 
 export function needsOverridingCopy(c: Pick<CommissionClaim, "kind" | "commissionType" | "sourceClaimId">) {
   // A copy never spawns another copy, even if its type is edited to "Sales Commission"
-  return c.kind === "MA" && c.commissionType === SALES_COMMISSION && !c.sourceClaimId
+  return c.commissionType === OVERRIDING_FOR[c.kind].from && !c.sourceClaimId
 }
 
 function copiedDetails(source: CommissionClaim) {
@@ -63,11 +63,11 @@ export async function syncOverridingCopy(
   const copy = await db.commissionClaim.create({
     data: {
       ...copiedDetails(source),
-      kind: "MA",
+      kind: source.kind,
       userId: owner.managerId,
       customerName: source.customerName,
       month: source.month,
-      commissionType: SALES_OVERRIDING,
+      commissionType: OVERRIDING_FOR[source.kind].to,
       amountClaim: null,
       sourceClaimId: source.id,
       createdById: actorId,

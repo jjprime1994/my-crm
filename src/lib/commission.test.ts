@@ -111,3 +111,31 @@ describe("blank amount for auto Sales Overriding copies", () => {
     expect(r.ok && r.data.amountClaim).toBe(null)
   })
 })
+
+describe("overridingLast", () => {
+  it("moves Sales Overriding rows to the bottom, keeping entry order otherwise", async () => {
+    const { overridingLast } = await import("./commission")
+    const rows = [
+      { id: "1", commissionType: "Sales Overriding" }, { id: "2", commissionType: "Sales Commission" },
+      { id: "3", commissionType: "Sales Overriding" }, { id: "4", commissionType: "Introducer" },
+    ]
+    expect(overridingLast(rows).map((r) => r.id)).toEqual(["2", "4", "1", "3"])
+  })
+})
+
+describe("types per page", () => {
+  it("MA offers sales types only, LA location types only", () => {
+    expect(parseClaimBody("MA", { customerName: "A", amountClaim: 1, commissionType: "Location Commission" }).ok).toBe(false)
+    expect(parseClaimBody("LA", { customerName: "A", amountClaim: 1, commissionType: "Sales Overriding" }).ok).toBe(false)
+    expect(parseClaimBody("LA", { customerName: "A", amountClaim: 1, commissionType: "Location Overriding" }).ok).toBe(true)
+    expect(parseClaimBody("MA", { customerName: "A", amountClaim: 1, commissionType: "Introducer" }).ok).toBe(true)
+  })
+  it("still accepts an older row's existing type on edit", () => {
+    expect(parseClaimBody("MA", { customerName: "A", amountClaim: 1, commissionType: "Location Commission" }, false, "Location Commission").ok).toBe(true)
+  })
+  it("puts Location Overriding at the bottom too", async () => {
+    const { overridingLast } = await import("./commission")
+    const rows = [{ id: "1", commissionType: "Location Overriding" }, { id: "2", commissionType: "Location Commission" }]
+    expect(overridingLast(rows).map((r) => r.id)).toEqual(["2", "1"])
+  })
+})

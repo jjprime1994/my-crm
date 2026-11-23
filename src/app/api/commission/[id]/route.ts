@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { session, claim } = r
 
   const body = await req.json().catch(() => ({}))
-  const parsed = parseClaimBody(claim.kind, body, !!claim.sourceClaimId)
+  const parsed = parseClaimBody(claim.kind, body, !!claim.sourceClaimId, claim.commissionType)
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
 
   const month = isMonthStr(body.month) ? body.month : claim.month

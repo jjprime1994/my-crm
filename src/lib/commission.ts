@@ -2,6 +2,17 @@
 // Dropdown values come from the "Code" sheet of Commission Templete 2026.xlsx.
 
 export const COMMISSION_TYPES = ["Sales Commission", "Sales Overriding", "Introducer", "Location Commission", "Location Overriding"] as const
+/** Types offered on each page (owner, 23 Nov 2026): sales types on MA, location types on LA. */
+export const COMMISSION_TYPES_BY_KIND: Record<"MA" | "LA", readonly string[]> = {
+  MA: ["Sales Commission", "Sales Overriding", "Introducer"],
+  LA: ["Location Commission", "Location Overriding", "Introducer"],
+}
+/** "Commission" type on each page → the "Overriding" type its leader's auto copy gets. */
+export const OVERRIDING_FOR: Record<"MA" | "LA", { from: string; to: string }> = {
+  MA: { from: "Sales Commission", to: "Sales Overriding" },
+  LA: { from: "Location Commission", to: "Location Overriding" },
+}
+const OVERRIDING_TYPES = new Set(["Sales Overriding", "Location Overriding"])
 export const PACKAGE_TYPES = ["Rental", "Installment", "AR", "Cashout"] as const
 
 const MYT_OFFSET_MS = 8 * 60 * 60 * 1000
@@ -47,6 +58,12 @@ export function comparePeople(
     return a.team.localeCompare(b.team)
   }
   return (ROLE_RANK[a.role] ?? 9) - (ROLE_RANK[b.role] ?? 9) || a.name.localeCompare(b.name)
+}
+
+/** Rows inside one person's block: Sales/Location Overriding always at the bottom, otherwise keep entry order. */
+export function overridingLast<T extends { commissionType: string | null }>(rows: T[]): T[] {
+  const isOv = (r: T) => (r.commissionType && OVERRIDING_TYPES.has(r.commissionType) ? 1 : 0)
+  return rows.map((r, i) => ({ r, i })).sort((a, b) => isOv(a.r) - isOv(b.r) || a.i - b.i).map((x) => x.r)
 }
 
 export type CommissionKindStr = "MA" | "LA"
@@ -100,8 +117,9 @@ export function serializeClaim(c: any): CommissionRow {
 type ParseResult = { ok: true; data: Record<string, unknown> } | { ok: false; error: string }
 
 // Validates/normalises a claim body from the client. Only fields relevant to `kind` are kept.
-// allowBlankAmount: auto Sales Overriding copies may stay without an amount until the leader fills it in.
-export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unknown>, allowBlankAmount = false): ParseResult {
+// allowBlankAmount: auto overriding copies may stay without an amount until the leader fills it in.
+// currentType: the row's existing type, still accepted on edit even if no longer offered on this page.
+export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unknown>, allowBlankAmount = false, currentType: string | null = null): ParseResult {
   const text = (k: string) => {
     const v = body[k]
     if (v === null || v === undefined) return null
@@ -125,7 +143,7 @@ export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unk
   if (amountClaim === "bad" || (amountClaim === null && !allowBlankAmount)) return { ok: false, error: "Amount Claim (RM) is required and must be a number." }
 
   const commissionType = text("commissionType")
-  if (commissionType && !(COMMISSION_TYPES as readonly string[]).includes(commissionType)) return { ok: false, error: "Invalid Types of Commission." }
+  if (commissionType && !COMMISSION_TYPES_BY_KIND[kind].includes(commissionType) && commissionType !== currentType) return { ok: false, error: "Invalid Types of Commission." }
   const packageType = text("packageType")
   if (packageType && !(PACKAGE_TYPES as readonly string[]).includes(packageType)) return { ok: false, error: "Invalid Package Type." }
 

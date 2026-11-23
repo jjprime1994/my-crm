@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/Toast"
 import { groupByHierarchy, groupKeyOf, hierarchyIndex, roleLabel, NO_TEAM_KEY } from "@/lib/hierarchy"
-import { COMMISSION_TYPES, PACKAGE_TYPES, monthLabel, type CommissionKindStr, type CommissionRow } from "@/lib/commission"
+import { COMMISSION_TYPES_BY_KIND, OVERRIDING_FOR, PACKAGE_TYPES, monthLabel, overridingLast, type CommissionKindStr, type CommissionRow } from "@/lib/commission"
 
 type Person = { id: string; name: string; role: string; disabled: boolean; managerId: string | null; teamId: string | null; teamLabel: string | null }
 
@@ -113,7 +113,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
       map.set(c.userId, [...(map.get(c.userId) ?? []), c])
     }
     return [...map.entries()]
-      .map(([userId, rows]) => ({ userId, name: nameOf.get(userId) ?? "Unknown", rows, total: rows.reduce((s, r) => s + (r.amountClaim ?? 0), 0) }))
+      .map(([userId, rows]) => ({ userId, name: nameOf.get(userId) ?? "Unknown", rows: overridingLast(rows), total: rows.reduce((s, r) => s + (r.amountClaim ?? 0), 0) }))
       .sort((a, b) => byRank(a.userId, b.userId))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claims, personFilter, teamFilter, nameOf, teamOf, order])
@@ -161,12 +161,12 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
       return next
     })
     const leader = overriding && !form.id ? nameOf.get(overriding.userId) : null
-    toast(form.id ? "Claim updated." : leader ? `Claim added. Sales Overriding copy added for ${leader}.` : overriding ? "Claim added. Sales Overriding copy added for their leader." : "Claim added.")
+    toast(form.id ? "Claim updated." : leader ? `Claim added. ${OVERRIDING_FOR[kind].to} copy added for ${leader}.` : overriding ? `Claim added. ${OVERRIDING_FOR[kind].to} copy added for their leader.` : "Claim added.")
     setForm(null)
   }
 
   async function remove(c: CommissionRow) {
-    const copyNote = c.commissionType === "Sales Commission" && kind === "MA" ? " The leader's Sales Overriding copy will be deleted too." : ""
+    const copyNote = c.commissionType === OVERRIDING_FOR[kind].from ? ` The leader's ${OVERRIDING_FOR[kind].to} copy will be deleted too.` : ""
     if (!confirm(`Delete the claim for "${c.customerName}"${c.amountClaim === null ? "" : ` (RM ${rm(c.amountClaim)})`}?${copyNote}`)) return
     setDeleting(c.id)
     const res = await fetch(`/api/commission/${c.id}`, { method: "DELETE" })
@@ -187,7 +187,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
     const v = c[f.key]
     if (f.key === "amountClaim" && v === null && c.sourceClaimId) return <span className="text-xs font-medium text-amber-600">To fill in</span>
     if (f.key === "commissionType" && c.sourceClaimId) {
-      return <>{String(v ?? "")}<span title="Copied automatically from a team member's Sales Commission" className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">AUTO</span></>
+      return <>{String(v ?? "")}<span title={`Copied automatically from a team member's ${OVERRIDING_FOR[kind].from}`} className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">AUTO</span></>
     }
     if (v === null || v === undefined || v === "") return <span className="text-gray-300">–</span>
     if (f.money && typeof v === "number") return rm(v)
@@ -200,7 +200,9 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
     const set = (v: string) => setForm({ ...form, values: { ...form.values, [f.key]: v } })
     const id = `f-${f.key}`
     if (f.type === "commissionType" || f.type === "packageType") {
-      const opts = f.type === "commissionType" ? COMMISSION_TYPES : PACKAGE_TYPES
+      const base = f.type === "commissionType" ? COMMISSION_TYPES_BY_KIND[kind] : PACKAGE_TYPES
+      // Keep an older row's type selectable when editing, even if it's no longer offered on this page
+      const opts = value && !base.includes(value) ? [...base, value] : base
       return (
         <select id={id} value={value} onChange={(e) => set(e.target.value)} className={inputCls}>
           <option value="">— Select —</option>

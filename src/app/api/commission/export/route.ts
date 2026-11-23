@@ -3,7 +3,7 @@ import ExcelJS from "exceljs"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/roles"
-import { isMonthStr, monthLabel, serializeClaim, type CommissionRow } from "@/lib/commission"
+import { isMonthStr, monthLabel, overridingLast, serializeClaim, type CommissionRow } from "@/lib/commission"
 import { getScopedUsers } from "@/lib/team-scope"
 import { groupByHierarchy, roleLabel } from "@/lib/hierarchy"
 import { canViewCommission } from "@/lib/app-settings"
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       label: g.label,
       blocks: g.people
         .filter((p) => byUser.has(p.user.id))
-        .map((p) => ({ ...byUser.get(p.user.id)!, role: p.user.role, depth: p.depth })),
+        .map((p) => { const g = byUser.get(p.user.id)!; return { ...g, rows: overridingLast(g.rows), role: p.user.role, depth: p.depth } }),
     }))
     .filter((g) => g.blocks.length > 0)
   // Claims from a user missing from the scoped list (shouldn't happen) still get exported
