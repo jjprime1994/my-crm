@@ -39,9 +39,13 @@ const userSelect = {
 
 export async function getScopedUsers(actorId: string, role: string): Promise<ScopedUser[]> {
   const users = await db.user.findMany({ where: teamScopeWhere(actorId, role), select: userSelect, orderBy: { name: "asc" } })
+  // A SUPER_ADMIN who manages people (e.g. Johnny Liong) heads a team too; one with no reports doesn't.
+  const managerIds = new Set(users.map((u) => u.managerId).filter(Boolean))
   return users.map((u) => {
-    // Team head = first ADMIN walking up self → manager → manager's manager
-    const head = [u, u.manager, u.manager?.manager].find((x) => x && x.role === "ADMIN") ?? null
+    // Team head = first ADMIN (or managing SUPER_ADMIN) walking up self → manager → manager's manager
+    const head = [u, u.manager, u.manager?.manager].find(
+      (x) => x && (x.role === "ADMIN" || (x.role === "SUPER_ADMIN" && (x !== u || managerIds.has(u.id)))),
+    ) ?? null
     return {
       id: u.id, name: u.name, role: u.role, managerId: u.managerId, disabled: u.disabled,
       teamId: head?.id ?? null,
