@@ -42,7 +42,7 @@ export default async function CommissionPage({
       meId={me}
       canExport={role === "SUPER_ADMIN"}
       showTeams={role === "SUPER_ADMIN"}
-      users={users.map((u) => ({ id: u.id, name: u.name, role: u.role, disabled: u.disabled, teamId: u.teamId, teamLabel: u.teamLabel }))}
+      users={users.map((u) => ({ id: u.id, name: u.name, role: u.role, disabled: u.disabled, managerId: u.managerId, teamId: u.teamId, teamLabel: u.teamLabel }))}
       claims={claims.map(serializeClaim)}
     />
   )

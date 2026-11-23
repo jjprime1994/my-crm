@@ -3,11 +3,10 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/Toast"
-import { COMMISSION_TYPES, PACKAGE_TYPES, comparePeople, monthLabel, type CommissionKindStr, type CommissionRow } from "@/lib/commission"
+import { groupByHierarchy, groupKeyOf, hierarchyIndex, roleLabel, NO_TEAM_KEY } from "@/lib/hierarchy"
+import { COMMISSION_TYPES, PACKAGE_TYPES, monthLabel, type CommissionKindStr, type CommissionRow } from "@/lib/commission"
 
-type Person = { id: string; name: string; role: string; disabled: boolean; teamId: string | null; teamLabel: string | null }
-
-const NO_TEAM = "__none"
+type Person = { id: string; name: string; role: string; disabled: boolean; managerId: string | null; teamId: string | null; teamLabel: string | null }
 
 interface Props {
   kind: CommissionKindStr
@@ -84,29 +83,23 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
 
   const multi = users.length > 1
   const nameOf = useMemo(() => new Map(users.map((u) => [u.id, u.name])), [users])
-  const personOf = useMemo(
-    () => new Map(users.map((u) => [u.id, { id: u.id, name: u.name, role: u.role, team: u.teamLabel }])),
-    [users]
-  )
-  const byRank = (a: string, b: string) => {
-    const pa = personOf.get(a) ?? { id: a, name: "", role: "", team: null }
-    const pb = personOf.get(b) ?? { id: b, name: "", role: "", team: null }
-    return comparePeople(pa, pb, meId)
-  }
-  const teamOf = useMemo(() => new Map(users.map((u) => [u.id, u.teamId ?? NO_TEAM])), [users])
+  // Same order as the Excel export: Management, then each team A→Z following the hierarchy
+  // (head → each team leader + their people → others), "No team" last.
+  const hierarchy = useMemo(() => groupByHierarchy(users), [users])
+  const order = useMemo(() => hierarchyIndex(hierarchy), [hierarchy])
+  const byRank = (a: string, b: string) => (order.get(a)?.rank ?? Infinity) - (order.get(b)?.rank ?? Infinity)
+  const teamOf = useMemo(() => new Map(users.map((u) => [u.id, groupKeyOf(u)])), [users])
 
-  // Team summary (Super Admin): total claimed per team for this month, "No team" last
-  const teamStats = useMemo(() => {
-    const labels = new Map<string, string>()
-    for (const u of users) labels.set(u.teamId ?? NO_TEAM, u.teamLabel ?? "No team")
-    return [...labels.entries()]
-      .map(([key, label]) => {
-        const rs = claims.filter((c) => (teamOf.get(c.userId) ?? NO_TEAM) === key)
-        return { key, label, people: new Set(rs.map((r) => r.userId)).size, rows: rs.length, total: rs.reduce((s, r) => s + r.amountClaim, 0) }
-      })
-      .sort((a, b) => (a.key === NO_TEAM ? 1 : b.key === NO_TEAM ? -1 : b.total - a.total || a.label.localeCompare(b.label)))
-  }, [users, claims, teamOf])
-  const visibleUsers = (teamFilter === "ALL" ? users : users.filter((u) => (u.teamId ?? NO_TEAM) === teamFilter))
+  // Team summary (Super Admin): total claimed per team for this month, in hierarchy order
+  const teamStats = useMemo(
+    () =>
+      hierarchy.map((g) => {
+        const rs = claims.filter((c) => (teamOf.get(c.userId) ?? NO_TEAM_KEY) === g.key)
+        return { key: g.key, label: g.label, people: new Set(rs.map((r) => r.userId)).size, rows: rs.length, total: rs.reduce((s, r) => s + r.amountClaim, 0) }
+      }),
+    [hierarchy, claims, teamOf]
+  )
+  const visibleUsers = (teamFilter === "ALL" ? users : users.filter((u) => groupKeyOf(u) === teamFilter))
     .slice()
     .sort((a, b) => byRank(a.id, b.id))
   const activeUsers = users.filter((u) => !u.disabled || u.id === meId)
@@ -116,14 +109,17 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
     const map = new Map<string, CommissionRow[]>()
     for (const c of claims) {
       if (personFilter !== "ALL" && c.userId !== personFilter) continue
-      if (teamFilter !== "ALL" && (teamOf.get(c.userId) ?? NO_TEAM) !== teamFilter) continue
+      if (teamFilter !== "ALL" && (teamOf.get(c.userId) ?? NO_TEAM_KEY) !== teamFilter) continue
       map.set(c.userId, [...(map.get(c.userId) ?? []), c])
     }
     return [...map.entries()]
       .map(([userId, rows]) => ({ userId, name: nameOf.get(userId) ?? "Unknown", rows, total: rows.reduce((s, r) => s + r.amountClaim, 0) }))
       .sort((a, b) => byRank(a.userId, b.userId))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claims, personFilter, teamFilter, nameOf, teamOf, personOf, meId])
+  }, [claims, personFilter, teamFilter, nameOf, teamOf, order])
+  const roleOf = useMemo(() => new Map(users.map((u) => [u.id, u.role])), [users])
+  // Team header before each team's first block, when more than one team is on screen
+  const showTeamHeaders = new Set(groups.map((g) => order.get(g.userId)?.groupKey)).size > 1
 
   const grandTotal = groups.reduce((s, g) => s + g.total, 0)
   const rowCount = groups.reduce((s, g) => s + g.rows.length, 0)
@@ -346,10 +342,24 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
           No {kind} claims for {monthLabel(month)} yet. Click <span className="font-semibold">+ Add claim</span> to add one.
         </div>
       ) : (
-        groups.map((g) => (
-          <div key={g.userId} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        groups.map((g, gi) => {
+          const pos = order.get(g.userId)
+          const newTeam = showTeamHeaders && pos?.groupKey !== order.get(groups[gi - 1]?.userId)?.groupKey
+          const depth = Math.min(pos?.depth ?? 0, 3)
+          return (
+          <div key={g.userId} className="space-y-3">
+          {newTeam && (
+            <div className="rounded-xl bg-[#1F4E78] px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-white">
+              Team: {pos?.groupLabel ?? "No team"}
+            </div>
+          )}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" style={{ marginLeft: `${depth * 1.25}rem` }}>
             <div className="px-5 py-3 flex items-center justify-between border-b border-gray-100 bg-gray-50/60">
-              <p className="text-sm font-semibold text-gray-900">Name: {g.name}{g.userId === meId && <span className="ml-1.5 text-xs text-blue-600">(you)</span>}</p>
+              <p className="text-sm font-semibold text-gray-900">
+                Name: {g.name}
+                <span className="ml-2 rounded-full bg-gray-200/70 px-2 py-0.5 text-[11px] font-medium text-gray-600">{roleLabel(roleOf.get(g.userId) ?? "")}</span>
+                {g.userId === meId && <span className="ml-1.5 text-xs text-blue-600">(you)</span>}
+              </p>
               <p className="text-sm font-semibold text-gray-900 tabular-nums">RM {rm(g.total)}</p>
             </div>
             <div className="overflow-x-auto">
@@ -389,7 +399,9 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
               </table>
             </div>
           </div>
-        ))
+          </div>
+          )
+        })
       )}
     </div>
   )

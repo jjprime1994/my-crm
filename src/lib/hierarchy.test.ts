@@ -29,6 +29,12 @@ describe("groupByHierarchy", () => {
     expect(team.people.map((p) => `${p.user.id}:${p.depth}`)).toEqual(["Boss:0", "TL-A:1", "Bob:2", "TL-B:1", "Amy:2", "Zed:1"])
   })
 
+  it("keeps a team leader above their people when the head isn't in the list (team leader's own view)", () => {
+    const tlView = users.filter((x) => ["TL-A", "Bob"].includes(x.id))
+    const [team] = groupByHierarchy([...tlView].reverse())
+    expect(team.people.map((p) => `${p.user.id}:${p.depth}`)).toEqual(["TL-A:0", "Bob:1"])
+  })
+
   it("treats a managing super admin as their team's head", () => {
     const team = groupByHierarchy(users).find((g) => g.label === "Johnny")!
     expect(team.people.map((p) => p.user.id)).toEqual(["Johnny", "Amar"])
