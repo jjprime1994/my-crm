@@ -56,7 +56,7 @@ const rm = (n: number) => n.toLocaleString("en-MY", { minimumFractionDigits: 2, 
 const inputCls =
   "w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 
-type FormState = { id: string | null; userId: string; values: Record<string, string> }
+type FormState = { id: string | null; userId: string; values: Record<string, string>; isCopy?: boolean }
 
 function emptyValues(fields: Field[]) {
   return Object.fromEntries(fields.map((f) => [f.key, ""])) as Record<string, string>
@@ -95,7 +95,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
     () =>
       hierarchy.map((g) => {
         const rs = claims.filter((c) => (teamOf.get(c.userId) ?? NO_TEAM_KEY) === g.key)
-        return { key: g.key, label: g.label, people: new Set(rs.map((r) => r.userId)).size, rows: rs.length, total: rs.reduce((s, r) => s + r.amountClaim, 0) }
+        return { key: g.key, label: g.label, people: new Set(rs.map((r) => r.userId)).size, rows: rs.length, total: rs.reduce((s, r) => s + (r.amountClaim ?? 0), 0) }
       }),
     [hierarchy, claims, teamOf]
   )
@@ -113,7 +113,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
       map.set(c.userId, [...(map.get(c.userId) ?? []), c])
     }
     return [...map.entries()]
-      .map(([userId, rows]) => ({ userId, name: nameOf.get(userId) ?? "Unknown", rows, total: rows.reduce((s, r) => s + r.amountClaim, 0) }))
+      .map(([userId, rows]) => ({ userId, name: nameOf.get(userId) ?? "Unknown", rows, total: rows.reduce((s, r) => s + (r.amountClaim ?? 0), 0) }))
       .sort((a, b) => byRank(a.userId, b.userId))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claims, personFilter, teamFilter, nameOf, teamOf, order])
@@ -134,7 +134,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
       const v = c[f.key]
       values[f.key] = v === null || v === undefined ? "" : String(v)
     }
-    setForm({ id: c.id, userId: c.userId, values })
+    setForm({ id: c.id, userId: c.userId, values, isCopy: !!c.sourceClaimId })
   }
 
   async function submit(e: React.FormEvent) {
@@ -150,14 +150,24 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
     setSaving(false)
     const j = await res.json().catch(() => ({}))
     if (!res.ok) return toast(j.error ?? "Couldn't save.", "error")
-    const row = j as CommissionRow
-    setClaims((prev) => (form.id ? prev.map((c) => (c.id === row.id ? row : c)) : [...prev, row]))
-    toast(form.id ? "Claim updated." : "Claim added.")
+    const { overriding, removedOverridingId, ...row } = j as CommissionRow & { overriding: CommissionRow | null; removedOverridingId: string | null }
+    setClaims((prev) => {
+      let next = form.id ? prev.map((c) => (c.id === row.id ? row : c)) : [...prev, row]
+      if (removedOverridingId) next = next.filter((c) => c.id !== removedOverridingId)
+      // Show the leader's auto copy straight away if they're on this page
+      if (overriding && nameOf.has(overriding.userId)) {
+        next = next.some((c) => c.id === overriding.id) ? next.map((c) => (c.id === overriding.id ? overriding : c)) : [...next, overriding]
+      }
+      return next
+    })
+    const leader = overriding && !form.id ? nameOf.get(overriding.userId) : null
+    toast(form.id ? "Claim updated." : leader ? `Claim added. Sales Overriding copy added for ${leader}.` : overriding ? "Claim added. Sales Overriding copy added for their leader." : "Claim added.")
     setForm(null)
   }
 
   async function remove(c: CommissionRow) {
-    if (!confirm(`Delete the claim for "${c.customerName}" (RM ${rm(c.amountClaim)})?`)) return
+    const copyNote = c.commissionType === "Sales Commission" && kind === "MA" ? " The leader's Sales Overriding copy will be deleted too." : ""
+    if (!confirm(`Delete the claim for "${c.customerName}"${c.amountClaim === null ? "" : ` (RM ${rm(c.amountClaim)})`}?${copyNote}`)) return
     setDeleting(c.id)
     const res = await fetch(`/api/commission/${c.id}`, { method: "DELETE" })
     setDeleting(null)
@@ -165,12 +175,20 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
       const j = await res.json().catch(() => ({}))
       return toast(j.error ?? "Couldn't delete.", "error")
     }
-    setClaims((prev) => prev.filter((x) => x.id !== c.id))
+    const j = await res.json().catch(() => ({}))
+    setClaims((prev) => prev.filter((x) => x.id !== c.id && x.id !== j.removedOverridingId))
     toast("Claim deleted.")
   }
 
+  // An auto Sales Overriding copy can be saved before the leader keys in the amount
+  const isRequired = (f: Field) => !!f.required && !(form?.isCopy && f.key === "amountClaim")
+
   function display(c: CommissionRow, f: Field) {
     const v = c[f.key]
+    if (f.key === "amountClaim" && v === null && c.sourceClaimId) return <span className="text-xs font-medium text-amber-600">To fill in</span>
+    if (f.key === "commissionType" && c.sourceClaimId) {
+      return <>{String(v ?? "")}<span title="Copied automatically from a team member's Sales Commission" className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">AUTO</span></>
+    }
     if (v === null || v === undefined || v === "") return <span className="text-gray-300">–</span>
     if (f.money && typeof v === "number") return rm(v)
     return String(v)
@@ -196,7 +214,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
         type={f.type === "number" ? "number" : f.type}
         step={f.type === "number" ? "any" : undefined}
         inputMode={f.type === "number" ? "decimal" : undefined}
-        required={f.required}
+        required={isRequired(f)}
         value={value}
         onChange={(e) => set(e.target.value)}
         className={inputCls}
@@ -321,7 +339,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
             {fields.map((f) => (
               <div key={f.key} className={f.wide ? "sm:col-span-2" : ""}>
                 <label htmlFor={`f-${f.key}`} className="block text-xs font-medium text-gray-600 mb-1">
-                  {f.label}{f.required && <span className="text-rose-500"> *</span>}
+                  {f.label}{isRequired(f) && <span className="text-rose-500"> *</span>}
                 </label>
                 {renderInput(f)}
               </div>

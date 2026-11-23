@@ -5,6 +5,7 @@ import { isUserDisabled } from "@/lib/session-guard"
 import { canManageUser } from "@/lib/team-scope"
 import { canViewCommission } from "@/lib/app-settings"
 import { isMonthStr, parseClaimBody, serializeClaim } from "@/lib/commission"
+import { needsOverridingCopy, syncOverridingCopy } from "@/lib/commission-overriding"
 
 async function loadEditable(id: string) {
   const session = await auth()
@@ -27,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { session, claim } = r
 
   const body = await req.json().catch(() => ({}))
-  const parsed = parseClaimBody(claim.kind, body)
+  const parsed = parseClaimBody(claim.kind, body, !!claim.sourceClaimId)
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
 
   const month = isMonthStr(body.month) ? body.month : claim.month
@@ -35,13 +36,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data: { ...(parsed.data as object), month, updatedById: session.user.id },
   })
-  return NextResponse.json(serializeClaim(updated))
+  const sync = await syncOverridingCopy(updated, needsOverridingCopy(claim), session.user.id)
+  return NextResponse.json({ ...serializeClaim(updated), overriding: sync.copy ? serializeClaim(sync.copy) : null, removedOverridingId: sync.removedId })
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const r = await loadEditable(id)
   if (r.error) return r.error
+  // The leader's overriding copy (if any) goes with it via the FK cascade
+  const copy = await db.commissionClaim.findUnique({ where: { sourceClaimId: id }, select: { id: true } })
   await db.commissionClaim.delete({ where: { id } })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, removedOverridingId: copy?.id ?? null })
 }

@@ -73,7 +73,10 @@ export type CommissionRow = {
   locationPoNo: string | null
   locationName: string | null
   paymentMadePct: number | null
-  amountClaim: number
+  /** null = not keyed in yet (auto Sales Overriding copy) */
+  amountClaim: number | null
+  /** set on an auto Sales Overriding copy: the Sales Commission row it was copied from */
+  sourceClaimId: string | null
   updatedAt: string
 }
 
@@ -89,7 +92,7 @@ export function serializeClaim(c: any): CommissionRow {
     sellingPrice: num(c.sellingPrice), totalCollection: num(c.totalCollection), lastPaymentDate: c.lastPaymentDate,
     machineCount: c.machineCount, kpi: num(c.kpi), incentive: num(c.incentive),
     machinePoNo: c.machinePoNo, locationPoNo: c.locationPoNo, locationName: c.locationName,
-    paymentMadePct: num(c.paymentMadePct), amountClaim: Number(c.amountClaim),
+    paymentMadePct: num(c.paymentMadePct), amountClaim: num(c.amountClaim), sourceClaimId: c.sourceClaimId ?? null,
     updatedAt: new Date(c.updatedAt).toISOString(),
   }
 }
@@ -97,7 +100,8 @@ export function serializeClaim(c: any): CommissionRow {
 type ParseResult = { ok: true; data: Record<string, unknown> } | { ok: false; error: string }
 
 // Validates/normalises a claim body from the client. Only fields relevant to `kind` are kept.
-export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unknown>): ParseResult {
+// allowBlankAmount: auto Sales Overriding copies may stay without an amount until the leader fills it in.
+export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unknown>, allowBlankAmount = false): ParseResult {
   const text = (k: string) => {
     const v = body[k]
     if (v === null || v === undefined) return null
@@ -118,7 +122,7 @@ export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unk
   const customerName = text("customerName")
   if (!customerName) return { ok: false, error: "Customer Name is required." }
   const amountClaim = decimal("amountClaim")
-  if (amountClaim === null || amountClaim === "bad") return { ok: false, error: "Amount Claim (RM) is required and must be a number." }
+  if (amountClaim === "bad" || (amountClaim === null && !allowBlankAmount)) return { ok: false, error: "Amount Claim (RM) is required and must be a number." }
 
   const commissionType = text("commissionType")
   if (commissionType && !(COMMISSION_TYPES as readonly string[]).includes(commissionType)) return { ok: false, error: "Invalid Types of Commission." }

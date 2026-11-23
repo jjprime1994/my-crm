@@ -101,3 +101,13 @@ describe("parseAppointmentBody", () => {
     expect(sourceLabel({ source: "TikTok", sourceOther: null })).toBe("TikTok")
   })
 })
+
+describe("blank amount for auto Sales Overriding copies", () => {
+  it("still requires an amount on normal claims", () => {
+    expect(parseClaimBody("MA", { customerName: "A" }).ok).toBe(false)
+  })
+  it("allows a blank amount when editing an auto copy", () => {
+    const r = parseClaimBody("MA", { customerName: "A", amountClaim: "" }, true)
+    expect(r.ok && r.data.amountClaim).toBe(null)
+  })
+})

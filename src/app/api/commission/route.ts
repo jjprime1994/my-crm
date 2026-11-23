@@ -5,6 +5,7 @@ import { isUserDisabled } from "@/lib/session-guard"
 import { canManageUser } from "@/lib/team-scope"
 import { canViewCommission } from "@/lib/app-settings"
 import { isMonthStr, parseClaimBody, serializeClaim } from "@/lib/commission"
+import { syncOverridingCopy } from "@/lib/commission-overriding"
 
 // POST: add a commission claim row. Body: { kind: "MA"|"LA", userId?, month: "YYYY-MM", ...fields }
 export async function POST(req: NextRequest) {
@@ -33,10 +34,11 @@ export async function POST(req: NextRequest) {
       userId,
       month: body.month,
       customerName: parsed.data.customerName as string,
-      amountClaim: parsed.data.amountClaim as number,
       createdById: session.user.id,
       updatedById: session.user.id,
     },
   })
-  return NextResponse.json(serializeClaim(row))
+  // Sales Commission → blank Sales Overriding copy for the claimant's direct leader
+  const sync = await syncOverridingCopy(row, null, session.user.id)
+  return NextResponse.json({ ...serializeClaim(row), overriding: sync.copy ? serializeClaim(sync.copy) : null, removedOverridingId: sync.removedId })
 }

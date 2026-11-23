@@ -8,38 +8,38 @@ datasource db {
 }
 
 model User {
-  id                String              @id @default(cuid())
-  name              String
-  email             String              @unique
-  password          String
-  role              Role                @default(SALESPERSON)
-  claimLimit        Int                 @default(5)
-  appointmentClaimLimit Int             @default(5)
-  newLeadThreshold  Int                 @default(0)
-  coveredStates     String[]            @default([])
-  isDefaultTeam     Boolean             @default(false)
-  teamName          String?
-  autoAssign        Boolean             @default(false)
-  disabled          Boolean             @default(false)
-  disabledAt        DateTime?
-  managerId         String?
-  manager           User?               @relation("TeamMembers", fields: [managerId], references: [id])
-  teamMembers       User[]              @relation("TeamMembers")
-  leads             Lead[]              @relation("AssignedLeads")
-  notes             LeadNote[]
-  statusChanges     LeadStatusHistory[]
-  suggestions       Suggestion[]
-  pushSubscriptions PushSubscription[]
-  claimedLeads      Lead[]              @relation("ClaimedLeads")
-  assignmentsMade   LeadAssignmentLog[] @relation("AssignedByLogs")
-  assignmentsReceived LeadAssignmentLog[] @relation("AssignedToLogs")
-  claimedAppointments AppointmentSlot[] @relation("ClaimedAppointments")
-  createdAppointments AppointmentSlot[] @relation("CreatedAppointments")
-  dailyActivities   DailyActivity[]     @relation("DailyActivityOwner")
-  dailyAppointments DailyAppointment[]  @relation("DailyAppointmentOwner")
-  commissionClaims  CommissionClaim[]   @relation("CommissionClaimOwner")
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id                    String              @id @default(cuid())
+  name                  String
+  email                 String              @unique
+  password              String
+  role                  Role                @default(SALESPERSON)
+  claimLimit            Int                 @default(5)
+  appointmentClaimLimit Int                 @default(5)
+  newLeadThreshold      Int                 @default(0)
+  coveredStates         String[]            @default([])
+  isDefaultTeam         Boolean             @default(false)
+  teamName              String?
+  autoAssign            Boolean             @default(false)
+  disabled              Boolean             @default(false)
+  disabledAt            DateTime?
+  managerId             String?
+  manager               User?               @relation("TeamMembers", fields: [managerId], references: [id])
+  teamMembers           User[]              @relation("TeamMembers")
+  leads                 Lead[]              @relation("AssignedLeads")
+  notes                 LeadNote[]
+  statusChanges         LeadStatusHistory[]
+  suggestions           Suggestion[]
+  pushSubscriptions     PushSubscription[]
+  claimedLeads          Lead[]              @relation("ClaimedLeads")
+  assignmentsMade       LeadAssignmentLog[] @relation("AssignedByLogs")
+  assignmentsReceived   LeadAssignmentLog[] @relation("AssignedToLogs")
+  claimedAppointments   AppointmentSlot[]   @relation("ClaimedAppointments")
+  createdAppointments   AppointmentSlot[]   @relation("CreatedAppointments")
+  dailyActivities       DailyActivity[]     @relation("DailyActivityOwner")
+  dailyAppointments     DailyAppointment[]  @relation("DailyAppointmentOwner")
+  commissionClaims      CommissionClaim[]   @relation("CommissionClaimOwner")
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 }
 
 enum Role {
@@ -50,36 +50,36 @@ enum Role {
 }
 
 model Lead {
-  id               String              @id @default(cuid())
-  metaLeadId       String?             @unique
-  formId           String?
-  adId             String?
-  adName           String?
-  campaignId       String?
-  campaignName     String?
-  firstName        String?
-  lastName         String?
-  email            String?
-  phone            String?
-  branch           String?
-  source           String              @default("META")
-  firstContactedAt DateTime?
-  status           LeadStatus          @default(NEW)
-  assignedTo       User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
-  assignedToId     String?
-  claimedAt        DateTime?
-  claimedById      String?
-  claimedBy        User?               @relation("ClaimedLeads", fields: [claimedById], references: [id], onDelete: SetNull)
-  followUpAt       DateTime?
-  isDuplicate      Boolean             @default(false)
-  notes            LeadNote[]
-  statusHistory    LeadStatusHistory[]
-  assignmentLogs   LeadAssignmentLog[]
-  appointment      AppointmentSlot?
+  id                   String                @id @default(cuid())
+  metaLeadId           String?               @unique
+  formId               String?
+  adId                 String?
+  adName               String?
+  campaignId           String?
+  campaignName         String?
+  firstName            String?
+  lastName             String?
+  email                String?
+  phone                String?
+  branch               String?
+  source               String                @default("META")
+  firstContactedAt     DateTime?
+  status               LeadStatus            @default(NEW)
+  assignedTo           User?                 @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  assignedToId         String?
+  claimedAt            DateTime?
+  claimedById          String?
+  claimedBy            User?                 @relation("ClaimedLeads", fields: [claimedById], references: [id], onDelete: SetNull)
+  followUpAt           DateTime?
+  isDuplicate          Boolean               @default(false)
+  notes                LeadNote[]
+  statusHistory        LeadStatusHistory[]
+  assignmentLogs       LeadAssignmentLog[]
+  appointment          AppointmentSlot?
   whatsAppConversation WhatsAppConversation?
-  rawData          Json?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  rawData              Json?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   @@index([assignedToId])
   @@index([assignedToId, status])
@@ -96,15 +96,15 @@ model Lead {
 }
 
 model AdRoute {
-  id        String   @id @default(cuid())
-  adId      String?
-  adName    String   @unique
-  teamIds   String[]
-  userIds   String[] @default([])
-  userStates Json    @default("{}")
-  archived  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  adId       String?
+  adName     String   @unique
+  teamIds    String[]
+  userIds    String[] @default([])
+  userStates Json     @default("{}")
+  archived   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // Campaigns whose leadgen webhook events are skipped entirely (no Lead row created) —
@@ -259,7 +259,7 @@ model DailyActivity {
   id                String   @id @default(cuid())
   user              User     @relation("DailyActivityOwner", fields: [userId], references: [id], onDelete: Cascade)
   userId            String
-  date              String   // "YYYY-MM-DD" in MYT
+  date              String // "YYYY-MM-DD" in MYT
   leadsCount        Int      @default(0)
   appointmentsCount Int      @default(0)
   updatedById       String?
@@ -276,9 +276,9 @@ model DailyAppointment {
   id           String   @id @default(cuid())
   user         User     @relation("DailyAppointmentOwner", fields: [userId], references: [id], onDelete: Cascade)
   userId       String
-  date         String   // "YYYY-MM-DD" in MYT
-  source       String   // one of APPOINTMENT_SOURCES in src/lib/commission.ts
-  sourceOther  String?  // required when source = "Other"
+  date         String // "YYYY-MM-DD" in MYT
+  source       String // one of APPOINTMENT_SOURCES in src/lib/commission.ts
+  sourceOther  String? // required when source = "Other"
   customerName String?
   createdById  String?
   createdAt    DateTime @default(now())
@@ -295,11 +295,11 @@ enum CommissionKind {
 
 // One row of a monthly commission claim (MA or LA sheet of the commission template).
 model CommissionClaim {
-  id              String         @id @default(cuid())
+  id              String           @id @default(cuid())
   kind            CommissionKind
-  user            User           @relation("CommissionClaimOwner", fields: [userId], references: [id], onDelete: Cascade)
+  user            User             @relation("CommissionClaimOwner", fields: [userId], references: [id], onDelete: Cascade)
   userId          String
-  month           String         // "YYYY-MM"
+  month           String // "YYYY-MM"
   branch          String?
   customerName    String
   commissionType  String?
@@ -307,24 +307,28 @@ model CommissionClaim {
   // MA only
   machineType     String?
   poNo            String?
-  poDate          String?        // "YYYY-MM-DD"
-  sellingPrice    Decimal?       @db.Decimal(12, 2)
-  totalCollection Decimal?       @db.Decimal(12, 2)
-  lastPaymentDate String?        // "YYYY-MM-DD"
+  poDate          String? // "YYYY-MM-DD"
+  sellingPrice    Decimal?         @db.Decimal(12, 2)
+  totalCollection Decimal?         @db.Decimal(12, 2)
+  lastPaymentDate String? // "YYYY-MM-DD"
   machineCount    Int?
-  kpi             Decimal?       @db.Decimal(12, 2)
-  incentive       Decimal?       @db.Decimal(12, 2)
+  kpi             Decimal?         @db.Decimal(12, 2)
+  incentive       Decimal?         @db.Decimal(12, 2)
   // LA only
   machinePoNo     String?
   locationPoNo    String?
   locationName    String?
   // both
-  paymentMadePct  Decimal?       @db.Decimal(6, 2)
-  amountClaim     Decimal        @db.Decimal(12, 2)
+  paymentMadePct  Decimal?         @db.Decimal(6, 2)
+  amountClaim     Decimal?         @db.Decimal(12, 2) // null = not keyed in yet (auto Sales Overriding rows)
+  // Auto "Sales Overriding" row for the claimant's direct leader, copied from a "Sales Commission" row
+  sourceClaim     CommissionClaim? @relation("OverridingCopy", fields: [sourceClaimId], references: [id], onDelete: Cascade)
+  sourceClaimId   String?          @unique
+  overridingCopy  CommissionClaim? @relation("OverridingCopy")
   createdById     String?
   updatedById     String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@index([kind, month])
   @@index([userId, month])
