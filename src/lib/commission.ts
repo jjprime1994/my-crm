@@ -1,7 +1,7 @@
 // Shared constants/helpers for the commission (MA / LA) and daily activity features.
 // Dropdown values come from the "Code" sheet of Commission Templete 2026.xlsx.
 
-export const COMMISSION_TYPES = ["Sales Overriding", "Introducer", "Location Commission", "Location Overriding"] as const
+export const COMMISSION_TYPES = ["Sales Commission", "Sales Overriding", "Introducer", "Location Commission", "Location Overriding"] as const
 export const PACKAGE_TYPES = ["Rental", "Installment", "AR", "Cashout"] as const
 
 const MYT_OFFSET_MS = 8 * 60 * 60 * 1000
