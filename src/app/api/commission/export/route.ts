@@ -3,8 +3,9 @@ import ExcelJS from "exceljs"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/roles"
-import { comparePeople, isMonthStr, monthLabel, serializeClaim, type CommissionRow } from "@/lib/commission"
+import { isMonthStr, monthLabel, serializeClaim, type CommissionRow } from "@/lib/commission"
 import { getScopedUsers } from "@/lib/team-scope"
+import { groupByHierarchy, roleLabel } from "@/lib/hierarchy"
 import { canViewCommission } from "@/lib/app-settings"
 
 type Col = { header: string; width: number; get: (r: CommissionRow, i: number) => string | number | null; money?: boolean }
@@ -70,17 +71,20 @@ export async function GET(req: NextRequest) {
     byUser.set(c.userId, g)
   }
 
-  // Same order as the MA/LA pages: Super Admin(s) on top, then each team with its manager first.
-  const people = new Map(
-    (await getScopedUsers(session.user.id, "SUPER_ADMIN")).map((u) => [u.id, { id: u.id, name: u.name, role: u.role, team: u.teamLabel }])
-  )
-  const blocks = [...byUser.entries()]
-    .sort(([a], [b]) => {
-      const pa = people.get(a) ?? { id: a, name: byUser.get(a)!.name, role: "SALESPERSON", team: null }
-      const pb = people.get(b) ?? { id: b, name: byUser.get(b)!.name, role: "SALESPERSON", team: null }
-      return comparePeople(pa, pb, session.user.id)
-    })
-    .map(([, g]) => g)
+  // Arrange by team, following the hierarchy: team head → each team leader + their people → others.
+  const scoped = await getScopedUsers(session.user.id, "SUPER_ADMIN")
+  const groups = groupByHierarchy(scoped)
+    .map((g) => ({
+      label: g.label,
+      blocks: g.people
+        .filter((p) => byUser.has(p.user.id))
+        .map((p) => ({ ...byUser.get(p.user.id)!, role: p.user.role, depth: p.depth })),
+    }))
+    .filter((g) => g.blocks.length > 0)
+  // Claims from a user missing from the scoped list (shouldn't happen) still get exported
+  const placed = new Set(scoped.map((u) => u.id))
+  const orphans = [...byUser.entries()].filter(([id]) => !placed.has(id)).map(([, g]) => ({ ...g, role: "SALESPERSON", depth: 0 }))
+  if (orphans.length) groups.push({ label: "Other", blocks: orphans })
 
   const cols = kind === "MA" ? MA_COLS : LA_COLS
   const sumCols = kind === "MA" ? MA_SUM : LA_SUM
@@ -99,10 +103,23 @@ export async function GET(req: NextRequest) {
   grandRow.getCell(1).font = { bold: true }
   const totalRowNums: number[] = []
 
+  const sumCells = cols.map((c, i) => ({ c, i })).filter(({ c }) => sumCols.includes(c.header))
   let r = 5
-  for (const { name, rows } of blocks) {
+  for (const group of groups) {
+    // Team header
+    ws.mergeCells(r, 1, r, cols.length)
+    const th = ws.getCell(r, 1)
+    th.value = `TEAM: ${group.label.toUpperCase()}`
+    th.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } }
+    th.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E78" } }
+    ws.getRow(r).height = 22
+    r += 2
+    const teamTotalRows: number[] = []
+
+  for (const { name, rows, role, depth } of group.blocks) {
     ws.getCell(r, 1).value = "Name:"
-    ws.getCell(r, 2).value = name
+    ws.getCell(r, 2).value = `${"    ".repeat(depth)}${name}`
+    ws.getCell(r, 4).value = roleLabel(role)
     ws.getRow(r).font = { bold: true }
     r++
 
@@ -151,7 +168,26 @@ export async function GET(req: NextRequest) {
       }
     })
     totalRowNums.push(r)
+    teamTotalRows.push(r)
     r += 3
+  }
+
+    // Team subtotal
+    const st = ws.getRow(r)
+    st.getCell(1).value = `TEAM TOTAL – ${group.label}`
+    st.font = { bold: true }
+    for (const { c, i } of sumCells) {
+      const L = ws.getColumn(i + 1).letter
+      const cell = st.getCell(i + 1)
+      cell.value = { formula: teamTotalRows.map((n) => `${L}${n}`).join("+") }
+      if (c.money) cell.numFmt = "#,##0.00"
+    }
+    for (let i = 1; i <= cols.length; i++) {
+      const cell = st.getCell(i)
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2EFDA" } }
+      cell.border = border
+    }
+    r += 4
   }
 
   // Grand total across every person's TOTAL row
