@@ -244,7 +244,7 @@ export default function AdRoutingClient({ ads: initial, managers: initialManager
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 pt-4 pb-3 border-b border-gray-50">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">State Routing</p>
-          <p className="text-sm text-gray-500 mt-0.5">Leads auto-assign via round-robin to the selected people for each state.</p>
+          <p className="text-sm text-gray-500 mt-0.5">The selected people see that state&apos;s unassigned leads in Available Leads and claim them.</p>
         </div>
         <div className="divide-y divide-gray-50">
           {MALAYSIA_STATES.map((state) => {

@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import crypto from "crypto"
 import { resolveStateBranch } from "@/lib/branch"
-import { assignToDefaultTeam } from "@/lib/assign-default-team"
-import { assignLeadByBranch, hasActiveAdRoute } from "@/lib/route-lead"
 import { sendPushToSuperAdmins } from "@/lib/push"
 
 // Cooldown so super admins don't get spammed if many leads arrive while token is broken
@@ -170,11 +168,6 @@ export async function POST(req: NextRequest) {
       if (!branch && campaignName) branch = resolveStateBranch(campaignName)
       if (!branch && adName) branch = resolveStateBranch(adName)
 
-      // Ad-routed leads stay unassigned so the routed team claims them from Available Leads.
-      // Otherwise auto-assign via StateRoute round-robin — only members of a StateRoute are eligible.
-      const adRouted = await hasActiveAdRoute(adName)
-      let assignedToId: string | null = adRouted ? null : await assignLeadByBranch(branch)
-
       // Flag as duplicate only if an active lead with same contact exists within 30 days
       let isDuplicate = false
       if (phone || email) {
@@ -192,12 +185,6 @@ export async function POST(req: NextRequest) {
           select: { id: true },
         })
         if (existing) isDuplicate = true
-      }
-      if (isDuplicate) assignedToId = null
-
-      // Fallback: if no state route matched and not a duplicate, assign to Johnny's team
-      if (!assignedToId && !isDuplicate && !adRouted) {
-        assignedToId = await assignToDefaultTeam()
       }
 
       await db.lead.upsert({
@@ -217,7 +204,9 @@ export async function POST(req: NextRequest) {
           branch,
           source: "META",
           isDuplicate,
-          assignedToId,
+          // No auto-assignment (owner decision, 19 Nov 2026): every lead lands unassigned in
+          // Available Leads and is claimed under the routing rules (filterLeads).
+          assignedToId: null,
           rawData: { ...change.value, field_data: fieldData },
         },
       })

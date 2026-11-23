@@ -180,11 +180,11 @@ const faqs: FAQSection[] = [
       },
       {
         q: "What is State Routing and how does it work?",
-        a: "State Routing automatically assigns incoming leads to specific salespeople by state, in round-robin order, without manager intervention. Set it up in Ad Routing → State Routing: expand a state and toggle on the salespeople who should receive leads from it. If a salesperson is at capacity they are skipped; if all are at capacity the lead falls into the unassigned pool.",
+        a: "State Routing decides which salespeople see a state's leads in Available Leads. Leads are never auto-assigned — they arrive unassigned and the salespeople on that state claim them (up to their daily claim limit). Set it up in Ad Routing → State Routing: expand a state and toggle on the salespeople who should see leads from it.",
       },
       {
         q: "What is Ad Routing and how do I set it up?",
-        a: "Go to Ad Routing under the Super Admin menu.\n\n1. Set a Default Team — catches any lead that can't be routed by state or ad.\n2. State Routing — assign salespeople to each state for automatic round-robin assignment by location.\n3. Ad → Team Assignment — assign each ad to a manager's team. Leads from that ad go to the salesperson on that team with the fewest active leads.\n\nRouting runs in this order for every incoming lead:\nState routing → Ad routing → Default team → Unassigned pool\n\nFor bilingual campaigns (e.g. Chinese and English versions of the same ad), give each ad a distinct name in Meta Ads Manager and route them to different teams here.",
+        a: "Go to Ad Routing under the Super Admin menu.\n\n1. Set a Default Team — sees any lead that can't be routed by state or ad.\n2. State Routing — choose which salespeople see each state's leads.\n3. Ad → Team Assignment — choose which manager's team sees each ad's leads.\n\nEvery incoming lead lands unassigned in Available Leads; routing only decides who can see and claim it.\n\nFor bilingual campaigns (e.g. Chinese and English versions of the same ad), give each ad a distinct name in Meta Ads Manager and route them to different teams here.",
       },
       {
         q: "Can I set up ad routing before any leads have arrived?",
@@ -192,7 +192,7 @@ const faqs: FAQSection[] = [
       },
       {
         q: "How do I archive a stopped campaign's ad route?",
-        a: "In the Ad → Team Assignment list, click the archive icon (box) next to the ad. It moves to an Archived section at the bottom and is dimmed out. The webhook will skip archived routes, so any stray leads from a stopped ad fall through to the default team instead. Click the same icon to unarchive if the campaign restarts.",
+        a: "In the Ad → Team Assignment list, click the archive icon (box) next to the ad. It moves to an Archived section at the bottom and is dimmed out. Archived routes are ignored, so any stray leads from a stopped ad show up for the default team instead. Click the same icon to unarchive if the campaign restarts.",
       },
       {
         q: "How are leads automatically tagged with a state?",
@@ -200,7 +200,7 @@ const faqs: FAQSection[] = [
       },
       {
         q: "What is the routing priority order?",
-        a: "Every incoming lead goes through this chain until it finds a match:\n\n1. State routing — if the lead's form has a location field and that state has salespeople assigned, the lead is auto-assigned via round-robin to the first person with capacity.\n\n2. Ad routing — if state routing didn't assign anyone, the system checks if the lead's ad name matches a configured ad route. The salesperson on that team with the fewest active leads gets the lead.\n\n3. Default team — if neither matched, the lead goes to the manager marked as Default Team.\n\n4. Unassigned pool — if no default is set, the lead sits in Available Leads for anyone to claim.",
+        a: "Leads are never auto-assigned. Every incoming lead lands unassigned in Available Leads, and routing decides who can see and claim it:\n\n1. State routing — salespeople assigned to the lead's state see it.\n\n2. Ad routing — the team the lead's ad is routed to sees it.\n\n3. Default team — sees leads no other team covers.\n\nAdmins can still assign a lead to someone directly.",
       },
     ],
   },
