@@ -13,7 +13,12 @@ export const OVERRIDING_FOR: Record<"MA" | "LA", { from: string; to: string }> =
   LA: { from: "Location Commission", to: "Location Overriding" },
 }
 const OVERRIDING_TYPES = new Set(["Sales Overriding", "Location Overriding"])
-export const PACKAGE_TYPES = ["Rental", "Installment", "AR", "Cashout"] as const
+export const PACKAGE_TYPES = ["Rental", "Installment", "AR", "Cashout", "JuiceSup"] as const
+/** Package types offered on each page — JuiceSup is MA only (owner, 23 Nov 2026). */
+export const PACKAGE_TYPES_BY_KIND: Record<"MA" | "LA", readonly string[]> = {
+  MA: ["Rental", "Installment", "AR", "Cashout", "JuiceSup"],
+  LA: ["Rental", "Installment", "AR", "Cashout"],
+}
 
 const MYT_OFFSET_MS = 8 * 60 * 60 * 1000
 
@@ -89,6 +94,7 @@ export type CommissionRow = {
   machinePoNo: string | null
   locationPoNo: string | null
   locationName: string | null
+  remarks: string | null
   paymentMadePct: number | null
   /** null = not keyed in yet (auto Sales Overriding copy) */
   amountClaim: number | null
@@ -108,7 +114,7 @@ export function serializeClaim(c: any): CommissionRow {
     machineType: c.machineType, poNo: c.poNo, poDate: c.poDate,
     sellingPrice: num(c.sellingPrice), totalCollection: num(c.totalCollection), lastPaymentDate: c.lastPaymentDate,
     machineCount: c.machineCount, kpi: num(c.kpi), incentive: num(c.incentive),
-    machinePoNo: c.machinePoNo, locationPoNo: c.locationPoNo, locationName: c.locationName,
+    machinePoNo: c.machinePoNo, locationPoNo: c.locationPoNo, locationName: c.locationName, remarks: c.remarks ?? null,
     paymentMadePct: num(c.paymentMadePct), amountClaim: num(c.amountClaim), sourceClaimId: c.sourceClaimId ?? null,
     updatedAt: new Date(c.updatedAt).toISOString(),
   }
@@ -119,12 +125,12 @@ type ParseResult = { ok: true; data: Record<string, unknown> } | { ok: false; er
 // Validates/normalises a claim body from the client. Only fields relevant to `kind` are kept.
 // allowBlankAmount: auto overriding copies may stay without an amount until the leader fills it in.
 // currentType: the row's existing type, still accepted on edit even if no longer offered on this page.
-export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unknown>, allowBlankAmount = false, currentType: string | null = null): ParseResult {
-  const text = (k: string) => {
+export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unknown>, allowBlankAmount = false, currentType: string | null = null, currentPackage: string | null = null): ParseResult {
+  const text = (k: string, max = 300) => {
     const v = body[k]
     if (v === null || v === undefined) return null
     const s = String(v).trim()
-    return s === "" ? null : s.slice(0, 300)
+    return s === "" ? null : s.slice(0, max)
   }
   const date = (k: string) => {
     const s = text(k)
@@ -145,13 +151,14 @@ export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unk
   const commissionType = text("commissionType")
   if (commissionType && !COMMISSION_TYPES_BY_KIND[kind].includes(commissionType) && commissionType !== currentType) return { ok: false, error: "Invalid Types of Commission." }
   const packageType = text("packageType")
-  if (packageType && !(PACKAGE_TYPES as readonly string[]).includes(packageType)) return { ok: false, error: "Invalid Package Type." }
+  if (packageType && !PACKAGE_TYPES_BY_KIND[kind].includes(packageType) && packageType !== currentPackage) return { ok: false, error: "Invalid Package Type." }
 
   const paymentMadePct = decimal("paymentMadePct")
   if (paymentMadePct === "bad") return { ok: false, error: "Payment Made (%) must be a number." }
 
   const data: Record<string, unknown> = {
     branch: text("branch"), customerName, commissionType, packageType, paymentMadePct, amountClaim,
+    remarks: text("remarks", 1000),
   }
 
   if (kind === "MA") {

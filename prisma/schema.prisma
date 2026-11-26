@@ -324,6 +324,7 @@ model CommissionClaim {
   // Auto "Sales Overriding" row for the claimant's direct leader, copied from a "Sales Commission" row
   sourceClaim     CommissionClaim? @relation("OverridingCopy", fields: [sourceClaimId], references: [id], onDelete: Cascade)
   sourceClaimId   String?          @unique
+  remarks         String? // free-text note, both MA and LA (not copied to overriding copies)
   overridingCopy  CommissionClaim? @relation("OverridingCopy")
   createdById     String?
   updatedById     String?

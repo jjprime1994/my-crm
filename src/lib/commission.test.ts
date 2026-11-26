@@ -139,3 +139,19 @@ describe("types per page", () => {
     expect(overridingLast(rows).map((r) => r.id)).toEqual(["2", "1"])
   })
 })
+
+describe("package types per page", () => {
+  it("JuiceSup is offered on MA only", () => {
+    expect(parseClaimBody("MA", { customerName: "A", amountClaim: 1, packageType: "JuiceSup" }).ok).toBe(true)
+    expect(parseClaimBody("LA", { customerName: "A", amountClaim: 1, packageType: "JuiceSup" }).ok).toBe(false)
+  })
+})
+
+describe("remarks", () => {
+  it("keeps remarks on MA and LA, trimmed, blank → null", () => {
+    const ma = parseClaimBody("MA", { customerName: "A", amountClaim: 1, remarks: "  paid in 2 parts " })
+    const la = parseClaimBody("LA", { customerName: "A", amountClaim: 1, remarks: "" })
+    expect(ma.ok && ma.data.remarks).toBe("paid in 2 parts")
+    expect(la.ok && la.data.remarks).toBe(null)
+  })
+})

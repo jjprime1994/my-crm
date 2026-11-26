@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/Toast"
 import { groupByHierarchy, groupKeyOf, hierarchyIndex, roleLabel, NO_TEAM_KEY } from "@/lib/hierarchy"
-import { COMMISSION_TYPES_BY_KIND, OVERRIDING_FOR, PACKAGE_TYPES, monthLabel, overridingLast, type CommissionKindStr, type CommissionRow } from "@/lib/commission"
+import { COMMISSION_TYPES_BY_KIND, OVERRIDING_FOR, PACKAGE_TYPES_BY_KIND, monthLabel, overridingLast, type CommissionKindStr, type CommissionRow } from "@/lib/commission"
 
 type Person = { id: string; name: string; role: string; disabled: boolean; managerId: string | null; teamId: string | null; teamLabel: string | null }
 
@@ -38,6 +38,7 @@ const MA_FIELDS: Field[] = [
   { key: "incentive", label: "Incentive (RM)", type: "number", money: true },
   { key: "paymentMadePct", label: "Payment Made (%)", type: "number" },
   { key: "amountClaim", label: "Amount Claim (RM)", type: "number", required: true, money: true },
+  { key: "remarks", label: "Remarks", type: "text", wide: true },
 ]
 
 const LA_FIELDS: Field[] = [
@@ -50,6 +51,7 @@ const LA_FIELDS: Field[] = [
   { key: "locationName", label: "Location Name", type: "text", wide: true },
   { key: "paymentMadePct", label: "Payment Made (%)", type: "number" },
   { key: "amountClaim", label: "Amount Claim (RM)", type: "number", required: true, money: true },
+  { key: "remarks", label: "Remarks", type: "text", wide: true },
 ]
 
 const rm = (n: number) => n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -185,6 +187,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
 
   function display(c: CommissionRow, f: Field) {
     const v = c[f.key]
+    if (f.key === "remarks" && v) return <span title={String(v)} className="block max-w-[16rem] truncate">{String(v)}</span>
     if (f.key === "amountClaim" && v === null && c.sourceClaimId) return <span className="text-xs font-medium text-amber-600">To fill in</span>
     if (f.key === "commissionType" && c.sourceClaimId) {
       return <>{String(v ?? "")}<span title={`Copied automatically from a team member's ${OVERRIDING_FOR[kind].from}`} className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">AUTO</span></>
@@ -200,7 +203,7 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
     const set = (v: string) => setForm({ ...form, values: { ...form.values, [f.key]: v } })
     const id = `f-${f.key}`
     if (f.type === "commissionType" || f.type === "packageType") {
-      const base = f.type === "commissionType" ? COMMISSION_TYPES_BY_KIND[kind] : PACKAGE_TYPES
+      const base = f.type === "commissionType" ? COMMISSION_TYPES_BY_KIND[kind] : PACKAGE_TYPES_BY_KIND[kind]
       // Keep an older row's type selectable when editing, even if it's no longer offered on this page
       const opts = value && !base.includes(value) ? [...base, value] : base
       return (

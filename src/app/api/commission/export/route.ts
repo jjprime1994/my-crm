@@ -27,6 +27,7 @@ const MA_COLS: Col[] = [
   { header: "Incentive (RM)", width: 13, get: (r) => r.incentive, money: true },
   { header: "Payment Made (%)", width: 12, get: (r) => r.paymentMadePct },
   { header: "Amount Claim (RM)", width: 15, get: (r) => r.amountClaim, money: true },
+  { header: "Remarks", width: 30, get: (r) => r.remarks },
 ]
 const MA_SUM = ["Total Collection Amount", "No of Machine", "KPI", "Amount Claim (RM)"]
 
@@ -41,6 +42,7 @@ const LA_COLS: Col[] = [
   { header: "Location Name", width: 26, get: (r) => r.locationName },
   { header: "Payment Made (%)", width: 12, get: (r) => r.paymentMadePct },
   { header: "Amount Claim (RM)", width: 15, get: (r) => r.amountClaim, money: true },
+  { header: "Remarks", width: 30, get: (r) => r.remarks },
 ]
 const LA_SUM = ["Amount Claim (RM)"]
 
