@@ -85,9 +85,13 @@ export default function CommissionClient({ kind, month, meId, canExport, showTea
 
   const multi = users.length > 1
   const nameOf = useMemo(() => new Map(users.map((u) => [u.id, u.name])), [users])
-  // Same order as the Excel export: Management, then each team A→Z following the hierarchy
-  // (head → each team leader + their people → others), "No team" last.
-  const hierarchy = useMemo(() => groupByHierarchy(users), [users])
+  // Same order as the Excel export (Management, then each team A→Z following the hierarchy,
+  // "No team" last), except the viewer's own team is moved to the top.
+  // The viewer's own team goes on top (e.g. Johnny sees his team first).
+  const hierarchy = useMemo(() => {
+    const me = users.find((u) => u.id === meId)
+    return groupByHierarchy(users, me ? groupKeyOf(me) : undefined)
+  }, [users, meId])
   const order = useMemo(() => hierarchyIndex(hierarchy), [hierarchy])
   const byRank = (a: string, b: string) => (order.get(a)?.rank ?? Infinity) - (order.get(b)?.rank ?? Infinity)
   const teamOf = useMemo(() => new Map(users.map((u) => [u.id, groupKeyOf(u)])), [users])

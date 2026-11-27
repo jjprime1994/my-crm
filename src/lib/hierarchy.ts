@@ -37,8 +37,10 @@ export const groupKeyOf = (u: Pick<HierarchyUser, "teamId" | "role">) =>
  *   3. "No team" last
  * Works on partial lists too (e.g. a team leader's own scope): anyone whose manager isn't in the
  * list starts the tree for their team.
+ * `topKey` (optional): a group key to move to the very top, e.g. the viewer's own team so a
+ * Super Admin who heads a team sees their team first on the MA/LA pages.
  */
-export function groupByHierarchy<T extends HierarchyUser>(users: T[]): HierarchyGroup<T>[] {
+export function groupByHierarchy<T extends HierarchyUser>(users: T[], topKey?: string): HierarchyGroup<T>[] {
   const byName = (a: T, b: T) => a.name.localeCompare(b.name)
   const leadersFirst = (list: T[]) => {
     const leaders = list.filter((k) => k.role === "TEAM_LEADER" || k.role === "ADMIN" || k.role === "SUPER_ADMIN").sort(byName)
@@ -72,11 +74,13 @@ export function groupByHierarchy<T extends HierarchyUser>(users: T[]): Hierarchy
     return { key: teamId, teamId, label: members[0]?.teamLabel ?? "Team", people }
   }).sort((a, b) => a.label.localeCompare(b.label))
 
-  return [
+  const all: HierarchyGroup<T>[] = [
     ...(management.length ? [{ key: MANAGEMENT_KEY, teamId: null, label: "Management", people: management.map((user) => ({ user, depth: 0 })) }] : []),
     ...teams,
     ...(noTeam.length ? [{ key: NO_TEAM_KEY, teamId: null, label: "No team", people: noTeam.map((user) => ({ user, depth: 0 })) }] : []),
   ]
+  const top = topKey ? all.find((g) => g.key === topKey) : undefined
+  return top ? [top, ...all.filter((g) => g !== top)] : all
 }
 
 /** Flattened position of each person (for sorting) plus their depth and group. */
