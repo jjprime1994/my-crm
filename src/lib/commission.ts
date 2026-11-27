@@ -180,8 +180,10 @@ export function parseClaimBody(kind: CommissionKindStr, body: Record<string, unk
       lastPaymentDate: date("lastPaymentDate"), machineCount: mc,
     })
   } else {
+    const kpi = decimal("kpi")
+    if (kpi === "bad") return { ok: false, error: "KPI must be a number." }
     Object.assign(data, {
-      machinePoNo: text("machinePoNo"), locationPoNo: text("locationPoNo"), locationName: text("locationName"),
+      machinePoNo: text("machinePoNo"), locationPoNo: text("locationPoNo"), locationName: text("locationName"), kpi,
     })
   }
   return { ok: true, data }

@@ -49,6 +49,7 @@ const LA_FIELDS: Field[] = [
   { key: "machinePoNo", label: "Machine PO No", type: "text" },
   { key: "locationPoNo", label: "Location PO No", type: "text" },
   { key: "locationName", label: "Location Name", type: "text", wide: true },
+  { key: "kpi", label: "KPI", type: "number" },
   { key: "paymentMadePct", label: "Payment Made (%)", type: "number" },
   { key: "amountClaim", label: "Amount Claim (RM)", type: "number", required: true, money: true },
   { key: "remarks", label: "Remarks", type: "text", wide: true },

@@ -40,11 +40,12 @@ const LA_COLS: Col[] = [
   { header: "Machine PO No", width: 15, get: (r) => r.machinePoNo },
   { header: "Location PO No", width: 15, get: (r) => r.locationPoNo },
   { header: "Location Name", width: 26, get: (r) => r.locationName },
+  { header: "KPI", width: 9, get: (r) => r.kpi },
   { header: "Payment Made (%)", width: 12, get: (r) => r.paymentMadePct },
   { header: "Amount Claim (RM)", width: 15, get: (r) => r.amountClaim, money: true },
   { header: "Remarks", width: 30, get: (r) => r.remarks },
 ]
-const LA_SUM = ["Amount Claim (RM)"]
+const LA_SUM = ["KPI", "Amount Claim (RM)"]
 
 const thin = { style: "thin" as const }
 const border = { top: thin, left: thin, bottom: thin, right: thin }

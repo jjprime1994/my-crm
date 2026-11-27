@@ -36,6 +36,12 @@ describe("parseClaimBody", () => {
     expect(r.data.machinePoNo).toBe("PO1")
     expect("sellingPrice" in r.data).toBe(false)
   })
+
+  it("accepts KPI on LA claims too", () => {
+    const r = parseClaimBody("LA", { customerName: "A", amountClaim: 50, kpi: "2" })
+    expect(r.ok && r.data.kpi).toBe(2)
+    expect(parseClaimBody("LA", { customerName: "A", amountClaim: 50, kpi: "x" }).ok).toBe(false)
+  })
 })
 
 describe("month helpers", () => {
