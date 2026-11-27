@@ -158,6 +158,7 @@ export default function Sidebar({ user, onClose, isSuperAdmin: actualSuperAdmin,
     ...(commissionHidden ? [] : [
       { href: "/commission/ma", label: "MA – Sales Commission", icon: Icons.money, count: 0 },
       { href: "/commission/la", label: "LA – Location Commission", icon: Icons.pin, count: 0 },
+      { href: "/report", label: "Sales & Location Report", icon: Icons.overview, count: 0 },
     ]),
     ...(claimingPaused ? [] : [
       { href: "/available-leads", label: "Available Leads", icon: Icons.inbox, count: counts.availableLeads },

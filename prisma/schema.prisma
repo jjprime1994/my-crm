@@ -38,6 +38,7 @@ model User {
   dailyActivities       DailyActivity[]     @relation("DailyActivityOwner")
   dailyAppointments     DailyAppointment[]  @relation("DailyAppointmentOwner")
   commissionClaims      CommissionClaim[]   @relation("CommissionClaimOwner")
+  performanceReports    PerformanceReport[] @relation("PerformanceReportOwner")
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 }
@@ -330,6 +331,36 @@ model CommissionClaim {
   updatedById     String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+  @@index([kind, month])
+  @@index([userId, month])
+}
+
+enum ReportKind {
+  SALES
+  LOCATION
+}
+
+// Monthly Sales & Location Report rows (Sales and Location Report 2026.xlsx).
+// Collection (%) isn't stored: it's collection / sellingPrice.
+model PerformanceReport {
+  id                  String     @id @default(cuid())
+  kind                ReportKind
+  user                User       @relation("PerformanceReportOwner", fields: [userId], references: [id], onDelete: Cascade)
+  userId              String
+  month               String // "YYYY-MM"
+  customerName        String
+  // SALES only
+  sellingPrice        Decimal?   @db.Decimal(12, 2)
+  collection          Decimal?   @db.Decimal(12, 2)
+  packageType         String?
+  // LOCATION only
+  locationDescription String?
+  locationType        String?
+  createdById         String?
+  updatedById         String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   @@index([kind, month])
   @@index([userId, month])
